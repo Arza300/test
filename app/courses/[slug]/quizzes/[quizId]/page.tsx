@@ -1,11 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { unstable_noStore } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { QuizTake } from "./QuizTake";
 
 type Props = { params: Promise<{ slug: string; quizId: string }> };
+
+/** عدم التخزين المؤقت — ضروري على Vercel حتى لا تُخزَّن الصفحة وتُرجع 404 */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function decodeSegment(s: string): string {
   try {
@@ -25,15 +30,24 @@ function courseHref(course: { slug?: string | null; id: string }): string {
 }
 
 export default async function QuizPage({ params }: Props) {
+  unstable_noStore();
   const { slug: courseSegment, quizId } = await params;
-  const decoded = decodeSegment(courseSegment);
+  const decoded = decodeSegment(courseSegment).trim();
   const session = await getServerSession(authOptions);
 
-  const course = await prisma.course.findFirst({
+  let course = await prisma.course.findFirst({
     where: isCourseId(decoded)
       ? { id: decoded, isPublished: true }
       : { slug: decoded, isPublished: true },
   });
+  if (!course && !isCourseId(decoded)) {
+    const slugNormalized = decoded.replace(/-+$/, "").replace(/^-+/, "");
+    if (slugNormalized !== decoded) {
+      course = await prisma.course.findFirst({
+        where: { slug: slugNormalized, isPublished: true },
+      });
+    }
+  }
   if (!course) notFound();
 
   let canAccess = false;
