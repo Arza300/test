@@ -236,7 +236,7 @@ export default async function CoursePage({ params }: Props) {
                     <li key={quiz.id}>
                       {canAccessContent ? (
                         <Link
-                          href={`/courses/${course!.slug}/quizzes/${quiz.id}`}
+                          href={`/courses/${encodeURIComponent((course!.slug ?? "").trim()) || course!.id}/quizzes/${quiz.id}`}
                           className="flex items-center justify-between rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 transition hover:border-[var(--color-primary)]/30"
                         >
                           <span className="font-medium text-[var(--color-foreground)]">{quiz.title}</span>
