@@ -43,11 +43,16 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     console.error("Signup error:", e);
     const message = e instanceof Error ? e.message : String(e);
+    const isVercel = !!process.env.VERCEL;
     let userMessage = "حدث خطأ أثناء إنشاء الحساب.";
     if (message.includes("DATABASE_URL") || message.includes("Environment variable not found")) {
-      userMessage = "لم يتم ضبط قاعدة البيانات. أنشئ ملف .env وأضف سطر: DATABASE_URL=\"رابط_postgres\" ثم نفّذ: npm run db:push";
-    } else if (message.includes("does not exist") || message.includes("Unknown table") || message.includes("relation") || message.includes("P1001") || message.includes("P2021")) {
-      userMessage = "جدول المستخدمين غير موجود أو قاعدة البيانات غير متصلة. نفّذ: npm run db:push (بعد إضافة DATABASE_URL في .env)";
+      userMessage = isVercel
+        ? "قاعدة البيانات غير مضبوطة على السيرفر. في Vercel: Settings → Environment Variables → أضف DATABASE_URL (رابط Neon أو Supabase) ثم أعد النشر. للتحقق: افتح /api/health"
+        : "لم يتم ضبط قاعدة البيانات. أنشئ ملف .env وأضف DATABASE_URL ثم نفّذ: npm run db:push";
+    } else if (message.includes("does not exist") || message.includes("Unknown table") || message.includes("relation") || message.includes("P1001") || message.includes("P2021") || message.includes("Can't reach")) {
+      userMessage = isVercel
+        ? "الاتصال بقاعدة البيانات فشل. تأكد أن DATABASE_URL على Vercel يشير إلى قاعدة سحابية (Neon/Supabase) وليس localhost، ثم أعد النشر. للتحقق: افتح /api/health"
+        : "جدول المستخدمين غير موجود أو قاعدة البيانات غير متصلة. نفّذ: npm run db:push (بعد إضافة DATABASE_URL في .env)";
     } else if (process.env.NODE_ENV === "development" && message) {
       userMessage = message;
     }
