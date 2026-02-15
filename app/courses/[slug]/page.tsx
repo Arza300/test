@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { unstable_noStore } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -7,8 +8,13 @@ import { EnrollButton } from "./EnrollButton";
 
 type Props = { params: Promise<{ slug: string }> };
 
+/** عدم التخزين المؤقت — دائماً التحقق من وجود الدورة (تجنب 404 للدورات المحذوفة) */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
+  unstable_noStore();
   const course = await prisma.course.findFirst({
     where: { slug, isPublished: true },
   });
@@ -20,6 +26,7 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function CoursePage({ params }: Props) {
+  unstable_noStore();
   const { slug } = await params;
   const session = await getServerSession(authOptions);
   let course = null;
