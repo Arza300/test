@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import { CourseCard } from "@/components/CourseCard";
 
+/** دائماً جلب قائمة حديثة حتى تختفي الكورسات المحذوفة من صفحة جميع الدورات */
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "الدورات | منصتي التعليمية",
   description: "تصفح جميع الدورات المتاحة والبدء في التعلم",

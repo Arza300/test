@@ -4,8 +4,8 @@ import { PrismaClient } from "@prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 /**
- * Prisma Client singleton - مطلوب لـ Vercel serverless
- * يمنع إنشاء اتصالات متعددة أثناء التطوير
+ * Prisma Client singleton - مطلوب لـ Vercel serverless.
+ * Development: instance واحدة عبر globalThis. Production: عميل واحد لكل serverless instance (يستخدم env DATABASE_URL فقط).
  */
 export const prisma =
   globalForPrisma.prisma ??

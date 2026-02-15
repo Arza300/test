@@ -2,6 +2,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { CourseCard } from "@/components/CourseCard";
 
+/** دائماً جلب بيانات حديثة حتى تختفي الكورسات المحذوفة من القائمة */
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   let courses: Awaited<ReturnType<typeof prisma.course.findMany>> = [];
   try {
