@@ -7,12 +7,43 @@ import { getYouTubeEmbedUrl } from "@/lib/youtube";
 
 type Props = { params: Promise<{ slug: string; lessonSlug: string }> };
 
+function decodeSegment(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
+function isCourseId(segment: string): boolean {
+  return /^c[a-z0-9]{24}$/i.test(segment);
+}
+
+function isLessonId(segment: string): boolean {
+  return /^c[a-z0-9]{24}$/i.test(segment);
+}
+
+function courseHref(course: { slug?: string | null; id: string }): string {
+  const segment = (course.slug && course.slug.trim()) ? encodeURIComponent(course.slug.trim()) : course.id;
+  return `/courses/${segment}`;
+}
+
+function lessonHref(course: { slug?: string | null; id: string }, lesson: { slug?: string | null; id: string }): string {
+  const courseSeg = (course.slug && course.slug.trim()) ? encodeURIComponent(course.slug.trim()) : course.id;
+  const lessonSeg = (lesson.slug && lesson.slug.trim()) ? encodeURIComponent(lesson.slug.trim()) : lesson.id;
+  return `/courses/${courseSeg}/lessons/${lessonSeg}`;
+}
+
 export default async function LessonPage({ params }: Props) {
-  const { slug, lessonSlug } = await params;
+  const { slug: courseSegment, lessonSlug: lessonSegment } = await params;
+  const courseDecoded = decodeSegment(courseSegment);
+  const lessonDecoded = decodeSegment(lessonSegment);
   const session = await getServerSession(authOptions);
 
   const course = await prisma.course.findFirst({
-    where: { slug, isPublished: true },
+    where: isCourseId(courseDecoded)
+      ? { id: courseDecoded, isPublished: true }
+      : { slug: courseDecoded, isPublished: true },
     include: {
       lessons: { orderBy: { order: "asc" } },
     },
@@ -29,7 +60,9 @@ export default async function LessonPage({ params }: Props) {
   }
   if (!canAccess) notFound();
 
-  const lesson = course.lessons.find((l) => l.slug === lessonSlug);
+  const lesson = isLessonId(lessonDecoded)
+    ? course.lessons.find((l) => l.id === lessonDecoded)
+    : course.lessons.find((l) => l.slug === lessonDecoded);
   if (!lesson) notFound();
 
   const embedUrl = getYouTubeEmbedUrl(lesson.videoUrl);
@@ -38,7 +71,7 @@ export default async function LessonPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <Link href={`/courses/${course.slug}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+      <Link href={courseHref(course)} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
         ← العودة إلى {courseTitle}
       </Link>
       <h1 className="mt-4 text-2xl font-bold text-[var(--color-foreground)]">{lessonTitle}</h1>
@@ -85,7 +118,7 @@ export default async function LessonPage({ params }: Props) {
             <div className="flex w-full justify-between gap-4">
               {prev ? (
                 <Link
-                  href={`/courses/${course.slug}/lessons/${prev.slug}`}
+                  href={lessonHref(course, prev)}
                   className="rounded-[var(--radius-btn)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium"
                 >
                   ← الحصة السابقة
@@ -93,7 +126,7 @@ export default async function LessonPage({ params }: Props) {
               ) : <span />}
               {next ? (
                 <Link
-                  href={`/courses/${course.slug}/lessons/${next.slug}`}
+                  href={lessonHref(course, next)}
                   className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white"
                 >
                   الحصة التالية →

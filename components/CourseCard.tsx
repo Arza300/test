@@ -4,7 +4,7 @@ type Course = {
   id: string;
   title: string;
   titleAr?: string | null;
-  slug: string;
+  slug?: string | null;
   shortDesc?: string | null;
   duration?: string | null;
   level?: string | null;
@@ -16,10 +16,12 @@ type Course = {
 export function CourseCard({ course }: { course: Course }) {
   const displayTitle = course.titleAr ?? course.title;
   const categoryName = course.category?.nameAr ?? course.category?.name;
+  const slugOrId = (course.slug && course.slug.trim()) ? encodeURIComponent(course.slug.trim()) : course.id;
+  const href = slugOrId ? `/courses/${slugOrId}` : "/courses";
 
   return (
     <Link
-      href={`/courses/${course.slug}`}
+      href={href}
       className="group block overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-hover)] hover:border-[var(--color-primary)]/30"
     >
       <div className="aspect-video w-full bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-primary-light)]/30 flex items-center justify-center">

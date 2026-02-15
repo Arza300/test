@@ -12,11 +12,26 @@ type Props = { params: Promise<{ slug: string }> };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+function isCourseId(segment: string): boolean {
+  return /^c[a-z0-9]{24}$/i.test(segment);
+}
+
+function decodeSlug(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
 export async function generateMetadata({ params }: Props) {
-  const { slug } = await params;
+  const { slug: segment } = await params;
   unstable_noStore();
+  const decoded = decodeSlug(segment);
   const course = await prisma.course.findFirst({
-    where: { slug, isPublished: true },
+    where: isCourseId(decoded)
+      ? { id: decoded, isPublished: true }
+      : { slug: decoded, isPublished: true },
   });
   if (!course) return { title: "دورة غير موجودة" };
   return {
@@ -27,14 +42,17 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function CoursePage({ params }: Props) {
   unstable_noStore();
-  const { slug } = await params;
+  const { slug: segment } = await params;
+  const decoded = decodeSlug(segment);
   const session = await getServerSession(authOptions);
   let course = null;
   let isEnrolled = false;
   let userBalance = 0;
   try {
     course = await prisma.course.findFirst({
-      where: { slug, isPublished: true },
+      where: isCourseId(decoded)
+        ? { id: decoded, isPublished: true }
+        : { slug: decoded, isPublished: true },
       include: {
         category: true,
         lessons: { orderBy: { order: "asc" } },
@@ -191,7 +209,7 @@ export default async function CoursePage({ params }: Props) {
                       <li key={lesson.id}>
                         {canAccessContent ? (
                           <Link
-                            href={`/courses/${course.slug}/lessons/${lesson.slug}`}
+                            href={`/courses/${encodeURIComponent((course.slug ?? "").trim()) || course.id}/lessons/${(lesson.slug && lesson.slug.trim()) ? encodeURIComponent(lesson.slug.trim()) : lesson.id}`}
                             className={lessonClassName}
                           >
                             {content}
