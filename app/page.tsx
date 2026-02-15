@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { unstable_noStore } from "next/cache";
 import { prisma } from "@/lib/db";
 import { CourseCard } from "@/components/CourseCard";
 
-/** دائماً جلب بيانات حديثة حتى تختفي الكورسات المحذوفة من القائمة */
+/** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function HomePage() {
+  unstable_noStore();
   let courses: Awaited<ReturnType<typeof prisma.course.findMany>> = [];
   try {
     courses = await prisma.course.findMany({

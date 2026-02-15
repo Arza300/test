@@ -1,8 +1,10 @@
+import { unstable_noStore } from "next/cache";
 import { prisma } from "@/lib/db";
 import { CourseCard } from "@/components/CourseCard";
 
-/** دائماً جلب قائمة حديثة حتى تختفي الكورسات المحذوفة من صفحة جميع الدورات */
+/** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata = {
   title: "الدورات | منصتي التعليمية",
@@ -10,6 +12,7 @@ export const metadata = {
 };
 
 export default async function CoursesPage() {
+  unstable_noStore();
   let courses: Awaited<ReturnType<typeof prisma.course.findMany>> = [];
   try {
     courses = await prisma.course.findMany({
