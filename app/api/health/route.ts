@@ -30,7 +30,7 @@ export async function GET() {
       }
     }
   } else {
-    dbMessage = "لم يتم تعيين DATABASE_URL في Vercel. أضفه من Settings → Environment Variables ثم أعد النشر.";
+    dbMessage = "Environment variable not found: DATABASE_URL. في Vercel: Settings → Environment Variables → أضف Key: DATABASE_URL وقيمة رابط PostgreSQL (Neon/Supabase) ثم Redeploy. راجع ENV_VERCEL.md.";
   }
 
   const authOk = hasAuthSecret && hasAuthUrl;

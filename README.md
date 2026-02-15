@@ -2,6 +2,8 @@
 
 منصة تعليمية مبنية بـ **Next.js** و **Prisma**، جاهزة للنشر على **Vercel**.
 
+> **إذا ظهر على Vercel:** `Environment variable not found: DATABASE_URL` أو فشل تسجيل الدخول/إنشاء الحساب، أضف المتغيرات من **Vercel → Settings → Environment Variables** (راجع **ENV_VERCEL.md**).
+
 ## التقنيات
 
 - **Next.js 16** (App Router)
