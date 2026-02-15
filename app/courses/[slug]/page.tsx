@@ -159,33 +159,41 @@ export default async function CoursePage({ params }: Props) {
                 </h2>
                 <ul className="mt-4 space-y-2">
                   {course.lessons.map((lesson, i) => {
-                    const LessonWrapper = canAccessContent ? Link : "div";
-                    const lessonProps = canAccessContent
-                      ? { href: `/courses/${course!.slug}/lessons/${lesson.slug}` }
-                      : {};
+                    const lessonClassName = `flex items-center gap-3 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-3 ${canAccessContent ? "transition hover:border-[var(--color-primary)]/30" : ""}`;
+                    const content = (
+                      <>
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/20 text-sm font-medium text-[var(--color-primary)]">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium text-[var(--color-foreground)]">
+                            {lesson.titleAr ?? lesson.title}
+                          </span>
+                          {lesson.duration && (
+                            <span className="mr-2 text-sm text-[var(--color-muted)]">
+                              • {lesson.duration} دقيقة
+                            </span>
+                          )}
+                          {lesson.videoUrl && canAccessContent && (
+                            <span className="mr-2 text-xs text-[var(--color-primary)]">▶ فيديو</span>
+                          )}
+                        </div>
+                      </>
+                    );
                     return (
                       <li key={lesson.id}>
-                        <LessonWrapper
-                          {...lessonProps}
-                          className={`flex items-center gap-3 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-3 ${canAccessContent ? "transition hover:border-[var(--color-primary)]/30" : ""}`}
-                        >
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)]/20 text-sm font-medium text-[var(--color-primary)]">
-                            {i + 1}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <span className="font-medium text-[var(--color-foreground)]">
-                              {lesson.titleAr ?? lesson.title}
-                            </span>
-                            {lesson.duration && (
-                              <span className="mr-2 text-sm text-[var(--color-muted)]">
-                                • {lesson.duration} دقيقة
-                              </span>
-                            )}
-                            {lesson.videoUrl && canAccessContent && (
-                              <span className="mr-2 text-xs text-[var(--color-primary)]">▶ فيديو</span>
-                            )}
+                        {canAccessContent ? (
+                          <Link
+                            href={`/courses/${course.slug}/lessons/${lesson.slug}`}
+                            className={lessonClassName}
+                          >
+                            {content}
+                          </Link>
+                        ) : (
+                          <div className={lessonClassName}>
+                            {content}
                           </div>
-                        </LessonWrapper>
+                        )}
                       </li>
                     );
                   })}
