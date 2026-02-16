@@ -25,7 +25,7 @@ function LoginForm() {
     });
     setLoading(false);
     if (res?.error) {
-      setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
+      setError("البريد الإلكتروني او كلمة المرور غير صحيحة");
       return;
     }
     router.push(callbackUrl);
