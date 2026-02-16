@@ -71,15 +71,15 @@ body {
   min-height: 100vh;
 }
 
-/* في الوضع الساطع: تدرج أزرق فقط حتى منتصف الشاشة (النصف السفلي)، والنصف الأعلى أبيض */
+/* في الوضع الساطع: تدرج أزرق خفيف جداً حتى منتصف الشاشة */
 html.light body {
   background: linear-gradient(
     to top,
-    #0ea5e9 0%,
-    #38bdf8 12%,
-    #7dd3fc 28%,
-    #bae6fd 42%,
-    #e0f2fe 48%,
+    #e0f2fe 0%,
+    #e8f4fd 20%,
+    #f0f9ff 35%,
+    #f5faff 45%,
+    #fafcff 48%,
     #ffffff 50%,
     #ffffff 100%
   );
@@ -92,15 +92,15 @@ html.light main {
   background: #ffffff;
 }
 
-/* الصفحة الرئيسية فقط: التدرج الأزرق حتى منتصف الـ Hero (النصف السفلي من أول شاشة) */
+/* الصفحة الرئيسية فقط: تدرج أزرق خفيف جداً حتى منتصف الـ Hero */
 html.light .home-hero-gradient {
   background: linear-gradient(
     to top,
-    #0ea5e9 0%,
-    #38bdf8 12%,
-    #7dd3fc 28%,
-    #bae6fd 42%,
-    #e0f2fe 48%,
+    #e0f2fe 0%,
+    #e8f4fd 20%,
+    #f0f9ff 35%,
+    #f5faff 45%,
+    #fafcff 48%,
     #ffffff 50%,
     #ffffff 100%
   ) !important;
