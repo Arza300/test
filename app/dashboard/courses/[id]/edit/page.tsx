@@ -28,6 +28,7 @@ export default async function EditCoursePage({ params }: Props) {
     imageUrl: String(c.imageUrl ?? c.image_url ?? ""),
     price: String(Number(c.price ?? 0)),
     isPublished: Boolean(c.isPublished ?? c.is_published ?? true),
+    maxQuizAttempts: c.maxQuizAttempts ?? c.max_quiz_attempts ?? null,
     lessons: data.lessons.map((l) => {
       const row = l as Record<string, unknown>;
       return {

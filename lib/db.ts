@@ -198,13 +198,30 @@ export async function createCourse(data: {
   price: number;
   is_published: boolean;
   created_by_id: string;
+  max_quiz_attempts?: number | null;
 }): Promise<Course> {
   const id = generateId();
-  await sql`
-    INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id)
-    VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id})
-  `;
-  const c = await getCourseById(id);
+  let rows: Record<string, unknown>[];
+  try {
+    rows = await sql`
+      INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id, max_quiz_attempts)
+      VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id}, ${data.max_quiz_attempts ?? null})
+      RETURNING *
+    `;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("max_quiz_attempts") || (msg.includes("column") && msg.includes("does not exist"))) {
+      rows = await sql`
+        INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id)
+        VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id})
+        RETURNING *
+      `;
+    } else {
+      throw err;
+    }
+  }
+  const row = rows?.[0] as Record<string, unknown> | undefined;
+  const c = row ? rowToCamel(row) as Course : null;
   if (!c) throw new Error("فشل إنشاء الدورة");
   return c;
 }
@@ -219,6 +236,7 @@ export async function updateCourse(
     image_url?: string | null;
     price?: number;
     is_published?: boolean;
+    max_quiz_attempts?: number | null;
   }
 ): Promise<void> {
   if (data.title !== undefined) await sql`UPDATE "Course" SET title = ${data.title}, updated_at = NOW() WHERE id = ${id}`;
@@ -228,6 +246,7 @@ export async function updateCourse(
   if (data.image_url !== undefined) await sql`UPDATE "Course" SET image_url = ${data.image_url}, updated_at = NOW() WHERE id = ${id}`;
   if (data.price !== undefined) await sql`UPDATE "Course" SET price = ${data.price}, updated_at = NOW() WHERE id = ${id}`;
   if (data.is_published !== undefined) await sql`UPDATE "Course" SET is_published = ${data.is_published}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.max_quiz_attempts !== undefined) await sql`UPDATE "Course" SET max_quiz_attempts = ${data.max_quiz_attempts}, updated_at = NOW() WHERE id = ${id}`;
 }
 
 export async function deleteCourse(id: string): Promise<void> {
@@ -460,6 +479,106 @@ export async function createEnrollment(userId: string, courseId: string): Promis
 
 export async function deleteEnrollment(userId: string, courseId: string): Promise<void> {
   await sql`DELETE FROM "Enrollment" WHERE user_id = ${userId} AND course_id = ${courseId}`;
+}
+
+// ----- QuizAttempt (يتطلب تشغيل scripts/add-quiz-attempts.sql) -----
+export async function countQuizAttemptsByUserAndCourse(userId: string, courseId: string): Promise<number> {
+  const rows = await sql`
+    SELECT COUNT(*)::int as c FROM "QuizAttempt" qa
+    JOIN "Quiz" q ON q.id = qa.quiz_id
+    WHERE qa.user_id = ${userId} AND q.course_id = ${courseId}
+  `;
+  return Number((rows[0] as { c: number })?.c ?? 0);
+}
+
+export async function createQuizAttempt(
+  userId: string,
+  quizId: string,
+  score: number,
+  totalQuestions: number
+): Promise<void> {
+  const id = generateId();
+  await sql`
+    INSERT INTO "QuizAttempt" (id, user_id, quiz_id, score, total_questions, updated_at)
+    VALUES (${id}, ${userId}, ${quizId}, ${score}, ${totalQuestions}, NOW())
+  `;
+}
+
+export async function getQuizAttemptsByUserId(userId: string): Promise<
+  Array<{ quizTitle: string; courseTitle: string; score: number; totalQuestions: number; createdAt: Date }>
+> {
+  const rows = await sql`
+    SELECT q.title as quiz_title, c.title as course_title, qa.score, qa.total_questions, qa.created_at
+    FROM "QuizAttempt" qa
+    JOIN "Quiz" q ON q.id = qa.quiz_id
+    JOIN "Course" c ON c.id = q.course_id
+    WHERE qa.user_id = ${userId}
+    ORDER BY qa.created_at DESC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => ({
+    quizTitle: r.quiz_title,
+    courseTitle: r.course_title,
+    score: Number(r.score),
+    totalQuestions: Number(r.total_questions),
+    createdAt: r.created_at as Date,
+  }));
+}
+
+export async function getAllQuizAttemptsForAdmin(): Promise<
+  Array<{
+    userId: string;
+    userName: string;
+    userEmail: string;
+    quizId: string;
+    quizTitle: string;
+    courseId: string;
+    courseTitle: string;
+    score: number;
+    totalQuestions: number;
+    createdAt: Date;
+  }>
+> {
+  const rows = await sql`
+    SELECT u.id as user_id, u.name as user_name, u.email as user_email,
+           qa.quiz_id, q.title as quiz_title, c.id as course_id, c.title as course_title,
+           qa.score, qa.total_questions, qa.created_at
+    FROM "QuizAttempt" qa
+    JOIN "User" u ON u.id = qa.user_id
+    JOIN "Quiz" q ON q.id = qa.quiz_id
+    JOIN "Course" c ON c.id = q.course_id
+    ORDER BY qa.created_at DESC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => ({
+    userId: r.user_id as string,
+    userName: r.user_name as string,
+    userEmail: r.user_email as string,
+    quizId: r.quiz_id as string,
+    quizTitle: r.quiz_title as string,
+    courseId: r.course_id as string,
+    courseTitle: r.course_title as string,
+    score: Number(r.score),
+    totalQuestions: Number(r.total_questions),
+    createdAt: r.created_at as Date,
+  }));
+}
+
+/** إجمالي أرباح المنصة من مدفوعات الطلاب (رصيد مُخصوم عند التسجيل في كورسات مدفوعة) */
+export async function getTotalPlatformEarnings(): Promise<number> {
+  try {
+    const rows = await sql`SELECT COALESCE(SUM(amount), 0)::float as total FROM "Payment"`;
+    return Number((rows[0] as { total: number })?.total ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+export async function createPayment(userId: string, courseId: string, amount: number): Promise<void> {
+  if (amount <= 0) return;
+  const id = generateId();
+  await sql`
+    INSERT INTO "Payment" (id, user_id, course_id, amount)
+    VALUES (${id}, ${userId}, ${courseId}, ${amount})
+  `;
 }
 
 // ----- LiveStream -----

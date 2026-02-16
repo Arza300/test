@@ -21,16 +21,17 @@ enum UserRole {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String   @map("password_hash")
-  name      String
-  role      UserRole @default(STUDENT)
-  balance   Decimal  @default(0) @db.Decimal(10, 2) // رصيد الطالب (يُستخدم للأدمن)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  enrollments Enrollment[]
-  coursesCreated Course[] @relation("CourseCreator")
+  id             String        @id @default(cuid())
+  email          String        @unique
+  password       String        @map("password_hash")
+  name           String
+  role           UserRole      @default(STUDENT)
+  balance        Decimal       @default(0) @db.Decimal(10, 2) // رصيد الطالب (يُستخدم للأدمن)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  enrollments    Enrollment[]
+  coursesCreated Course[]      @relation("CourseCreator")
+  quizAttempts   QuizAttempt[]
 }
 
 model Category {
@@ -47,27 +48,28 @@ model Category {
 }
 
 model Course {
-  id          String   @id @default(cuid())
-  title       String
-  titleAr     String?  @map("title_ar")
-  slug        String   @unique
-  description String   @db.Text
-  shortDesc   String?  @map("short_desc") @db.VarChar(300)
-  imageUrl    String?  @map("image_url")
-  price       Decimal  @default(0) @db.Decimal(10, 2) // سعر الكورس
-  duration    String?  // مثل "4 أسابيع" أو "12 ساعة"
-  level       String?  // beginner | intermediate | advanced
-  isPublished Boolean  @default(false) @map("is_published")
-  order       Int      @default(0)
-  categoryId  String?  @map("category_id")
-  createdById String?  @map("created_by_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  createdBy   User?    @relation("CourseCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  lessons     Lesson[]
-  quizzes     Quiz[]
-  enrollments Enrollment[]
+  id               String   @id @default(cuid())
+  title            String
+  titleAr          String?  @map("title_ar")
+  slug             String   @unique
+  description      String   @db.Text
+  shortDesc        String?  @map("short_desc") @db.VarChar(300)
+  imageUrl         String?  @map("image_url")
+  price            Decimal  @default(0) @db.Decimal(10, 2) // سعر الكورس
+  duration         String?  // مثل "4 أسابيع" أو "12 ساعة"
+  level            String?  // beginner | intermediate | advanced
+  isPublished      Boolean  @default(false) @map("is_published")
+  order            Int      @default(0)
+  maxQuizAttempts  Int?     @map("max_quiz_attempts") // حد مرات دخول الاختبار في الكورس (null = غير محدود)
+  categoryId       String?  @map("category_id")
+  createdById      String?  @map("created_by_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  category         Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdBy        User?    @relation("CourseCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  lessons          Lesson[]
+  quizzes          Quiz[]
+  enrollments      Enrollment[]
 }
 
 enum QuestionType {
@@ -77,14 +79,15 @@ enum QuestionType {
 }
 
 model Quiz {
-  id        String   @id @default(cuid())
-  title     String
-  courseId  String   @map("course_id")
-  order     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  questions Question[]
+  id          String        @id @default(cuid())
+  title       String
+  courseId    String        @map("course_id")
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  quizAttempts QuizAttempt[]
 }
 
 model Question {
@@ -110,13 +113,25 @@ model QuestionOption {
 }
 
 model Enrollment {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  courseId  String   @map("course_id")
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  courseId   String   @map("course_id")
   enrolledAt DateTime @default(now()) @map("enrolled_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   @@unique([userId, courseId])
+}
+
+model QuizAttempt {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  quizId         String   @map("quiz_id")
+  score          Int      // عدد الإجابات الصحيحة
+  totalQuestions Int      @map("total_questions")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz           Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
 }
 
 model Lesson {

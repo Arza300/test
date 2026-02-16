@@ -3,35 +3,56 @@
 @theme inline {
   --font-sans: var(--font-outfit), system-ui, sans-serif;
   --font-display: var(--font-outfit), system-ui, sans-serif;
-  --color-background: #fafaf9;
-  --color-foreground: #1c1917;
-  --color-surface: #ffffff;
-  --color-border: #e7e5e4;
-  --color-primary: #0d9488;
-  --color-primary-hover: #0f766e;
-  --color-primary-light: #ccfbf1;
-  --color-accent: #f59e0b;
-  --color-muted: #78716c;
-  --color-success: #059669;
   --radius-card: 1rem;
   --radius-btn: 0.75rem;
+}
+
+/* الوضع النهاري: أبيض وأزرق */
+html.light {
+  --color-background: #f0f7ff;
+  --color-foreground: #1e3a5f;
+  --color-surface: #ffffff;
+  --color-border: #bfdbfe;
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-light: #dbeafe;
+  --color-accent: #f59e0b;
+  --color-muted: #64748b;
+  --color-success: #059669;
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
   --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
 }
 
-@media (prefers-color-scheme: dark) {
-  @theme inline {
-    --color-background: #0c0a09;
-    --color-foreground: #fafaf9;
-    --color-surface: #1c1917;
-    --color-border: #292524;
-    --color-primary: #2dd4bf;
-    --color-primary-hover: #5eead4;
-    --color-primary-light: #134e4a;
-    --color-muted: #a8a29e;
-    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3);
-    --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.4);
-  }
+/* الوضع الليلي: الألوان الحالية */
+html.dark {
+  --color-background: #0c0a09;
+  --color-foreground: #fafaf9;
+  --color-surface: #1c1917;
+  --color-border: #292524;
+  --color-primary: #2dd4bf;
+  --color-primary-hover: #5eead4;
+  --color-primary-light: #134e4a;
+  --color-accent: #f59e0b;
+  --color-muted: #a8a29e;
+  --color-success: #059669;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.4);
+}
+
+/* افتراضي: وضع ليلي إذا لم يُختر وضع */
+html:not(.light):not(.dark) {
+  --color-background: #0c0a09;
+  --color-foreground: #fafaf9;
+  --color-surface: #1c1917;
+  --color-border: #292524;
+  --color-primary: #2dd4bf;
+  --color-primary-hover: #5eead4;
+  --color-primary-light: #134e4a;
+  --color-accent: #f59e0b;
+  --color-muted: #a8a29e;
+  --color-success: #059669;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.4);
 }
 
 :root {

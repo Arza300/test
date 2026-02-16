@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getCourseById, getEnrollment, getUserById, createEnrollment, updateUser } from "@/lib/db";
+import { getCourseById, getEnrollment, getUserById, createEnrollment, updateUser, createPayment } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
   if (coursePrice > 0) {
     const newBalance = String(Math.max(0, userBalance - coursePrice));
     await updateUser(session.user.id, { balance: newBalance });
+    await createPayment(session.user.id, courseId, coursePrice);
   }
   await createEnrollment(session.user.id, courseId);
 

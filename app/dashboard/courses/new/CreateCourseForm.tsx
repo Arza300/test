@@ -18,6 +18,7 @@ export function CreateCourseForm() {
     shortDesc: "",
     imageUrl: "",
     price: "",
+    maxQuizAttempts: "",
   });
   const [lessons, setLessons] = useState<LessonRow[]>([{ title: "", videoUrl: "", content: "", pdfUrl: "" }]);
   const [quizzes, setQuizzes] = useState<QuizRow[]>([{ title: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
@@ -135,6 +136,7 @@ export function CreateCourseForm() {
       shortDesc: form.shortDesc.trim() || undefined,
       imageUrl: form.imageUrl.trim() || undefined,
       price: form.price ? parseFloat(form.price) : 0,
+      maxQuizAttempts: form.maxQuizAttempts.trim() ? parseInt(form.maxQuizAttempts, 10) : null,
       lessons: lessons
         .filter((l) => l.title.trim())
         .map((l) => ({
@@ -386,7 +388,23 @@ export function CreateCourseForm() {
 
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
         <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">الاختبارات</h3>
-        <p className="mb-4 text-sm text-[var(--color-muted)]">اختياري: أضف اختبارات وأسئلة اختيارية أو مقالية</p>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">اختياري: يمكنك إنشاء الكورس بدون اختبارات، أو إضافة اختبارات وأسئلة اختيارية أو مقالية</p>
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-[var(--color-foreground)]">
+            حد مرات دخول الاختبار (اختياري)
+          </label>
+          <input
+            type="number"
+            min="1"
+            placeholder="فارغ = غير محدود"
+            value={form.maxQuizAttempts}
+            onChange={(e) => setForm((f) => ({ ...f, maxQuizAttempts: e.target.value }))}
+            className="mt-1 w-full max-w-xs rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+          />
+          <p className="mt-1 text-xs text-[var(--color-muted)]">
+            أقصى عدد مرات يسمح فيها للطالب بحل اختبارات هذا الكورس (مجموع كل الاختبارات). اتركه فارغاً لعدم التحديد.
+          </p>
+        </div>
         {quizzes.map((quiz, qi) => (
           <div key={qi} className="mb-6 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <div className="mb-3 flex items-center justify-between">
@@ -397,11 +415,9 @@ export function CreateCourseForm() {
                 placeholder="عنوان الاختبار"
                 className="flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
               />
-              {quizzes.length > 1 && (
-                <button type="button" onClick={() => removeQuiz(qi)} className="mr-2 text-sm text-red-600 hover:underline">
-                  حذف الاختبار
-                </button>
-              )}
+              <button type="button" onClick={() => removeQuiz(qi)} className="mr-2 text-sm text-red-600 hover:underline">
+                حذف الاختبار
+              </button>
             </div>
             {quiz.questions.map((q, qti) => (
               <div key={qti} className="mb-4 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3">

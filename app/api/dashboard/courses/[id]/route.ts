@@ -37,6 +37,7 @@ export async function PUT(
     imageUrl?: string;
     price?: number;
     isPublished?: boolean;
+    maxQuizAttempts?: number | null;
     lessons?: LessonInput[];
     quizzes?: QuizInput[];
   };
@@ -66,6 +67,7 @@ export async function PUT(
     image_url: body.imageUrl?.trim() || null,
     price: body.price ?? 0,
     is_published: body.isPublished ?? true,
+    max_quiz_attempts: body.maxQuizAttempts ?? null,
   });
 
   await deleteLessonsByCourseId(id);
@@ -146,6 +148,7 @@ export async function GET(
     imageUrl: c.imageUrl ?? c.image_url,
     price: Number(c.price ?? 0),
     isPublished: c.isPublished ?? c.is_published ?? true,
+    maxQuizAttempts: c.maxQuizAttempts ?? c.max_quiz_attempts ?? null,
     lessons: data.lessons.map((l) => ({
       title: l.title,
       titleAr: l.titleAr ?? l.title_ar,

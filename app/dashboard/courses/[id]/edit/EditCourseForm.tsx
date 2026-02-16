@@ -16,6 +16,7 @@ type InitialData = {
   imageUrl: string;
   price: string;
   isPublished: boolean;
+  maxQuizAttempts: number | null;
   lessons: LessonRow[];
   quizzes: QuizRow[];
 };
@@ -34,6 +35,7 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
     imageUrl: initialData.imageUrl,
     price: initialData.price,
     isPublished: initialData.isPublished,
+    maxQuizAttempts: initialData.maxQuizAttempts != null ? String(initialData.maxQuizAttempts) : "",
   });
   const [lessons, setLessons] = useState<LessonRow[]>(
     initialData.lessons.length > 0 ? initialData.lessons : [defaultLesson]
@@ -157,6 +159,7 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
       imageUrl: form.imageUrl.trim() || undefined,
       price: form.price ? parseFloat(form.price) : 0,
       isPublished: form.isPublished,
+      maxQuizAttempts: form.maxQuizAttempts.trim() ? parseInt(form.maxQuizAttempts, 10) : null,
       lessons: lessons
         .filter((l) => l.title.trim())
         .map((l) => ({
@@ -260,6 +263,11 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
           <div>
             <label className="block text-sm font-medium text-[var(--color-foreground)]">السعر (ج.م)</label>
             <input type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">حد مرات دخول الاختبار (اختياري)</label>
+            <input type="number" min="1" placeholder="فارغ = غير محدود" value={form.maxQuizAttempts} onChange={(e) => setForm((f) => ({ ...f, maxQuizAttempts: e.target.value }))} className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2" />
+            <p className="mt-1 text-xs text-[var(--color-muted)]">أقصى عدد مرات يسمح فيها للطالب بحل اختبارات هذا الكورس (مجموع كل الاختبارات). اتركه فارغاً لعدم التحديد.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-foreground)]">عنوان الدورة (عربي) *</label>

@@ -31,14 +31,17 @@ export function QuizPageClient({ quizId }: { quizId: string }) {
       return;
     }
     fetch(`/api/quizzes/${encodeURIComponent(quizId)}`)
-      .then((res) => {
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
+          if (res.status === 403 && data.id) {
+            setQuiz(data);
+            setError(null);
+            return;
+          }
           if (res.status === 404) throw new Error("الاختبار غير موجود");
-          throw new Error("فشل تحميل الاختبار");
+          throw new Error(data.error ?? "فشل تحميل الاختبار");
         }
-        return res.json();
-      })
-      .then((data) => {
         setQuiz(data);
         setError(null);
       })
@@ -75,13 +78,36 @@ export function QuizPageClient({ quizId }: { quizId: string }) {
     ? `/courses/${encodeURIComponent(quiz.course.slug.trim())}`
     : `/courses/${quiz.course.id}`;
 
+  const q = quiz as QuizApiPayload & { canAttempt?: boolean; attemptsUsed?: number; maxQuizAttempts?: number | null };
+  if (q.canAttempt === false) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        <Link href={courseHref} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+          ← العودة إلى {courseTitle}
+        </Link>
+        <div className="mt-4 rounded-[var(--radius-card)] border border-amber-500/50 bg-amber-500/10 p-6">
+          <h1 className="text-xl font-bold text-[var(--color-foreground)]">{quiz.title}</h1>
+          <p className="mt-2 text-[var(--color-foreground)]">
+            تم استنفاد عدد المحاولات المسموح بها لهذا الاختبار في الكورس.
+            {q.maxQuizAttempts != null && <span className="mr-1">(الحد: {q.maxQuizAttempts} محاولة)</span>}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <Link href={courseHref} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
         ← العودة إلى {courseTitle}
       </Link>
       <h1 className="mt-4 text-2xl font-bold text-[var(--color-foreground)]">{quiz.title}</h1>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">{quiz.questions.length} سؤال</p>
+      <p className="mt-1 text-sm text-[var(--color-muted)]">
+        {quiz.questions.length} سؤال
+        {(q.maxQuizAttempts != null && q.attemptsUsed != null) && (
+          <span className="mr-2"> — استخدمت {q.attemptsUsed} من {q.maxQuizAttempts} محاولة</span>
+        )}
+      </p>
       <QuizTake quiz={quiz} />
     </div>
   );

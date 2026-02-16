@@ -1,0 +1,167 @@
+-- ============================================================
+-- تهيئة قاعدة بيانات Neon من الصفر — تشغيل هذا الملف مرة واحدة
+-- من لوحة Neon: SQL Editor → لصق المحتوى وتشغيله
+-- ============================================================
+
+-- 1) المستخدمون
+CREATE TABLE IF NOT EXISTS "User" (
+  id             TEXT PRIMARY KEY,
+  email          TEXT NOT NULL UNIQUE,
+  password_hash  TEXT NOT NULL,
+  name           TEXT NOT NULL,
+  role           TEXT NOT NULL DEFAULT 'STUDENT' CHECK (role IN ('ADMIN', 'ASSISTANT_ADMIN', 'STUDENT')),
+  balance        DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2) التصنيفات
+CREATE TABLE IF NOT EXISTS "Category" (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  name_ar     TEXT,
+  slug        TEXT NOT NULL UNIQUE,
+  description TEXT,
+  image_url   TEXT,
+  "order"     INT NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 3) الكورسات (تعتمد على User و Category)
+CREATE TABLE IF NOT EXISTS "Course" (
+  id                  TEXT PRIMARY KEY,
+  title               TEXT NOT NULL,
+  title_ar            TEXT,
+  slug                TEXT NOT NULL UNIQUE,
+  description         TEXT NOT NULL,
+  short_desc          VARCHAR(300),
+  image_url           TEXT,
+  price               DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  duration            TEXT,
+  level               TEXT,
+  is_published        BOOLEAN NOT NULL DEFAULT false,
+  "order"             INT NOT NULL DEFAULT 0,
+  max_quiz_attempts   INT,
+  category_id         TEXT REFERENCES "Category"(id) ON DELETE SET NULL,
+  created_by_id       TEXT REFERENCES "User"(id) ON DELETE SET NULL,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS "Course_slug_idx" ON "Course"(slug);
+CREATE INDEX IF NOT EXISTS "Course_category_id_idx" ON "Course"(category_id);
+CREATE INDEX IF NOT EXISTS "Course_created_by_id_idx" ON "Course"(created_by_id);
+
+-- 4) الدروس
+CREATE TABLE IF NOT EXISTS "Lesson" (
+  id         TEXT PRIMARY KEY,
+  course_id  TEXT NOT NULL REFERENCES "Course"(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL,
+  title_ar   TEXT,
+  slug       TEXT NOT NULL,
+  content    TEXT,
+  video_url  TEXT,
+  pdf_url    TEXT,
+  duration   INT,
+  "order"    INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(course_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS "Lesson_course_id_idx" ON "Lesson"(course_id);
+
+-- 5) الاختبارات
+CREATE TABLE IF NOT EXISTS "Quiz" (
+  id         TEXT PRIMARY KEY,
+  course_id  TEXT NOT NULL REFERENCES "Course"(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL,
+  "order"    INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS "Quiz_course_id_idx" ON "Quiz"(course_id);
+
+-- 6) أسئلة الاختبار
+CREATE TABLE IF NOT EXISTS "Question" (
+  id            TEXT PRIMARY KEY,
+  quiz_id       TEXT NOT NULL REFERENCES "Quiz"(id) ON DELETE CASCADE,
+  type          TEXT NOT NULL CHECK (type IN ('MULTIPLE_CHOICE', 'ESSAY', 'TRUE_FALSE')),
+  question_text TEXT NOT NULL,
+  "order"       INT NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS "Question_quiz_id_idx" ON "Question"(quiz_id);
+
+-- 7) خيارات الأسئلة
+CREATE TABLE IF NOT EXISTS "QuestionOption" (
+  id          TEXT PRIMARY KEY,
+  question_id TEXT NOT NULL REFERENCES "Question"(id) ON DELETE CASCADE,
+  text        TEXT NOT NULL,
+  is_correct  BOOLEAN NOT NULL DEFAULT false,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS "QuestionOption_question_id_idx" ON "QuestionOption"(question_id);
+
+-- 8) التسجيل في الكورسات
+CREATE TABLE IF NOT EXISTS "Enrollment" (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  course_id   TEXT NOT NULL REFERENCES "Course"(id) ON DELETE CASCADE,
+  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, course_id)
+);
+
+CREATE INDEX IF NOT EXISTS "Enrollment_user_id_idx" ON "Enrollment"(user_id);
+CREATE INDEX IF NOT EXISTS "Enrollment_course_id_idx" ON "Enrollment"(course_id);
+
+-- 9) محاولات الاختبار
+CREATE TABLE IF NOT EXISTS "QuizAttempt" (
+  id              TEXT PRIMARY KEY,
+  user_id         TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  quiz_id         TEXT NOT NULL REFERENCES "Quiz"(id) ON DELETE CASCADE,
+  score           INT NOT NULL,
+  total_questions INT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS "QuizAttempt_user_quiz_idx" ON "QuizAttempt"(user_id, quiz_id);
+CREATE INDEX IF NOT EXISTS "QuizAttempt_user_id_idx" ON "QuizAttempt"(user_id);
+
+-- 10) المدفوعات (رصيد مدفوع — أرباح المنصة)
+CREATE TABLE IF NOT EXISTS "Payment" (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+  course_id  TEXT NOT NULL REFERENCES "Course"(id) ON DELETE CASCADE,
+  amount     DECIMAL(10, 2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS "Payment_created_at_idx" ON "Payment"(created_at);
+
+-- 11) البث المباشر
+CREATE TABLE IF NOT EXISTS "LiveStream" (
+  id                TEXT PRIMARY KEY,
+  course_id         TEXT NOT NULL REFERENCES "Course"(id) ON DELETE CASCADE,
+  title             TEXT NOT NULL,
+  title_ar          TEXT,
+  provider          TEXT NOT NULL CHECK (provider IN ('zoom', 'google_meet')),
+  meeting_url       TEXT NOT NULL,
+  meeting_id        TEXT,
+  meeting_password  TEXT,
+  scheduled_at      TIMESTAMPTZ NOT NULL,
+  description       TEXT,
+  "order"           INT NOT NULL DEFAULT 0,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS "LiveStream_course_id_idx" ON "LiveStream"(course_id);
+CREATE INDEX IF NOT EXISTS "LiveStream_scheduled_at_idx" ON "LiveStream"(scheduled_at);

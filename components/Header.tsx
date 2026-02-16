@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
 import type { UserRole } from "@/lib/types";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 function UserMenu() {
   const { data: session, status } = useSession();
@@ -85,7 +86,8 @@ export function Header() {
         >
           منصة أستاذ عصام محي
         </Link>
-        <nav className="flex items-center gap-4 sm:gap-6">
+        <nav className="flex items-center gap-3 sm:gap-6">
+          <ThemeToggle />
           <Link
             href="/"
             className="text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-foreground)]"

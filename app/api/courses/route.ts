@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
     shortDesc?: string;
     imageUrl?: string;
     price?: number;
+    maxQuizAttempts?: number | null;
     lessons?: LessonInput[];
     quizzes?: QuizInput[];
   };
@@ -63,17 +64,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "رابط الدورة مستخدم مسبقاً" }, { status: 400 });
   }
 
-  const course = await createCourse({
-    title,
-    title_ar: title,
-    slug,
-    description,
-    short_desc: body.shortDesc?.trim() || null,
-    image_url: body.imageUrl?.trim() || null,
-    price: body.price ?? 0,
-    is_published: true,
-    created_by_id: session.user.id,
-  });
+  let course;
+  try {
+    course = await createCourse({
+      title,
+      title_ar: title,
+      slug,
+      description,
+      short_desc: body.shortDesc?.trim() || null,
+      image_url: body.imageUrl?.trim() || null,
+      price: body.price ?? 0,
+      is_published: true,
+      created_by_id: session.user.id,
+      max_quiz_attempts: body.maxQuizAttempts ?? null,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("createCourse error:", err);
+    if (msg.includes("foreign key") || msg.includes("فشل إنشاء الدورة")) {
+      return NextResponse.json(
+        { error: "فشل إنشاء الدورة. جرّب تسجيل الخروج ثم الدخول مرة أخرى (حسابك قد لا يكون في قاعدة البيانات الحالية)." },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json(
+      { error: msg || "فشل إنشاء الدورة" },
+      { status: 500 }
+    );
+  }
 
   const lessons = body.lessons ?? [];
   for (let i = 0; i < lessons.length; i++) {

@@ -111,12 +111,9 @@ export default async function HomePage() {
         ) : (
           <div className="mt-10 rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 p-12 text-center">
             <p className="text-[var(--color-muted)]">
-              لا توجد دورات حالياً. أضف رابط قاعدة البيانات في{" "}
-              <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">
-                .env
-              </code>{" "}
-              ثم نفّذ <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">npm run db:push</code> و{" "}
-              <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">npm run db:seed</code>.
+              لا توجد دورات حالياً. تأكد من ضبط <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">DATABASE_URL</code> في{" "}
+              <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">.env</code>
+              ، وإذا كانت الجداول غير موجودة نفّذ سكربت <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">scripts/init-neon-database.sql</code> في Neon (SQL Editor).
             </p>
           </div>
         )}

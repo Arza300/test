@@ -6,6 +6,7 @@ import type { QuizApiPayload } from "./QuizPageClient";
 export function QuizTake({ quiz }: { quiz: QuizApiPayload }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   function setAnswer(questionId: string, value: string) {
     setAnswers((a) => ({ ...a, [questionId]: value }));
@@ -29,6 +30,35 @@ export function QuizTake({ quiz }: { quiz: QuizApiPayload }) {
   const totalScored = quiz.questions.filter(
     (q) => q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE"
   ).length;
+
+  async function handleSubmit() {
+    let s = 0;
+    quiz.questions.forEach((q) => {
+      if (q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE") {
+        const opt = q.options.find((o) => o.id === answers[q.id]);
+        if (opt?.isCorrect) s++;
+      }
+    });
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/quizzes/${encodeURIComponent(quiz.id)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ score: s, totalQuestions: totalScored }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? "فشل تسجيل النتيجة");
+        setSubmitting(false);
+        return;
+      }
+      setSubmitted(true);
+    } catch {
+      alert("فشل الاتصال بالخادم");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="mt-8 space-y-8">
@@ -83,11 +113,11 @@ export function QuizTake({ quiz }: { quiz: QuizApiPayload }) {
       {!submitted ? (
         <button
           type="button"
-          onClick={() => setSubmitted(true)}
-          disabled={!allAnswered}
+          onClick={handleSubmit}
+          disabled={!allAnswered || submitting}
           className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-6 py-3 font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
         >
-          إنهاء وإظهار النتيجة
+          {submitting ? "جاري التسجيل..." : "إنهاء وإظهار النتيجة"}
         </button>
       ) : (
         <div className="rounded-[var(--radius-card)] border border-[var(--color-primary)] bg-[var(--color-primary-light)]/30 p-6">

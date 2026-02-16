@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     } else if (message.includes("does not exist") || message.includes("Unknown table") || message.includes("relation") || message.includes("P1001") || message.includes("P2021") || message.includes("Can't reach")) {
       userMessage = isVercel
         ? "الاتصال بقاعدة البيانات فشل. تأكد أن DATABASE_URL على Vercel يشير إلى قاعدة سحابية (Neon/Supabase) وليس localhost، ثم أعد النشر. للتحقق: افتح /api/health"
-        : "جدول المستخدمين غير موجود أو قاعدة البيانات غير متصلة. نفّذ: npm run db:push (بعد إضافة DATABASE_URL في .env)";
+        : "جدول المستخدمين غير موجود أو قاعدة البيانات غير متصلة. افتح لوحة Neon → SQL Editor، انسخ محتوى ملف scripts/init-neon-database.sql ونفّذه مرة واحدة لإنشاء الجداول.";
     } else if (process.env.NODE_ENV === "development" && message) {
       userMessage = message;
     }

@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { getUserById, getEnrollmentsWithCourseByUserId, countUsersByRole, countCourses } from "@/lib/db";
+import { getUserById, getEnrollmentsWithCourseByUserId, countUsersByRole, countCourses, getAllQuizAttemptsForAdmin, getTotalPlatformEarnings } from "@/lib/db";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -77,13 +77,18 @@ export default async function DashboardPage() {
   }
 
   // أدمن أو مساعد أدمن
-  const studentsCount = await countUsersByRole("STUDENT");
-  const coursesCount = await countCourses();
+  const [studentsCount, coursesCount, quizAttempts, totalEarnings] = await Promise.all([
+    countUsersByRole("STUDENT"),
+    countCourses(),
+    getAllQuizAttemptsForAdmin().catch(() => []),
+    getTotalPlatformEarnings(),
+  ]);
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
-      <Link
-        href="/dashboard/students"
+    <div className="space-y-8">
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Link
+          href="/dashboard/students"
         className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
       >
         <h3 className="font-semibold text-[var(--color-foreground)]">الطلاب</h3>
@@ -109,17 +114,39 @@ export default async function DashboardPage() {
         <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
         <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بثوط Zoom أو Google Meet وربطها بالكورسات</p>
       </Link>
-      {isAdmin && (
-        <div className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            كمدير، يمكنك إضافة رصيد لحسابات الطلاب من صفحة{" "}
-            <Link href="/dashboard/students" className="font-medium underline">
-              الطلاب
-            </Link>
-            .
-          </p>
-        </div>
-      )}
+        {isAdmin && (
+          <div className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              كمدير، يمكنك إضافة رصيد لحسابات الطلاب من صفحة{" "}
+              <Link href="/dashboard/students" className="font-medium underline">
+                الطلاب
+              </Link>
+              .
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* إحصائيات الطلاب — بجانب الاختيارات الكبيرة */}
+      <div className="grid gap-6 sm:grid-cols-2">
+        <Link
+          href="/dashboard/statistics"
+          className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+        >
+          <h3 className="font-semibold text-[var(--color-foreground)]">إحصائيات الطلاب</h3>
+          <div className="mt-3 flex flex-wrap gap-4">
+            <span className="text-2xl font-bold text-[var(--color-primary)]">{studentsCount}</span>
+            <span className="text-sm text-[var(--color-muted)]">طالب</span>
+            <span className="text-[var(--color-muted)]">·</span>
+            <span className="text-2xl font-bold text-[var(--color-primary)]">{quizAttempts.length}</span>
+            <span className="text-sm text-[var(--color-muted)]">محاولة اختبار</span>
+            <span className="text-[var(--color-muted)]">·</span>
+            <span className="text-2xl font-bold text-[var(--color-primary)]">{totalEarnings.toFixed(2)}</span>
+            <span className="text-sm text-[var(--color-muted)]">ج.م أرباح</span>
+          </div>
+          <p className="mt-2 text-sm text-[var(--color-muted)]">عرض التفاصيل والدرجات وإجمالي الأرباح</p>
+        </Link>
+      </div>
     </div>
   );
 }
