@@ -516,8 +516,8 @@ export async function getQuizAttemptsByUserId(userId: string): Promise<
     ORDER BY qa.created_at DESC
   `;
   return (rows as Record<string, unknown>[]).map((r) => ({
-    quizTitle: r.quiz_title,
-    courseTitle: r.course_title,
+    quizTitle: String(r.quiz_title ?? ""),
+    courseTitle: String(r.course_title ?? ""),
     score: Number(r.score),
     totalQuestions: Number(r.total_questions),
     createdAt: r.created_at as Date,
