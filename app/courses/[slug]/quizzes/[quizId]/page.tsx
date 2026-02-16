@@ -26,7 +26,12 @@ export default async function QuizPage({ params }: Props) {
 
   if (!quizId || quizId.length < 20) notFound();
 
-  const session = await getServerSession(authOptions);
+  let session = null;
+  try {
+    session = await getServerSession(authOptions);
+  } catch {
+    // تجاهل خطأ الجلسة (مثلاً على Vercel) — نعرض الصفحة دون منع
+  }
 
   let quiz: Awaited<ReturnType<typeof prisma.quiz.findUnique>> = null;
   try {
@@ -58,21 +63,46 @@ export default async function QuizPage({ params }: Props) {
       });
       if (en) canAccess = true;
     } catch {
-      notFound();
+      // لا نمنع عرض الصفحة عند خطأ في التحقق من التسجيل (مثلاً على Vercel)
     }
   }
-  if (!canAccess) notFound();
 
   const courseTitle = course.titleAr ?? course.title;
+
+  /** نسخة قابلة للتسلسل فقط للعميل — تجنّب أخطاء التسلسل على Vercel مع Neon */
+  const quizForClient = {
+    id: quiz.id,
+    title: quiz.title,
+    courseId: quiz.courseId,
+    order: quiz.order,
+    questions: quiz.questions.map((q) => ({
+      id: q.id,
+      type: q.type,
+      questionText: q.questionText,
+      order: q.order,
+      quizId: q.quizId,
+      options: q.options.map((o) => ({
+        id: o.id,
+        text: o.text,
+        isCorrect: o.isCorrect,
+        questionId: o.questionId,
+      })),
+    })),
+  };
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       <Link href={courseHref(course)} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
         ← العودة إلى {courseTitle}
       </Link>
+      {!canAccess && (
+        <p className="mt-4 rounded-[var(--radius-btn)] border border-[var(--color-primary)]/50 bg-[var(--color-primary-light)]/20 px-4 py-2 text-sm text-[var(--color-foreground)]">
+          سجّل في الدورة لتتمكن من حل الاختبار وتسجيل نتيجتك.
+        </p>
+      )}
       <h1 className="mt-4 text-2xl font-bold text-[var(--color-foreground)]">{quiz.title}</h1>
       <p className="mt-1 text-sm text-[var(--color-muted)]">{quiz.questions.length} سؤال</p>
-      <QuizTake quiz={quiz} />
+      <QuizTake quiz={quizForClient} />
     </div>
   );
 }
