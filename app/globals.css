@@ -85,3 +85,21 @@ body {
 .loading-dot {
   animation: loading-dot 1.4s ease-in-out infinite both;
 }
+
+/* حركة طفو خفيفة لأيقونات المدرس */
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.float-icon {
+  animation: float-gentle 3.5s ease-in-out infinite;
+}
+
+.float-icon-1 { animation-delay: 0s; }
+.float-icon-2 { animation-delay: 0.6s; }
+.float-icon-3 { animation-delay: 1.2s; }

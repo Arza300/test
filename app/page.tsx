@@ -50,13 +50,32 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* صورة المدرس - على اليمين (في RTL اليسار) */}
+            {/* صورة المدرس - على اليمين (في RTL اليسار) مع أيقونات عائمة */}
             <div className="flex-shrink-0 order-1 lg:order-2">
               <div className="relative">
                 <img
                   src="/instructor.png"
                   alt="عصام محي"
-                  className="h-60 w-60 rounded-full border-4 border-black object-cover shadow-xl sm:h-72 sm:w-72 lg:h-80 lg:w-80"
+                  className="h-60 w-60 border-4 border-black border-dotted object-cover shadow-xl sm:h-72 sm:w-72 lg:h-80 lg:w-80"
+                />
+                {/* أيقونات تطفو بجانب صورة المدرس */}
+                <img
+                  src="/images/ruler.png"
+                  alt=""
+                  className="float-icon float-icon-1 absolute -left-10 top-0 h-12 w-12 object-contain drop-shadow-md sm:-left-12 sm:top-2 sm:h-14 sm:w-14 lg:-left-14 lg:top-0 lg:h-16 lg:w-16"
+                  aria-hidden
+                />
+                <img
+                  src="/images/notebook.png"
+                  alt=""
+                  className="float-icon float-icon-2 absolute -right-10 bottom-4 h-12 w-12 object-contain drop-shadow-md sm:-right-12 sm:bottom-6 sm:h-14 sm:w-14 lg:-right-14 lg:bottom-4 lg:h-16 lg:w-16"
+                  aria-hidden
+                />
+                <img
+                  src="/images/pencil.png"
+                  alt=""
+                  className="float-icon float-icon-3 absolute -bottom-4 left-2 h-11 w-11 object-contain drop-shadow-md sm:left-4 sm:-bottom-5 sm:h-12 sm:w-12 lg:left-2 lg:-bottom-4 lg:h-14 lg:w-14"
+                  aria-hidden
                 />
               </div>
             </div>

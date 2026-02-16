@@ -101,9 +101,28 @@ export default async function CoursePage({ params }: Props) {
                 <img
                   src="/instructor.png"
                   alt="عصام محي"
-                  className="h-32 w-32 rounded-full object-cover ring-4 ring-[var(--color-primary)]/20"
+                  className="h-32 w-32 border-2 border-black border-dotted object-cover"
                 />
                 <div className="absolute bottom-0 right-0 h-6 w-6 rounded-full border-4 border-[var(--color-surface)] bg-[var(--color-success)]" />
+                {/* أيقونات تطفو بجانب صورة المدرس */}
+                <img
+                  src="/images/ruler.png"
+                  alt=""
+                  className="float-icon float-icon-1 absolute -left-8 top-0 h-9 w-9 object-contain drop-shadow sm:-left-9 sm:h-10 sm:w-10"
+                  aria-hidden
+                />
+                <img
+                  src="/images/notebook.png"
+                  alt=""
+                  className="float-icon float-icon-2 absolute -right-8 bottom-2 h-9 w-9 object-contain drop-shadow sm:-right-9 sm:h-10 sm:w-10"
+                  aria-hidden
+                />
+                <img
+                  src="/images/pencil.png"
+                  alt=""
+                  className="float-icon float-icon-3 absolute -bottom-2 left-1 h-8 w-8 object-contain drop-shadow sm:left-2 sm:h-9 sm:w-9"
+                  aria-hidden
+                />
               </div>
               <h3 className="text-xl font-bold text-[var(--color-foreground)]">عصام محي</h3>
               <p className="mt-1 text-sm text-[var(--color-muted)]">مدرس محترف</p>
