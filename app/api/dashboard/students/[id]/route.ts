@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserByEmailExcludingId, updateUser } from "@/lib/db";
 
 const ROLES = ["ADMIN", "ASSISTANT_ADMIN", "STUDENT"] as const;
 
@@ -25,15 +25,13 @@ export async function PATCH(
   const data: { name?: string; email?: string; role?: "ADMIN" | "ASSISTANT_ADMIN" | "STUDENT" } = {};
   if (body.name !== undefined && body.name.trim()) data.name = body.name.trim();
   if (body.email !== undefined && body.email.trim()) {
-    const existing = await prisma.user.findFirst({
-      where: { email: body.email.trim(), id: { not: id } },
-    });
+    const existing = await getUserByEmailExcludingId(body.email.trim(), id);
     if (existing) {
       return NextResponse.json({ error: "البريد الإلكتروني مستخدم لحساب آخر" }, { status: 400 });
     }
     data.email = body.email.trim();
   }
-  if (body.role !== undefined && ROLES.includes(body.role as typeof ROLES[number])) {
+  if (body.role !== undefined && ROLES.includes(body.role as (typeof ROLES)[number])) {
     data.role = body.role as "ADMIN" | "ASSISTANT_ADMIN" | "STUDENT";
   }
 
@@ -41,10 +39,7 @@ export async function PATCH(
     return NextResponse.json({ error: "لا يوجد شيء للتحديث" }, { status: 400 });
   }
 
-  await prisma.user.update({
-    where: { id },
-    data,
-  });
+  await updateUser(id, data);
 
   return NextResponse.json({ success: true });
 }

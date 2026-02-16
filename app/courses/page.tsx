@@ -1,5 +1,5 @@
 import { unstable_noStore } from "next/cache";
-import { prisma } from "@/lib/db";
+import { getCoursesPublished } from "@/lib/db";
 import { CourseCard } from "@/components/CourseCard";
 
 /** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
@@ -13,13 +13,9 @@ export const metadata = {
 
 export default async function CoursesPage() {
   unstable_noStore();
-  let courses: Awaited<ReturnType<typeof prisma.course.findMany>> = [];
+  let courses: Awaited<ReturnType<typeof getCoursesPublished>> = [];
   try {
-    courses = await prisma.course.findMany({
-      where: { isPublished: true },
-      include: { category: true },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-    });
+    courses = await getCoursesPublished(true);
   } catch {
     // DB not connected
   }

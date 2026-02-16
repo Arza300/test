@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { updateUser } from "@/lib/db";
 
 const updateSchema = z.object({
   name: z.string().min(2, "الاسم حرفين على الأقل").optional(),
@@ -33,20 +33,17 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const data: { name?: string; password?: string } = {};
+  const data: { name?: string; password_hash?: string } = {};
   if (parsed.data.name !== undefined) data.name = parsed.data.name.trim();
   if (parsed.data.password !== undefined) {
-    data.password = await hash(parsed.data.password, 12);
+    data.password_hash = await hash(parsed.data.password, 12);
   }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "لا يوجد شيء للتحديث" }, { status: 400 });
   }
 
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: data as { name?: string; password?: string },
-  });
+  await updateUser(session.user.id, data);
 
   return NextResponse.json({ success: true });
 }

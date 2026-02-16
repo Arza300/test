@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserById, getEnrollmentsWithCourseByUserId, countUsersByRole, countCourses } from "@/lib/db";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -13,13 +13,9 @@ export default async function DashboardPage() {
   const isStudent = session.user.role === "STUDENT";
 
   if (isStudent) {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: {
-        enrollments: { include: { course: true } },
-      },
-    });
-    const balance = user?.balance ?? 0;
+    const user = await getUserById(session.user.id);
+    const enrollments = user ? await getEnrollmentsWithCourseByUserId(session.user.id) : [];
+    const balance = user ? Number(user.balance) : 0;
 
     return (
       <div className="space-y-8">
@@ -54,9 +50,9 @@ export default async function DashboardPage() {
           <h2 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">
             دوراتي
           </h2>
-          {user?.enrollments && user.enrollments.length > 0 ? (
+          {enrollments.length > 0 ? (
             <ul className="space-y-2">
-              {user.enrollments.map((e) => (
+              {enrollments.map((e) => (
                 <li key={e.id}>
                   <Link
                     href={`/courses/${e.course.slug}`}
@@ -81,8 +77,8 @@ export default async function DashboardPage() {
   }
 
   // أدمن أو مساعد أدمن
-  const studentsCount = await prisma.user.count({ where: { role: "STUDENT" } });
-  const coursesCount = await prisma.course.count();
+  const studentsCount = await countUsersByRole("STUDENT");
+  const coursesCount = await countCourses();
 
   return (
     <div className="grid gap-6 sm:grid-cols-2">

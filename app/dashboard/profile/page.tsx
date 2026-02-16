@@ -2,17 +2,14 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserById } from "@/lib/db";
 import { ProfileForm } from "./ProfileForm";
 
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { name: true, email: true },
-  });
+  const user = await getUserById(session.user.id);
   if (!user) redirect("/login");
 
   return (

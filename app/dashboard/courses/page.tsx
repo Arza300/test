@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getCoursesWithCounts } from "@/lib/db";
 import { CoursesManageList } from "./CoursesManageList";
 
 export default async function DashboardCoursesPage() {
@@ -12,31 +12,22 @@ export default async function DashboardCoursesPage() {
     redirect("/dashboard");
   }
 
-  const courses = await prisma.course.findMany({
-    orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-    select: {
-      id: true,
-      title: true,
-      titleAr: true,
-      slug: true,
-      isPublished: true,
-      price: true,
-      imageUrl: true,
-      _count: { select: { lessons: true, enrollments: true } },
-    },
-  });
+  const courses = await getCoursesWithCounts();
 
-  const coursesPlain = courses.map((c) => ({
-    id: c.id,
-    title: c.title,
-    titleAr: c.titleAr,
-    slug: c.slug,
-    isPublished: c.isPublished,
-    price: Number(c.price),
-    imageUrl: c.imageUrl,
-    lessonsCount: c._count.lessons,
-    enrollmentsCount: c._count.enrollments,
-  }));
+  const coursesPlain = courses.map((c) => {
+    const row = c as Record<string, unknown>;
+    return {
+      id: String(row.id ?? ""),
+      title: String(row.title ?? ""),
+      titleAr: String(row.titleAr ?? row.title_ar ?? ""),
+      slug: String(row.slug ?? ""),
+      isPublished: Boolean(row.isPublished ?? row.is_published ?? false),
+      price: Number(row.price ?? 0),
+      imageUrl: String(row.imageUrl ?? row.image_url ?? ""),
+      lessonsCount: Number(row.lessonsCount ?? 0),
+      enrollmentsCount: Number(row.enrollmentsCount ?? 0),
+    };
+  });
 
   return (
     <div>

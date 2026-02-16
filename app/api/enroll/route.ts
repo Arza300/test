@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getCourseById, getEnrollment, getUserById, createEnrollment, updateUser } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -15,31 +15,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "معرف الدورة مطلوب" }, { status: 400 });
   }
 
-  const course = await prisma.course.findFirst({
-    where: { id: courseId, isPublished: true },
-  });
-  if (!course) {
+  const course = await getCourseById(courseId);
+  if (!course || !(course as { isPublished?: boolean }).isPublished) {
     return NextResponse.json({ error: "الدورة غير موجودة" }, { status: 404 });
   }
 
-  const existing = await prisma.enrollment.findUnique({
-    where: {
-      userId_courseId: { userId: session.user.id, courseId },
-    },
-  });
+  const existing = await getEnrollment(session.user.id, courseId);
   if (existing) {
     return NextResponse.json({ error: "مسجّل في هذه الدورة مسبقاً" }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { balance: true },
-  });
+  const user = await getUserById(session.user.id);
   if (!user) {
     return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
   }
 
-  const coursePrice = Number(course.price) || 0;
+  const coursePrice = Number((course as { price?: string }).price) || 0;
   const userBalance = Number(user.balance) || 0;
 
   if (coursePrice > 0 && userBalance < coursePrice) {
@@ -55,21 +46,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // استخدام transaction لضمان خصم الرصيد والتسجيل معاً
-  await prisma.$transaction(async (tx) => {
-    if (coursePrice > 0) {
-      await tx.user.update({
-        where: { id: session.user.id },
-        data: { balance: { decrement: coursePrice } },
-      });
-    }
-    await tx.enrollment.create({
-      data: {
-        userId: session.user.id,
-        courseId,
-      },
-    });
-  });
+  if (coursePrice > 0) {
+    const newBalance = String(Math.max(0, userBalance - coursePrice));
+    await updateUser(session.user.id, { balance: newBalance });
+  }
+  await createEnrollment(session.user.id, courseId);
 
   return NextResponse.json({
     success: true,

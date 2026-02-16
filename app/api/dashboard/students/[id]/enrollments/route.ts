@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserById, getCourseById, getEnrollment, createEnrollment } from "@/lib/db";
 
 /** إضافة طالب إلى دورة (بدون خصم رصيد) - للأدمن فقط */
 export async function POST(
@@ -26,32 +26,22 @@ export async function POST(
     return NextResponse.json({ error: "معرف الدورة مطلوب" }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true },
-  });
+  const user = await getUserById(userId);
   if (!user) {
     return NextResponse.json({ error: "الطالب غير موجود" }, { status: 404 });
   }
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { id: true },
-  });
+  const course = await getCourseById(courseId);
   if (!course) {
     return NextResponse.json({ error: "الدورة غير موجودة" }, { status: 404 });
   }
 
-  const existing = await prisma.enrollment.findUnique({
-    where: { userId_courseId: { userId, courseId } },
-  });
+  const existing = await getEnrollment(userId, courseId);
   if (existing) {
     return NextResponse.json({ error: "الطالب مسجّل في هذه الدورة مسبقاً" }, { status: 400 });
   }
 
-  await prisma.enrollment.create({
-    data: { userId, courseId },
-  });
+  await createEnrollment(userId, courseId);
 
   return NextResponse.json({ success: true });
 }

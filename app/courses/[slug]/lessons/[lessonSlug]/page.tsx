@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getCourseWithContent, getEnrollment } from "@/lib/db";
 import { getYouTubeEmbedUrl } from "@/lib/youtube";
 
 type Props = { params: Promise<{ slug: string; lessonSlug: string }> };
@@ -40,34 +40,29 @@ export default async function LessonPage({ params }: Props) {
   const lessonDecoded = decodeSegment(lessonSegment);
   const session = await getServerSession(authOptions);
 
-  const course = await prisma.course.findFirst({
-    where: isCourseId(courseDecoded)
-      ? { id: courseDecoded, isPublished: true }
-      : { slug: courseDecoded, isPublished: true },
-    include: {
-      lessons: { orderBy: { order: "asc" } },
-    },
-  });
-  if (!course) notFound();
+  const data = await getCourseWithContent(courseDecoded);
+  if (!data?.course) notFound();
+
+  const course = data.course as unknown as Record<string, unknown> & { id: string; lessons: Record<string, unknown>[] };
+  course.lessons = data.lessons;
 
   let canAccess = false;
   if (session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN") canAccess = true;
   if (session?.user?.id) {
-    const en = await prisma.enrollment.findUnique({
-      where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
-    });
+    const en = await getEnrollment(session.user.id, course.id);
     if (en) canAccess = true;
   }
   if (!canAccess) notFound();
 
   const lesson = isLessonId(lessonDecoded)
-    ? course.lessons.find((l) => l.id === lessonDecoded)
-    : course.lessons.find((l) => l.slug === lessonDecoded);
+    ? data.lessons.find((l: Record<string, unknown>) => l.id === lessonDecoded)
+    : data.lessons.find((l: Record<string, unknown>) => l.slug === lessonDecoded);
   if (!lesson) notFound();
 
-  const embedUrl = getYouTubeEmbedUrl(lesson.videoUrl);
-  const courseTitle = course.titleAr ?? course.title;
-  const lessonTitle = lesson.titleAr ?? lesson.title;
+  const lessonObj = lesson as Record<string, unknown>;
+  const embedUrl = getYouTubeEmbedUrl((lessonObj.videoUrl ?? lessonObj.video_url) as string);
+  const courseTitle = (course.titleAr ?? course.title) as string;
+  const lessonTitle = (lessonObj.titleAr ?? lessonObj.title) as string;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -88,10 +83,10 @@ export default async function LessonPage({ params }: Props) {
         </div>
       )}
 
-      {lesson.pdfUrl && (
+      {(lessonObj.pdfUrl ?? lessonObj.pdf_url) ? (
         <div className="mt-6">
           <a
-            href={lesson.pdfUrl}
+            href={String(lessonObj.pdfUrl ?? lessonObj.pdf_url)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]"
@@ -99,26 +94,26 @@ export default async function LessonPage({ params }: Props) {
             📄 تحميل / عرض ملف PDF
           </a>
         </div>
-      )}
+      ) : null}
 
-      {lesson.content && (
+      {lessonObj.content ? (
         <div className="mt-6 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 prose-custom text-[var(--color-foreground)]">
-          {lesson.content.split("\n").map((p, i) => (
+          {String(lessonObj.content).split("\n").map((p, i) => (
             <p key={i}>{p}</p>
           ))}
         </div>
-      )}
+      ) : null}
 
       <div className="mt-8 flex gap-2">
         {(() => {
-          const idx = course.lessons.findIndex((l) => l.id === lesson.id);
+          const idx = course.lessons.findIndex((l: Record<string, unknown>) => l.id === lessonObj.id);
           const prev = course.lessons[idx - 1];
           const next = course.lessons[idx + 1];
           return (
             <div className="flex w-full justify-between gap-4">
               {prev ? (
                 <Link
-                  href={lessonHref(course, prev)}
+                  href={lessonHref(course, prev as { slug?: string | null; id: string })}
                   className="rounded-[var(--radius-btn)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium"
                 >
                   ← الحصة السابقة
@@ -126,7 +121,7 @@ export default async function LessonPage({ params }: Props) {
               ) : <span />}
               {next ? (
                 <Link
-                  href={lessonHref(course, next)}
+                  href={lessonHref(course, next as { slug?: string | null; id: string })}
                   className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white"
                 >
                   الحصة التالية →

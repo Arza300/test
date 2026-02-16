@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { getQuizById } from "@/lib/db";
 
 /**
- * جلب اختبار بالمعرّف فقط — يعمل بشكل موثوق على Vercel مع Neon.
- * يُستخدم من صفحة الاختبار (عميل) لتفادي مشاكل التسلسل.
+ * جلب اختبار بالمعرّف فقط — اتصال مباشر بـ Neon (بدون Prisma).
  */
 export async function GET(
   _request: Request,
@@ -15,45 +14,37 @@ export async function GET(
       return NextResponse.json({ error: "معرّف الاختبار غير صالح" }, { status: 400 });
     }
 
-    const quiz = await prisma.quiz.findUnique({
-      where: { id: quizId },
-      include: {
-        course: { select: { id: true, slug: true, title: true, titleAr: true, isPublished: true } },
-        questions: {
-          orderBy: { order: "asc" },
-          include: { options: true },
-        },
-      },
-    });
+    const result = await getQuizById(quizId);
 
-    if (!quiz || !quiz.course) {
+    if (!result || !result.course) {
       return NextResponse.json({ error: "الاختبار غير موجود" }, { status: 404 });
     }
 
-    if (!quiz.course.isPublished) {
+    const isPublished = result.course.isPublished ?? result.course.is_published;
+    if (!isPublished) {
       return NextResponse.json({ error: "الدورة غير منشورة" }, { status: 404 });
     }
 
     const payload = {
-      id: quiz.id,
-      title: quiz.title,
-      courseId: quiz.courseId,
-      order: quiz.order,
+      id: result.quiz.id,
+      title: result.quiz.title,
+      courseId: result.quiz.courseId ?? result.quiz.course_id,
+      order: result.quiz.order,
       course: {
-        id: quiz.course.id,
-        slug: quiz.course.slug,
-        title: quiz.course.title,
-        titleAr: quiz.course.titleAr,
+        id: result.course.id,
+        slug: result.course.slug,
+        title: result.course.title,
+        titleAr: result.course.titleAr ?? result.course.title_ar,
       },
-      questions: quiz.questions.map((q) => ({
+      questions: result.questions.map((q) => ({
         id: q.id,
         type: q.type,
-        questionText: q.questionText,
+        questionText: q.questionText ?? q.question_text,
         order: q.order,
-        options: q.options.map((o) => ({
+        options: (q.options ?? []).map((o: Record<string, unknown>) => ({
           id: o.id,
           text: o.text,
-          isCorrect: o.isCorrect,
+          isCorrect: o.isCorrect ?? o.is_correct,
         })),
       })),
     };

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserById, updateUser } from "@/lib/db";
 
 export async function POST(
   request: NextRequest,
@@ -25,17 +25,13 @@ export async function POST(
     return NextResponse.json({ error: "المبلغ غير صالح" }, { status: 400 });
   }
 
-  const student = await prisma.user.findUnique({
-    where: { id: studentId, role: "STUDENT" },
-  });
-  if (!student) {
+  const student = await getUserById(studentId);
+  if (!student || student.role !== "STUDENT") {
     return NextResponse.json({ error: "الطالب غير موجود" }, { status: 404 });
   }
 
-  await prisma.user.update({
-    where: { id: studentId },
-    data: { balance: { increment: amount } },
-  });
+  const newBalance = String(Math.max(0, Number(student.balance) + amount));
+  await updateUser(studentId, { balance: newBalance });
 
   return NextResponse.json({ success: true });
 }

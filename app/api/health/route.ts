@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { sql } from "@/lib/db";
 
 /**
  * فحص حالة النشر على Vercel:
@@ -16,12 +16,12 @@ export async function GET() {
 
   if (hasDbUrl) {
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      await sql`SELECT 1`;
       dbMessage = "متصل";
     } catch (e) {
       dbStatus = "error";
       const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes("P1001") || msg.includes("Can't reach database")) {
+      if (msg.includes("Can't reach") || msg.includes("ECONNREFUSED") || msg.includes("connection")) {
         dbMessage = "لا يمكن الوصول لقاعدة البيانات. تأكد أن DATABASE_URL يشير إلى قاعدة سحابية (Neon/Supabase) وليس localhost.";
       } else if (msg.includes("Authentication failed") || msg.includes("password")) {
         dbMessage = "فشل الاتصال: تحقق من صحة اسم المستخدم وكلمة المرور في DATABASE_URL.";

@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import {
+  getCourseById,
+  getCourseForEdit,
+  updateCourse,
+  deleteCourse,
+  deleteLessonsByCourseId,
+  deleteQuizzesByCourseId,
+  createLesson,
+  createQuiz,
+  createQuestion,
+  createQuestionOption,
+} from "@/lib/db";
 
 type LessonInput = { title: string; titleAr?: string; videoUrl?: string; content?: string; pdfUrl?: string };
 type QuestionOptionInput = { text: string; isCorrect: boolean };
@@ -35,13 +46,11 @@ export async function PUT(
     return NextResponse.json({ error: "طلب غير صالح" }, { status: 400 });
   }
 
-  const course = await prisma.course.findUnique({
-    where: { id },
-    select: { id: true, slug: true },
-  });
+  const course = await getCourseById(id);
   if (!course) {
     return NextResponse.json({ error: "الدورة غير موجودة" }, { status: 404 });
   }
+  const slug = (course as { slug?: string }).slug ?? "";
 
   const title = body.title?.trim();
   const description = body.description?.trim();
@@ -49,76 +58,63 @@ export async function PUT(
     return NextResponse.json({ error: "العنوان والوصف مطلوبان" }, { status: 400 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.course.update({
-      where: { id },
-      data: {
-        title,
-        titleAr: title,
-        description,
-        shortDesc: body.shortDesc?.trim() || null,
-        imageUrl: body.imageUrl?.trim() || null,
-        price: body.price ?? 0,
-        isPublished: body.isPublished ?? true,
-      },
+  await updateCourse(id, {
+    title,
+    title_ar: title,
+    description,
+    short_desc: body.shortDesc?.trim() || null,
+    image_url: body.imageUrl?.trim() || null,
+    price: body.price ?? 0,
+    is_published: body.isPublished ?? true,
+  });
+
+  await deleteLessonsByCourseId(id);
+  const lessons = body.lessons ?? [];
+  for (let i = 0; i < lessons.length; i++) {
+    const le = lessons[i];
+    const lessonSlug = `${slug}-${i + 1}`.replace(/\s+/g, "-");
+    await createLesson({
+      course_id: id,
+      title: le.title?.trim() || `حصة ${i + 1}`,
+      title_ar: le.titleAr?.trim() || null,
+      slug: lessonSlug,
+      content: le.content?.trim() || null,
+      video_url: le.videoUrl?.trim() || null,
+      pdf_url: le.pdfUrl?.trim() || null,
+      order: i + 1,
     });
+  }
 
-    await tx.lesson.deleteMany({ where: { courseId: id } });
-    const lessons = body.lessons ?? [];
-    for (let i = 0; i < lessons.length; i++) {
-      const le = lessons[i];
-      const lessonSlug = `${course.slug}-${i + 1}`.replace(/\s+/g, "-");
-      await tx.lesson.create({
-        data: {
-          courseId: id,
-          title: le.title?.trim() || `حصة ${i + 1}`,
-          titleAr: le.titleAr?.trim() || null,
-          slug: lessonSlug,
-          content: le.content?.trim() || null,
-          videoUrl: le.videoUrl?.trim() || null,
-          pdfUrl: le.pdfUrl?.trim() || null,
-          order: i + 1,
-        },
+  await deleteQuizzesByCourseId(id);
+  const quizzes = body.quizzes ?? [];
+  for (let qi = 0; qi < quizzes.length; qi++) {
+    const q = quizzes[qi];
+    const quiz = await createQuiz({
+      course_id: id,
+      title: q.title?.trim() || `اختبار ${qi + 1}`,
+      order: qi + 1,
+    });
+    const questions = q.questions ?? [];
+    for (let qti = 0; qti < questions.length; qti++) {
+      const qt = questions[qti];
+      const qType = qt.type === "ESSAY" ? "ESSAY" : qt.type === "TRUE_FALSE" ? "TRUE_FALSE" : "MULTIPLE_CHOICE";
+      const question = await createQuestion({
+        quiz_id: quiz.id,
+        type: qType,
+        question_text: qt.questionText?.trim() || "",
+        order: qti + 1,
       });
-    }
-
-    await tx.quiz.deleteMany({ where: { courseId: id } });
-    const quizzes = body.quizzes ?? [];
-    for (let qi = 0; qi < quizzes.length; qi++) {
-      const q = quizzes[qi];
-      const quiz = await tx.quiz.create({
-        data: {
-          courseId: id,
-          title: q.title?.trim() || `اختبار ${qi + 1}`,
-          order: qi + 1,
-        },
-      });
-      const questions = q.questions ?? [];
-      for (let qti = 0; qti < questions.length; qti++) {
-        const qt = questions[qti];
-        const qType = qt.type === "ESSAY" ? "ESSAY" : qt.type === "TRUE_FALSE" ? "TRUE_FALSE" : "MULTIPLE_CHOICE";
-        const question = await tx.question.create({
-          data: {
-            quizId: quiz.id,
-            type: qType,
-            questionText: qt.questionText?.trim() || "",
-            order: qti + 1,
-          },
-        });
-        if ((qt.type === "MULTIPLE_CHOICE" || qt.type === "TRUE_FALSE") && Array.isArray(qt.options)) {
-          for (const opt of qt.options) {
-            await tx.questionOption.create({
-              data: {
-                questionId: question.id,
-                text: opt.text?.trim() || "",
-                isCorrect: !!opt.isCorrect,
-              },
-            });
-          }
+      if ((qt.type === "MULTIPLE_CHOICE" || qt.type === "TRUE_FALSE") && Array.isArray(qt.options)) {
+        for (const opt of qt.options) {
+          await createQuestionOption({
+            question_id: question.id,
+            text: opt.text?.trim() || "",
+            is_correct: !!opt.isCorrect,
+          });
         }
       }
     }
-  });
+  }
 
   return NextResponse.json({ success: true });
 }
@@ -134,48 +130,35 @@ export async function GET(
   }
 
   const { id } = await params;
-  const course = await prisma.course.findUnique({
-    where: { id },
-    include: {
-      lessons: { orderBy: { order: "asc" } },
-      quizzes: {
-        orderBy: { order: "asc" },
-        include: {
-          questions: {
-            orderBy: { order: "asc" },
-            include: { options: true },
-          },
-        },
-      },
-    },
-  });
-  if (!course) {
+  const data = await getCourseForEdit(id);
+  if (!data?.course) {
     return NextResponse.json({ error: "الدورة غير موجودة" }, { status: 404 });
   }
 
+  const c = data.course;
   const payload = {
-    id: course.id,
-    title: course.title,
-    titleAr: course.titleAr,
-    slug: course.slug,
-    description: course.description,
-    shortDesc: course.shortDesc,
-    imageUrl: course.imageUrl,
-    price: Number(course.price),
-    isPublished: course.isPublished,
-    lessons: course.lessons.map((l) => ({
+    id: c.id,
+    title: c.title,
+    titleAr: c.titleAr ?? c.title_ar,
+    slug: c.slug,
+    description: c.description,
+    shortDesc: c.shortDesc ?? c.short_desc,
+    imageUrl: c.imageUrl ?? c.image_url,
+    price: Number(c.price ?? 0),
+    isPublished: c.isPublished ?? c.is_published ?? true,
+    lessons: data.lessons.map((l) => ({
       title: l.title,
-      titleAr: l.titleAr,
-      videoUrl: l.videoUrl,
+      titleAr: l.titleAr ?? l.title_ar,
+      videoUrl: l.videoUrl ?? l.video_url,
       content: l.content,
-      pdfUrl: l.pdfUrl,
+      pdfUrl: l.pdfUrl ?? l.pdf_url,
     })),
-    quizzes: course.quizzes.map((q) => ({
+    quizzes: data.quizzes.map((q) => ({
       title: q.title,
-      questions: q.questions.map((qt) => ({
+      questions: (q.questions ?? []).map((qt) => ({
         type: qt.type,
-        questionText: qt.questionText,
-        options: qt.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
+        questionText: qt.questionText ?? qt.question_text,
+        options: (qt.options ?? []).map((o) => ({ text: o.text, isCorrect: o.isCorrect ?? o.is_correct })),
       })),
     })),
   };
@@ -194,17 +177,12 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const course = await prisma.course.findUnique({
-    where: { id },
-    select: { id: true },
-  });
+  const course = await getCourseById(id);
   if (!course) {
     return NextResponse.json({ error: "الدورة غير موجودة" }, { status: 404 });
   }
 
-  await prisma.course.delete({
-    where: { id },
-  });
+  await deleteCourse(id);
 
   return NextResponse.json({ success: true });
 }

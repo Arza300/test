@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { unstable_noStore } from "next/cache";
-import { prisma } from "@/lib/db";
+import { getCoursesPublished } from "@/lib/db";
 import { CourseCard } from "@/components/CourseCard";
 
 /** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
@@ -9,14 +9,10 @@ export const revalidate = 0;
 
 export default async function HomePage() {
   unstable_noStore();
-  let courses: Awaited<ReturnType<typeof prisma.course.findMany>> = [];
+  let courses: Awaited<ReturnType<typeof getCoursesPublished>> = [];
   try {
-    courses = await prisma.course.findMany({
-      where: { isPublished: true },
-      include: { category: true },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-      take: 6,
-    });
+    courses = await getCoursesPublished(true);
+    courses = courses.slice(0, 6);
   } catch {
     // لا قاعدة بيانات أو غير متصلة - نعرض واجهة بدون دورات
   }

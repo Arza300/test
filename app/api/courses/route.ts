@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import {
+  getCoursesPublished,
+  courseExistsBySlug,
+  createCourse,
+  createLesson,
+  createQuiz,
+  createQuestion,
+  createQuestionOption,
+} from "@/lib/db";
 
 export async function GET() {
   try {
-    const courses = await prisma.course.findMany({
-      where: { isPublished: true },
-      include: { category: true },
-      orderBy: [{ order: "asc" }, { createdAt: "desc" }],
-    });
+    const courses = await getCoursesPublished(true);
     return NextResponse.json(courses);
   } catch (error) {
     console.error("API courses:", error);
@@ -54,78 +58,68 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "العنوان والرابط والوصف مطلوبة" }, { status: 400 });
   }
 
-  const existing = await prisma.course.findUnique({ where: { slug: slug.trim() } });
-  if (existing) {
+  const exists = await courseExistsBySlug(slug.trim());
+  if (exists) {
     return NextResponse.json({ error: "رابط الدورة مستخدم مسبقاً" }, { status: 400 });
   }
 
-  const course = await prisma.course.create({
-    data: {
-      title,
-      titleAr: title,
-      slug,
-      description,
-      shortDesc: body.shortDesc?.trim() || null,
-      imageUrl: body.imageUrl?.trim() || null,
-      price: body.price ?? 0,
-      isPublished: true,
-      createdById: session.user.id,
-    },
+  const course = await createCourse({
+    title,
+    title_ar: title,
+    slug,
+    description,
+    short_desc: body.shortDesc?.trim() || null,
+    image_url: body.imageUrl?.trim() || null,
+    price: body.price ?? 0,
+    is_published: true,
+    created_by_id: session.user.id,
   });
 
   const lessons = body.lessons ?? [];
   for (let i = 0; i < lessons.length; i++) {
     const le = lessons[i];
     const lessonSlug = `${slug.trim()}-${i + 1}`.replace(/\s+/g, "-");
-    await prisma.lesson.create({
-      data: {
-        courseId: course.id,
-        title: le.title?.trim() || `حصة ${i + 1}`,
-        titleAr: le.titleAr?.trim() || null,
-        slug: lessonSlug,
-        content: le.content?.trim() || null,
-        videoUrl: le.videoUrl?.trim() || null,
-        pdfUrl: le.pdfUrl?.trim() || null,
-        order: i + 1,
-      },
+    await createLesson({
+      course_id: course.id,
+      title: le.title?.trim() || `حصة ${i + 1}`,
+      title_ar: le.titleAr?.trim() || null,
+      slug: lessonSlug,
+      content: le.content?.trim() || null,
+      video_url: le.videoUrl?.trim() || null,
+      pdf_url: le.pdfUrl?.trim() || null,
+      order: i + 1,
     });
   }
 
   const quizzes = body.quizzes ?? [];
   for (let qi = 0; qi < quizzes.length; qi++) {
     const q = quizzes[qi];
-    const quiz = await prisma.quiz.create({
-      data: {
-        courseId: course.id,
-        title: q.title?.trim() || `اختبار ${qi + 1}`,
-        order: qi + 1,
-      },
+    const quiz = await createQuiz({
+      course_id: course.id,
+      title: q.title?.trim() || `اختبار ${qi + 1}`,
+      order: qi + 1,
     });
     const questions = q.questions ?? [];
     for (let qti = 0; qti < questions.length; qti++) {
       const qt = questions[qti];
       const qType = qt.type === "ESSAY" ? "ESSAY" : qt.type === "TRUE_FALSE" ? "TRUE_FALSE" : "MULTIPLE_CHOICE";
-      const question = await prisma.question.create({
-        data: {
-          quizId: quiz.id,
-          type: qType,
-          questionText: qt.questionText?.trim() || "",
-          order: qti + 1,
-        },
+      const question = await createQuestion({
+        quiz_id: quiz.id,
+        type: qType,
+        question_text: qt.questionText?.trim() || "",
+        order: qti + 1,
       });
       if ((qt.type === "MULTIPLE_CHOICE" || qt.type === "TRUE_FALSE") && Array.isArray(qt.options)) {
         for (const opt of qt.options) {
-          await prisma.questionOption.create({
-            data: {
-              questionId: question.id,
-              text: opt.text?.trim() || "",
-              isCorrect: !!opt.isCorrect,
-            },
+          await createQuestionOption({
+            question_id: question.id,
+            text: opt.text?.trim() || "",
+            is_correct: !!opt.isCorrect,
           });
         }
       }
     }
   }
 
-  return NextResponse.json(course);
+  return NextResponse.json({ id: course.id, title: course.title, slug: course.slug });
 }

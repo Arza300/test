@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
-import { prisma } from "@/lib/db";
+import { getUserByEmail, createUser } from "@/lib/db";
 import { z } from "zod";
 
 const signupSchema = z.object({
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
     const { email, password, name } = parsed.data;
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await getUserByEmail(email);
     if (existing) {
       return NextResponse.json(
         { error: "البريد الإلكتروني مستخدم مسبقاً" },
@@ -30,13 +30,11 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await hash(password, 12);
-    await prisma.user.create({
-      data: {
-        email,
-        password: passwordHash,
-        name,
-        role: "STUDENT",
-      },
+    await createUser({
+      email,
+      password_hash: passwordHash,
+      name,
+      role: "STUDENT",
     });
 
     return NextResponse.json({ success: true });

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "@/lib/types";
 
 function UserMenu() {
   const { data: session, status } = useSession();

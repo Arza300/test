@@ -3,7 +3,7 @@ import Link from "next/link";
 import { unstable_noStore } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getCourseWithContent, getEnrollment, getUserById } from "@/lib/db";
 import { EnrollButton } from "./EnrollButton";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -34,15 +34,12 @@ export async function generateMetadata({ params }: Props) {
   const { slug: segment } = await params;
   unstable_noStore();
   const decoded = decodeSlug(segment);
-  const course = await prisma.course.findFirst({
-    where: isCourseId(decoded)
-      ? { id: decoded, isPublished: true }
-      : { slug: decoded, isPublished: true },
-  });
+  const data = await getCourseWithContent(decoded);
+  const course = data?.course;
   if (!course) return { title: "دورة غير موجودة" };
   return {
-    title: `${course.titleAr ?? course.title} | منصتي التعليمية`,
-    description: course.shortDesc ?? course.description,
+    title: `${(course as { titleAr?: string; title?: string }).titleAr ?? course.title} | منصتي التعليمية`,
+    description: (course as { shortDesc?: string; description?: string }).shortDesc ?? (course as { description?: string }).description,
   };
 }
 
@@ -51,31 +48,15 @@ export default async function CoursePage({ params }: Props) {
   const { slug: segment } = await params;
   const decoded = decodeSlug(segment);
   const session = await getServerSession(authOptions);
-  let course = null;
+  let data: Awaited<ReturnType<typeof getCourseWithContent>> = null;
   let isEnrolled = false;
   let userBalance = 0;
   try {
-    course = await prisma.course.findFirst({
-      where: isCourseId(decoded)
-        ? { id: decoded, isPublished: true }
-        : { slug: decoded, isPublished: true },
-      include: {
-        category: true,
-        lessons: { orderBy: { order: "asc" } },
-        quizzes: { orderBy: { order: "asc" }, include: { _count: { select: { questions: true } } } },
-      },
-    });
-    if (course && session?.user?.id && session.user.role === "STUDENT") {
+    data = await getCourseWithContent(decoded);
+    if (data?.course && session?.user?.id && session.user.role === "STUDENT") {
       const [en, user] = await Promise.all([
-        prisma.enrollment.findUnique({
-          where: {
-            userId_courseId: { userId: session.user.id, courseId: course.id },
-          },
-        }),
-        prisma.user.findUnique({
-          where: { id: session.user.id },
-          select: { balance: true },
-        }),
+        getEnrollment(session.user.id, data.course.id),
+        getUserById(session.user.id),
       ]);
       isEnrolled = !!en;
       userBalance = Number(user?.balance) || 0;
@@ -83,13 +64,18 @@ export default async function CoursePage({ params }: Props) {
   } catch {
     notFound();
   }
-  if (!course) notFound();
+  if (!data?.course) notFound();
 
-  const title = course.titleAr ?? course.title;
-  const categoryName = course.category?.nameAr ?? course.category?.name;
+  const course = {
+    ...data.course,
+    lessons: data.lessons,
+    quizzes: data.quizzes,
+  };
+  const title = (course as { titleAr?: string; title: string }).titleAr ?? course.title;
+  const categoryName = (course.category as { nameAr?: string; name?: string })?.nameAr ?? (course.category as { name?: string })?.name;
   const canEnroll = session?.user?.role === "STUDENT" && !isEnrolled;
   const canAccessContent = isEnrolled || session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN";
-  const coursePrice = Number(course.price) || 0;
+  const coursePrice = Number((course as Record<string, unknown>).price) || 0;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -128,9 +114,9 @@ export default async function CoursePage({ params }: Props) {
         <article className="order-1 lg:order-2">
           <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
           <div className="aspect-video w-full bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-primary-light)]/30 flex items-center justify-center overflow-hidden">
-            {course.imageUrl ? (
+            {(course as Record<string, unknown>).imageUrl ?? (course as Record<string, unknown>).image_url ? (
               <img
-                src={course.imageUrl}
+                src={String((course as Record<string, unknown>).imageUrl ?? (course as Record<string, unknown>).image_url)}
                 alt=""
                 className="h-full w-full object-cover"
               />
@@ -148,26 +134,26 @@ export default async function CoursePage({ params }: Props) {
               {title}
             </h1>
             <div className="mt-4 flex flex-wrap gap-2">
-              {Number(course.price) > 0 && (
+              {coursePrice > 0 && (
                 <span className="rounded-full bg-[var(--color-primary-light)] px-3 py-1 text-sm font-semibold text-[var(--color-primary)]">
-                  {Number(course.price).toFixed(2)} ج.م
+                  {coursePrice.toFixed(2)} ج.م
                 </span>
               )}
-              {course.duration && (
+              {(course as Record<string, unknown>).duration ? (
                 <span className="rounded-full bg-[var(--color-primary-light)] px-3 py-1 text-sm text-[var(--color-primary)]">
-                  ⏱ {course.duration}
+                  ⏱ {(course as Record<string, unknown>).duration as string}
                 </span>
-              )}
-              {course.level && (
+              ) : null}
+              {(course as Record<string, unknown>).level ? (
                 <span className="rounded-full bg-[var(--color-border)] px-3 py-1 text-sm text-[var(--color-muted)]">
-                  {course.level === "beginner" && "مبتدئ"}
-                  {course.level === "intermediate" && "متوسط"}
-                  {course.level === "advanced" && "متقدم"}
+                  {(course as Record<string, unknown>).level === "beginner" && "مبتدئ"}
+                  {(course as Record<string, unknown>).level === "intermediate" && "متوسط"}
+                  {(course as Record<string, unknown>).level === "advanced" && "متقدم"}
                 </span>
-              )}
+              ) : null}
             </div>
             <div className="mt-6 prose-custom text-[var(--color-foreground)]">
-              <p>{course.description}</p>
+              <p>{(course as Record<string, unknown>).description as string}</p>
             </div>
 
             {canEnroll && (
@@ -198,24 +184,28 @@ export default async function CoursePage({ params }: Props) {
                         </span>
                         <div className="min-w-0 flex-1">
                           <span className="font-medium text-[var(--color-foreground)]">
-                            {lesson.titleAr ?? lesson.title}
+                            {String((lesson as Record<string, unknown>).titleAr ?? (lesson as Record<string, unknown>).title ?? "")}
                           </span>
-                          {lesson.duration && (
+                          {(lesson as Record<string, unknown>).duration ? (
                             <span className="mr-2 text-sm text-[var(--color-muted)]">
-                              • {lesson.duration} دقيقة
+                              • {String((lesson as Record<string, unknown>).duration)} دقيقة
                             </span>
-                          )}
-                          {lesson.videoUrl && canAccessContent && (
+                          ) : null}
+                          {(lesson as Record<string, unknown>).videoUrl && canAccessContent ? (
                             <span className="mr-2 text-xs text-[var(--color-primary)]">▶ فيديو</span>
-                          )}
+                          ) : null}
                         </div>
                       </>
                     );
+                    const courseSlugOrId = String((course as Record<string, unknown>).slug ?? "").trim() || String((course as Record<string, unknown>).id ?? course.id);
+                    const lessonSlugOrId = (lesson as Record<string, unknown>).slug && String((lesson as Record<string, unknown>).slug).trim()
+                      ? encodeURIComponent(String((lesson as Record<string, unknown>).slug).trim())
+                      : String((lesson as Record<string, unknown>).id ?? lesson.id);
                     return (
-                      <li key={lesson.id}>
+                      <li key={String(lesson.id)}>
                         {canAccessContent ? (
                           <Link
-                            href={`/courses/${encodeURIComponent((course.slug ?? "").trim()) || course.id}/lessons/${(lesson.slug && lesson.slug.trim()) ? encodeURIComponent(lesson.slug.trim()) : lesson.id}`}
+                            href={`/courses/${courseSlugOrId}/lessons/${lessonSlugOrId}`}
                             className={lessonClassName}
                           >
                             {content}
@@ -238,24 +228,27 @@ export default async function CoursePage({ params }: Props) {
                   الاختبارات ({course.quizzes.length})
                 </h2>
                 <ul className="mt-4 space-y-2">
-                  {course.quizzes.map((quiz, i) => (
-                    <li key={quiz.id}>
+                  {course.quizzes.map((quiz, i) => {
+                    const q = quiz as Record<string, unknown> & { _count?: { questions?: number } };
+                    const questionsCount = q._count?.questions ?? 0;
+                    return (
+                    <li key={String(q.id)}>
                       {canAccessContent ? (
                         <Link
-                          href={`/courses/${encodeURIComponent(normalizeSlugForUrl(course!.slug) || course!.id)}/quizzes/${quiz.id}`}
+                          href={`/courses/${encodeURIComponent(normalizeSlugForUrl(String((course as Record<string, unknown>).slug ?? "")) || String((course as Record<string, unknown>).id ?? course.id))}/quizzes/${String(q.id)}`}
                           className="flex items-center justify-between rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 transition hover:border-[var(--color-primary)]/30"
                         >
-                          <span className="font-medium text-[var(--color-foreground)]">{quiz.title}</span>
-                          <span className="text-sm text-[var(--color-muted)]">{quiz._count.questions} سؤال</span>
+                          <span className="font-medium text-[var(--color-foreground)]">{String(q.title ?? "")}</span>
+                          <span className="text-sm text-[var(--color-muted)]">{questionsCount} سؤال</span>
                         </Link>
                       ) : (
                         <div className="flex items-center justify-between rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 opacity-75">
-                          <span className="font-medium text-[var(--color-foreground)]">{quiz.title}</span>
-                          <span className="text-sm text-[var(--color-muted)]">{quiz._count.questions} سؤال</span>
+                          <span className="font-medium text-[var(--color-foreground)]">{String(q.title ?? "")}</span>
+                          <span className="text-sm text-[var(--color-muted)]">{questionsCount} سؤال</span>
                         </div>
                       )}
                     </li>
-                  ))}
+                  );})}
                 </ul>
               </div>
             )}

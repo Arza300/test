@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { getCategories } from "@/lib/db";
 
 export async function GET() {
   try {
-    const categories = await prisma.category.findMany({
-      orderBy: { order: "asc" },
-      include: {
-        _count: { select: { courses: true } },
-      },
-    });
+    const categories = await getCategories();
     return NextResponse.json(categories);
   } catch (error) {
     console.error("API categories:", error);
