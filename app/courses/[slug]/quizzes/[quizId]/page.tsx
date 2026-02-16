@@ -29,24 +29,36 @@ function courseHref(course: { slug?: string | null; id: string }): string {
   return `/courses/${seg}`;
 }
 
+function normalizeSlug(s: string): string {
+  return s.replace(/-+$/, "").replace(/^-+/, "").trim();
+}
+
 export default async function QuizPage({ params }: Props) {
   unstable_noStore();
   const { slug: courseSegment, quizId } = await params;
   const decoded = decodeSegment(courseSegment).trim();
   const session = await getServerSession(authOptions);
 
-  let course = await prisma.course.findFirst({
-    where: isCourseId(decoded)
-      ? { id: decoded, isPublished: true }
-      : { slug: decoded, isPublished: true },
-  });
-  if (!course && !isCourseId(decoded)) {
-    const slugNormalized = decoded.replace(/-+$/, "").replace(/^-+/, "");
-    if (slugNormalized !== decoded) {
+  let course = null;
+  try {
+    if (isCourseId(decoded)) {
       course = await prisma.course.findFirst({
-        where: { slug: slugNormalized, isPublished: true },
+        where: { id: decoded, isPublished: true },
+      });
+    } else {
+      const slugNorm = normalizeSlug(decoded);
+      course = await prisma.course.findFirst({
+        where: {
+          isPublished: true,
+          OR: [
+            { slug: decoded },
+            ...(slugNorm !== decoded ? [{ slug: slugNorm }] : []),
+          ],
+        },
       });
     }
+  } catch {
+    notFound();
   }
   if (!course) notFound();
 
@@ -60,15 +72,20 @@ export default async function QuizPage({ params }: Props) {
   }
   if (!canAccess) notFound();
 
-  const quiz = await prisma.quiz.findFirst({
-    where: { id: quizId, courseId: course.id },
-    include: {
-      questions: {
-        orderBy: { order: "asc" },
-        include: { options: true },
+  let quiz = null;
+  try {
+    quiz = await prisma.quiz.findFirst({
+      where: { id: quizId, courseId: course.id },
+      include: {
+        questions: {
+          orderBy: { order: "asc" },
+          include: { options: true },
+        },
       },
-    },
-  });
+    });
+  } catch {
+    notFound();
+  }
   if (!quiz) notFound();
 
   const courseTitle = course.titleAr ?? course.title;

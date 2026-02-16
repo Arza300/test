@@ -24,6 +24,12 @@ function decodeSlug(segment: string): string {
   }
 }
 
+/** توحيد الـ slug في الروابط (إزالة الشرطات الزائدة) ليتطابق مع صفحة الاختبار على Vercel */
+function normalizeSlugForUrl(s: string | null | undefined): string {
+  if (!s || !s.trim()) return "";
+  return s.trim().replace(/-+$/, "").replace(/^-+/, "");
+}
+
 export async function generateMetadata({ params }: Props) {
   const { slug: segment } = await params;
   unstable_noStore();
@@ -236,7 +242,7 @@ export default async function CoursePage({ params }: Props) {
                     <li key={quiz.id}>
                       {canAccessContent ? (
                         <Link
-                          href={`/courses/${encodeURIComponent((course!.slug ?? "").trim()) || course!.id}/quizzes/${quiz.id}`}
+                          href={`/courses/${encodeURIComponent(normalizeSlugForUrl(course!.slug) || course!.id)}/quizzes/${quiz.id}`}
                           className="flex items-center justify-between rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 transition hover:border-[var(--color-primary)]/30"
                         >
                           <span className="font-medium text-[var(--color-foreground)]">{quiz.title}</span>
