@@ -19,8 +19,8 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* Hero - قسم المدرس يملأ الشاشة بالكامل */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-blue-50 via-blue-100/30 to-blue-50 dark:from-blue-950/20 dark:via-blue-900/10 dark:to-blue-950/20">
+      {/* Hero - قسم المدرس: في الوضع الساطع التدرج الأزرق حتى منتصف الصفحة فقط */}
+      <section className="home-hero-gradient relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-blue-50 via-blue-100/30 to-blue-50 dark:from-blue-950/20 dark:via-blue-900/10 dark:to-blue-950/20">
         {/* أيقونات خلفية للعلوم */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute left-8 top-24 text-5xl opacity-5 dark:opacity-3">🔬</div>

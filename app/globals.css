@@ -7,20 +7,20 @@
   --radius-btn: 0.75rem;
 }
 
-/* الوضع النهاري: أبيض وأزرق */
+/* الوضع النهاري: صفحة بيضاء + تدرج أزرق من الأسفل للأعلى */
 html.light {
-  --color-background: #f0f7ff;
-  --color-foreground: #1e3a5f;
+  --color-background: #ffffff;
+  --color-foreground: #1e293b;
   --color-surface: #ffffff;
-  --color-border: #bfdbfe;
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #dbeafe;
+  --color-border: #e2e8f0;
+  --color-primary: #0ea5e9;
+  --color-primary-hover: #0284c7;
+  --color-primary-light: #e0f2fe;
   --color-accent: #f59e0b;
   --color-muted: #64748b;
   --color-success: #059669;
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-  --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.04);
 }
 
 /* الوضع الليلي: الألوان الحالية */
@@ -69,6 +69,41 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   min-height: 100vh;
+}
+
+/* في الوضع الساطع: تدرج أزرق فقط حتى منتصف الشاشة (النصف السفلي)، والنصف الأعلى أبيض */
+html.light body {
+  background: linear-gradient(
+    to top,
+    #0ea5e9 0%,
+    #38bdf8 12%,
+    #7dd3fc 28%,
+    #bae6fd 42%,
+    #e0f2fe 48%,
+    #ffffff 50%,
+    #ffffff 100%
+  );
+  background-attachment: fixed;
+  background-size: 100% 100vh;
+}
+
+/* منطقة المحتوى الرئيسي (الكورسات وغيرها) بيضاء بالكامل بدون تدرج */
+html.light main {
+  background: #ffffff;
+}
+
+/* الصفحة الرئيسية فقط: التدرج الأزرق حتى منتصف الـ Hero (النصف السفلي من أول شاشة) */
+html.light .home-hero-gradient {
+  background: linear-gradient(
+    to top,
+    #0ea5e9 0%,
+    #38bdf8 12%,
+    #7dd3fc 28%,
+    #bae6fd 42%,
+    #e0f2fe 48%,
+    #ffffff 50%,
+    #ffffff 100%
+  ) !important;
 }
 
 /* دعم RTL للعربية */
