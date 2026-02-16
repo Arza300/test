@@ -1,13 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { Quiz, Question, QuestionOption } from "@prisma/client";
+import type { QuizApiPayload } from "./QuizPageClient";
 
-type QuizWithQuestions = Quiz & {
-  questions: (Question & { options: QuestionOption[] })[];
-};
-
-export function QuizTake({ quiz }: { quiz: QuizWithQuestions }) {
+export function QuizTake({ quiz }: { quiz: QuizApiPayload }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
 
@@ -30,7 +26,9 @@ export function QuizTake({ quiz }: { quiz: QuizWithQuestions }) {
       }
     });
   }
-  const totalScored = quiz.questions.filter((q) => q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE").length;
+  const totalScored = quiz.questions.filter(
+    (q) => q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE"
+  ).length;
 
   return (
     <div className="mt-8 space-y-8">
@@ -45,7 +43,7 @@ export function QuizTake({ quiz }: { quiz: QuizWithQuestions }) {
           <span className="mt-1 block text-xs text-[var(--color-muted)]">
             {q.type === "MULTIPLE_CHOICE" ? "اختياري" : q.type === "TRUE_FALSE" ? "صح وخطأ" : "مقالي"}
           </span>
-          {(q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE") ? (
+          {q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE" ? (
             <ul className="mt-4 space-y-2">
               {q.options.map((opt) => (
                 <li key={opt.id}>
