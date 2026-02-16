@@ -51,7 +51,7 @@ export function CourseOutlineSidebar({ course, lessons, quizzes, currentLessonId
         {quizzes.map((q) => {
           const isCurrent = q.id === currentQuizId;
           const title = String((q as Record<string, unknown>).title ?? "");
-          const count = (q as Record<string, unknown>)._count?.questions ?? 0;
+          const count = (q as { _count?: { questions?: number } })._count?.questions ?? 0;
           return (
             <li key={q.id}>
               <Link
