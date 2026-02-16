@@ -102,6 +102,13 @@ export default async function DashboardPage() {
         </p>
         <p className="mt-1 text-sm text-[var(--color-muted)]">تعديل أو حذف الدورات · إنشاء دورة جديدة</p>
       </Link>
+      <Link
+        href="/dashboard/live-streams"
+        className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+      >
+        <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
+        <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بثوط Zoom أو Google Meet وربطها بالكورسات</p>
+      </Link>
       {isAdmin && (
         <div className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
           <p className="text-sm text-amber-800 dark:text-amber-200">

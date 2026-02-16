@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getCourseWithContent, getEnrollment } from "@/lib/db";
-import { getYouTubeEmbedUrl } from "@/lib/youtube";
+import { YouTubeOverlayPlayer } from "@/components/YouTubeOverlayPlayer";
 
 type Props = { params: Promise<{ slug: string; lessonSlug: string }> };
 
@@ -60,7 +60,7 @@ export default async function LessonPage({ params }: Props) {
   if (!lesson) notFound();
 
   const lessonObj = lesson as Record<string, unknown>;
-  const embedUrl = getYouTubeEmbedUrl((lessonObj.videoUrl ?? lessonObj.video_url) as string);
+  const videoUrl = (lessonObj.videoUrl ?? lessonObj.video_url) as string;
   const courseTitle = (course.titleAr ?? course.title) as string;
   const lessonTitle = (lessonObj.titleAr ?? lessonObj.title) as string;
 
@@ -71,15 +71,9 @@ export default async function LessonPage({ params }: Props) {
       </Link>
       <h1 className="mt-4 text-2xl font-bold text-[var(--color-foreground)]">{lessonTitle}</h1>
 
-      {embedUrl && (
-        <div className="mt-6 aspect-video w-full overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-black">
-          <iframe
-            src={embedUrl}
-            title={lessonTitle}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="h-full w-full"
-          />
+      {videoUrl && (
+        <div className="mt-6 w-full">
+          <YouTubeOverlayPlayer videoUrl={videoUrl} title={lessonTitle} />
         </div>
       )}
 

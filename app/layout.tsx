@@ -5,6 +5,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SessionProvider } from "@/components/SessionProvider";
+import { InspectGuard } from "@/components/InspectGuard";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -34,6 +35,7 @@ export default function RootLayout({
           shadow="0 0 10px rgba(13,148,136,0.4)"
         />
         <SessionProvider>
+          <InspectGuard />
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />

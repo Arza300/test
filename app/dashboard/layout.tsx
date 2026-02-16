@@ -33,6 +33,12 @@ export default async function DashboardLayout({
                 إدارة الكورسات
               </Link>
               <Link
+                href="/dashboard/live-streams"
+                className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--color-border)]/50"
+              >
+                البثوث المباشرة
+              </Link>
+              <Link
                 href="/dashboard/courses/new"
                 className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
               >

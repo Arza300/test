@@ -3,7 +3,7 @@ import Link from "next/link";
 import { unstable_noStore } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getCourseWithContent, getEnrollment, getUserById } from "@/lib/db";
+import { getCourseWithContent, getEnrollment, getUserById, getLiveStreamsByCourseId } from "@/lib/db";
 import { EnrollButton } from "./EnrollButton";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -76,6 +76,12 @@ export default async function CoursePage({ params }: Props) {
   const canEnroll = session?.user?.role === "STUDENT" && !isEnrolled;
   const canAccessContent = isEnrolled || session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN";
   const coursePrice = Number((course as Record<string, unknown>).price) || 0;
+
+  const liveStreams = canAccessContent ? await getLiveStreamsByCourseId(course.id) : [];
+  const formatStreamDate = (d: Date | string) => {
+    const date = typeof d === "string" ? new Date(d) : d;
+    return new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -155,6 +161,39 @@ export default async function CoursePage({ params }: Props) {
             <div className="mt-6 prose-custom text-[var(--color-foreground)]">
               <p>{(course as Record<string, unknown>).description as string}</p>
             </div>
+
+            {liveStreams.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
+                  البثوث المباشرة
+                </h2>
+                <ul className="mt-4 space-y-3">
+                  {(liveStreams as unknown as Record<string, unknown>[]).map((ls) => (
+                    <li
+                      key={String(ls.id)}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4"
+                    >
+                      <div>
+                        <span className="font-medium text-[var(--color-foreground)]">
+                          {String(ls.title_ar ?? ls.titleAr ?? ls.title ?? "")}
+                        </span>
+                        <span className="mr-2 text-sm text-[var(--color-muted)]">
+                          {ls.provider === "google_meet" ? "Google Meet" : "Zoom"} — {formatStreamDate((ls.scheduled_at ?? ls.scheduledAt) as string | Date || new Date())}
+                        </span>
+                      </div>
+                      <a
+                        href={String(ls.meeting_url ?? ls.meetingUrl ?? "#")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]"
+                      >
+                        انضم للبث
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {canEnroll && (
               <EnrollButton

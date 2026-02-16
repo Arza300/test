@@ -98,6 +98,24 @@ export interface Enrollment {
   enrolled_at: Date;
 }
 
+export type LiveStreamProvider = "zoom" | "google_meet";
+
+export interface LiveStream {
+  id: string;
+  course_id: string;
+  title: string;
+  title_ar: string | null;
+  provider: LiveStreamProvider;
+  meeting_url: string;
+  meeting_id: string | null;
+  meeting_password: string | null;
+  scheduled_at: Date;
+  description: string | null;
+  order: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // ----- أشكال للواجهة (camelCase) كما يتوقعها التطبيق -----
 export interface CourseApp {
   id: string;

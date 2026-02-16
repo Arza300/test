@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@neondatabase/serverless"],
+  turbopack: {
+    resolveAlias: {
+      "next/auth": "next-auth",
+      "next-auth/react": "next-auth/react",
+    },
+  },
   async headers() {
     return [
       {

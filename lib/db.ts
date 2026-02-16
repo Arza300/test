@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
-import type { User, UserRole, Course, Category, Enrollment, Lesson, Quiz, Question, QuestionOption } from "./types";
+import type { User, UserRole, Course, Category, Enrollment, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider } from "./types";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL غير معرّف");
@@ -460,6 +460,86 @@ export async function createEnrollment(userId: string, courseId: string): Promis
 
 export async function deleteEnrollment(userId: string, courseId: string): Promise<void> {
   await sql`DELETE FROM "Enrollment" WHERE user_id = ${userId} AND course_id = ${courseId}`;
+}
+
+// ----- LiveStream -----
+export async function getLiveStreamsByCourseId(courseId: string): Promise<LiveStream[]> {
+  const rows = await sql`
+    SELECT * FROM "LiveStream" WHERE course_id = ${courseId} ORDER BY "order" ASC, scheduled_at ASC
+  `;
+  return rowsToCamel(rows as Record<string, unknown>[]) as unknown as LiveStream[];
+}
+
+export async function getLiveStreamsAll(): Promise<(LiveStream & { course?: { id: string; title: string; slug: string } })[]> {
+  const rows = await sql`
+    SELECT ls.*, c.id as c_id, c.title as c_title, c.slug as c_slug
+    FROM "LiveStream" ls
+    LEFT JOIN "Course" c ON c.id = ls.course_id
+    ORDER BY ls.scheduled_at DESC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => {
+    const { c_id, c_title, c_slug, ...rest } = r;
+    const base = rowToCamel(rest) ?? {};
+    return { ...base, course: c_id ? { id: c_id, title: c_title, slug: c_slug } : undefined };
+  }) as unknown as (LiveStream & { course?: { id: string; title: string; slug: string } })[];
+}
+
+export async function getLiveStreamById(id: string): Promise<LiveStream | null> {
+  const rows = await sql`SELECT * FROM "LiveStream" WHERE id = ${id} LIMIT 1`;
+  return rowToCamel(rows[0] as Record<string, unknown>) as LiveStream | null;
+}
+
+export async function createLiveStream(data: {
+  course_id: string;
+  title: string;
+  title_ar?: string | null;
+  provider: LiveStreamProvider;
+  meeting_url: string;
+  meeting_id?: string | null;
+  meeting_password?: string | null;
+  scheduled_at: Date;
+  description?: string | null;
+  order?: number;
+}): Promise<LiveStream> {
+  const id = generateId();
+  await sql`
+    INSERT INTO "LiveStream" (id, course_id, title, title_ar, provider, meeting_url, meeting_id, meeting_password, scheduled_at, description, "order")
+    VALUES (${id}, ${data.course_id}, ${data.title}, ${data.title_ar ?? null}, ${data.provider}, ${data.meeting_url}, ${data.meeting_id ?? null}, ${data.meeting_password ?? null}, ${data.scheduled_at}, ${data.description ?? null}, ${data.order ?? 0})
+  `;
+  const ls = await getLiveStreamById(id);
+  if (!ls) throw new Error("فشل إنشاء البث المباشر");
+  return ls;
+}
+
+export async function updateLiveStream(
+  id: string,
+  data: {
+    course_id?: string;
+    title?: string;
+    title_ar?: string | null;
+    provider?: LiveStreamProvider;
+    meeting_url?: string;
+    meeting_id?: string | null;
+    meeting_password?: string | null;
+    scheduled_at?: Date;
+    description?: string | null;
+    order?: number;
+  }
+): Promise<void> {
+  if (data.course_id !== undefined) await sql`UPDATE "LiveStream" SET course_id = ${data.course_id}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.title !== undefined) await sql`UPDATE "LiveStream" SET title = ${data.title}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.title_ar !== undefined) await sql`UPDATE "LiveStream" SET title_ar = ${data.title_ar}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.provider !== undefined) await sql`UPDATE "LiveStream" SET provider = ${data.provider}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.meeting_url !== undefined) await sql`UPDATE "LiveStream" SET meeting_url = ${data.meeting_url}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.meeting_id !== undefined) await sql`UPDATE "LiveStream" SET meeting_id = ${data.meeting_id}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.meeting_password !== undefined) await sql`UPDATE "LiveStream" SET meeting_password = ${data.meeting_password}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.scheduled_at !== undefined) await sql`UPDATE "LiveStream" SET scheduled_at = ${data.scheduled_at}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.description !== undefined) await sql`UPDATE "LiveStream" SET description = ${data.description}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.order !== undefined) await sql`UPDATE "LiveStream" SET "order" = ${data.order}, updated_at = NOW() WHERE id = ${id}`;
+}
+
+export async function deleteLiveStream(id: string): Promise<void> {
+  await sql`DELETE FROM "LiveStream" WHERE id = ${id}`;
 }
 
 export async function getUsersByRole(role: UserRole): Promise<User[]> {
