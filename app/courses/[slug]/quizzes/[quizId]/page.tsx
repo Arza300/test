@@ -8,75 +8,32 @@ import { QuizTake } from "./QuizTake";
 
 type Props = { params: Promise<{ slug: string; quizId: string }> };
 
-/** عدم التخزين المؤقت — ضروري على Vercel حتى لا تُخزَّن الصفحة وتُرجع 404 */
+/** عدم التخزين المؤقت — ضروري على Vercel */
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-function decodeSegment(s: string): string {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
-  }
-}
-
-function isCourseId(segment: string): boolean {
-  return /^c[a-z0-9]{24}$/i.test(segment);
-}
 
 function courseHref(course: { slug?: string | null; id: string }): string {
   const seg = (course.slug && course.slug.trim()) ? encodeURIComponent(course.slug.trim()) : course.id;
   return `/courses/${seg}`;
 }
 
-function normalizeSlug(s: string): string {
-  return s.replace(/-+$/, "").replace(/^-+/, "").trim();
-}
-
+/**
+ * جلب الاختبار بالـ quizId فقط (بدون الاعتماد على slug الكورس) لتفادي مشاكل الترميز على Vercel مع Neon.
+ */
 export default async function QuizPage({ params }: Props) {
   unstable_noStore();
-  const { slug: courseSegment, quizId } = await params;
-  const decoded = decodeSegment(courseSegment).trim();
+  const { quizId } = await params;
+
+  if (!quizId || quizId.length < 20) notFound();
+
   const session = await getServerSession(authOptions);
 
-  let course = null;
+  let quiz: Awaited<ReturnType<typeof prisma.quiz.findUnique>> = null;
   try {
-    if (isCourseId(decoded)) {
-      course = await prisma.course.findFirst({
-        where: { id: decoded, isPublished: true },
-      });
-    } else {
-      const slugNorm = normalizeSlug(decoded);
-      course = await prisma.course.findFirst({
-        where: {
-          isPublished: true,
-          OR: [
-            { slug: decoded },
-            ...(slugNorm !== decoded ? [{ slug: slugNorm }] : []),
-          ],
-        },
-      });
-    }
-  } catch {
-    notFound();
-  }
-  if (!course) notFound();
-
-  let canAccess = false;
-  if (session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN") canAccess = true;
-  if (session?.user?.id) {
-    const en = await prisma.enrollment.findUnique({
-      where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
-    });
-    if (en) canAccess = true;
-  }
-  if (!canAccess) notFound();
-
-  let quiz = null;
-  try {
-    quiz = await prisma.quiz.findFirst({
-      where: { id: quizId, courseId: course.id },
+    quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
       include: {
+        course: true,
         questions: {
           orderBy: { order: "asc" },
           include: { options: true },
@@ -86,7 +43,25 @@ export default async function QuizPage({ params }: Props) {
   } catch {
     notFound();
   }
-  if (!quiz) notFound();
+
+  if (!quiz || !quiz.course) notFound();
+  const course = quiz.course;
+
+  if (!course.isPublished) notFound();
+
+  let canAccess = false;
+  if (session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN") canAccess = true;
+  if (session?.user?.id) {
+    try {
+      const en = await prisma.enrollment.findUnique({
+        where: { userId_courseId: { userId: session.user.id, courseId: course.id } },
+      });
+      if (en) canAccess = true;
+    } catch {
+      notFound();
+    }
+  }
+  if (!canAccess) notFound();
 
   const courseTitle = course.titleAr ?? course.title;
 
