@@ -24,7 +24,7 @@ export default async function DashboardCoursesPage() {
       slug: String(row.slug ?? ""),
       isPublished: Boolean(row.isPublished ?? row.is_published ?? false),
       price: Number(row.price ?? 0),
-      imageUrl: row.imageUrl ?? row.image_url ?? null,
+      imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : typeof row.image_url === "string" ? row.image_url : null,
       lessonsCount: Number(row.lessonsCount ?? 0),
       enrollmentsCount: Number(row.enrollmentsCount ?? 0),
       category: cat
