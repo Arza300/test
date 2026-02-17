@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+type CategoryOption = { id: string; name: string; nameAr?: string | null };
 type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: string };
 type QuestionOptionRow = { text: string; isCorrect: boolean };
 type QuestionRow = { type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
@@ -12,6 +13,7 @@ export function CreateCourseForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -19,8 +21,17 @@ export function CreateCourseForm() {
     imageUrl: "",
     price: "",
     maxQuizAttempts: "",
+    categoryId: "",
+    categoryName: "",
   });
   const [lessons, setLessons] = useState<LessonRow[]>([{ title: "", videoUrl: "", content: "", pdfUrl: "" }]);
+
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then((data) => Array.isArray(data) && setCategories(data))
+      .catch(() => {});
+  }, []);
   const [quizzes, setQuizzes] = useState<QuizRow[]>([{ title: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
@@ -137,6 +148,9 @@ export function CreateCourseForm() {
       imageUrl: form.imageUrl.trim() || undefined,
       price: form.price ? parseFloat(form.price) : 0,
       maxQuizAttempts: form.maxQuizAttempts.trim() ? parseInt(form.maxQuizAttempts, 10) : null,
+      ...(form.categoryName.trim()
+        ? { categoryName: form.categoryName.trim() }
+        : form.categoryId ? { categoryId: form.categoryId } : {}),
       lessons: lessons
         .filter((l) => l.title.trim())
         .map((l) => ({
@@ -255,6 +269,32 @@ export function CreateCourseForm() {
               placeholder="أو أدخل رابط صورة: https://..."
               className="mt-2 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">القسم (اختياري)</label>
+            <p className="mt-1 text-xs text-[var(--color-muted)]">اختر قسمًا موجودًا أو اكتب اسم قسم جديد ليتم إنشاؤه وربط الدورة به</p>
+            <select
+              value={form.categoryName.trim() ? "" : form.categoryId}
+              onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value, categoryName: "" }))}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+            >
+              <option value="">بدون قسم</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.nameAr ?? cat.name}
+                </option>
+              ))}
+            </select>
+            <div className="mt-2">
+              <label className="block text-xs text-[var(--color-muted)]">أو اكتب اسم قسم جديد</label>
+              <input
+                type="text"
+                value={form.categoryName}
+                onChange={(e) => setForm((f) => ({ ...f, categoryName: e.target.value, categoryId: "" }))}
+                placeholder="مثال: برمجة، تصميم، لغة عربية"
+                className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-foreground)]">السعر (ج.م)</label>

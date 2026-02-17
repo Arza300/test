@@ -12,6 +12,8 @@ import {
   createQuiz,
   createQuestion,
   createQuestionOption,
+  getCategoryByName,
+  createCategory,
 } from "@/lib/db";
 
 type LessonInput = { title: string; titleAr?: string; videoUrl?: string; content?: string; pdfUrl?: string };
@@ -38,6 +40,8 @@ export async function PUT(
     price?: number;
     isPublished?: boolean;
     maxQuizAttempts?: number | null;
+    categoryId?: string | null;
+    categoryName?: string;
     lessons?: LessonInput[];
     quizzes?: QuizInput[];
   };
@@ -59,6 +63,18 @@ export async function PUT(
     return NextResponse.json({ error: "العنوان والوصف مطلوبان" }, { status: 400 });
   }
 
+  let categoryId: string | null | undefined = body.categoryId;
+  const catName = body.categoryName?.trim();
+  if (catName) {
+    let cat = await getCategoryByName(catName);
+    if (!cat) {
+      const slugCat = catName.toLowerCase().replace(/\s+/g, "-").replace(/[^\w\u0600-\u06FF-]+/g, "") || "cat";
+      const uniqueSlug = slugCat + "-" + Date.now();
+      cat = await createCategory({ name: catName, name_ar: catName, slug: uniqueSlug });
+    }
+    categoryId = cat.id;
+  }
+
   await updateCourse(id, {
     title,
     title_ar: title,
@@ -68,6 +84,7 @@ export async function PUT(
     price: body.price ?? 0,
     is_published: body.isPublished ?? true,
     max_quiz_attempts: body.maxQuizAttempts ?? null,
+    ...(categoryId !== undefined && { category_id: categoryId }),
   });
 
   await deleteLessonsByCourseId(id);
@@ -149,6 +166,7 @@ export async function GET(
     price: Number(c.price ?? 0),
     isPublished: c.isPublished ?? c.is_published ?? true,
     maxQuizAttempts: c.maxQuizAttempts ?? c.max_quiz_attempts ?? null,
+    categoryId: (c as { categoryId?: string | null }).categoryId ?? null,
     lessons: data.lessons.map((l) => ({
       title: l.title,
       titleAr: l.titleAr ?? l.title_ar,

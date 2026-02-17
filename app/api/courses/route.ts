@@ -9,6 +9,8 @@ import {
   createQuiz,
   createQuestion,
   createQuestionOption,
+  getCategoryByName,
+  createCategory,
 } from "@/lib/db";
 
 export async function GET() {
@@ -43,6 +45,8 @@ export async function POST(request: NextRequest) {
     imageUrl?: string;
     price?: number;
     maxQuizAttempts?: number | null;
+    categoryId?: string | null;
+    categoryName?: string;
     lessons?: LessonInput[];
     quizzes?: QuizInput[];
   };
@@ -64,6 +68,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "رابط الدورة مستخدم مسبقاً" }, { status: 400 });
   }
 
+  let categoryId: string | null = null;
+  const catName = body.categoryName?.trim();
+  if (catName) {
+    let cat = await getCategoryByName(catName);
+    if (!cat) {
+      const slugCat = catName.toLowerCase().replace(/\s+/g, "-").replace(/[^\w\u0600-\u06FF-]+/g, "") || "cat";
+      const uniqueSlug = slugCat + "-" + Date.now();
+      cat = await createCategory({ name: catName, name_ar: catName, slug: uniqueSlug });
+    }
+    categoryId = cat.id;
+  } else if (body.categoryId) {
+    categoryId = body.categoryId;
+  }
+
   let course;
   try {
     course = await createCourse({
@@ -77,6 +95,7 @@ export async function POST(request: NextRequest) {
       is_published: true,
       created_by_id: session.user.id,
       max_quiz_attempts: body.maxQuizAttempts ?? null,
+      category_id: categoryId,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

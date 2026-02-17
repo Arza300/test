@@ -1,20 +1,51 @@
 import Link from "next/link";
 import { unstable_noStore } from "next/cache";
-import { getCoursesPublished } from "@/lib/db";
+import { getCoursesPublished, getCategories } from "@/lib/db";
 import { CourseCard } from "@/components/CourseCard";
 
 /** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+type CourseWithCategory = Awaited<ReturnType<typeof getCoursesPublished>>[number];
+
 export default async function HomePage() {
   unstable_noStore();
-  let courses: Awaited<ReturnType<typeof getCoursesPublished>> = [];
+  let courses: CourseWithCategory[] = [];
+  let categories: Awaited<ReturnType<typeof getCategories>> = [];
   try {
-    courses = await getCoursesPublished(true);
-    courses = courses.slice(0, 6);
+    [courses, categories] = await Promise.all([getCoursesPublished(true), getCategories()]);
   } catch {
     // لا قاعدة بيانات أو غير متصلة - نعرض واجهة بدون دورات
+  }
+
+  /** تجميع الدورات حسب القسم: كل قسم له قائمة دورات، ودورات بدون قسم في قائمة منفصلة */
+  const categoryIdToCourses = new Map<string, CourseWithCategory[]>();
+  const uncategorized: CourseWithCategory[] = [];
+  for (const c of courses) {
+    const catId = (c as { category?: { id?: string } }).category?.id;
+    if (catId) {
+      if (!categoryIdToCourses.has(catId)) categoryIdToCourses.set(catId, []);
+      categoryIdToCourses.get(catId)!.push(c);
+    } else {
+      uncategorized.push(c);
+    }
+  }
+
+  /** أقسام لها دورات (بنفس ترتيب الأقسام في النظام) + قسم "دورات أخرى" إن وُجدت */
+  const sections: { title: string; slug?: string; courses: CourseWithCategory[] }[] = [];
+  for (const cat of categories) {
+    const list = categoryIdToCourses.get(cat.id);
+    if (list?.length) {
+      sections.push({
+        title: (cat as { nameAr?: string | null }).nameAr ?? cat.name,
+        slug: cat.slug,
+        courses: list,
+      });
+    }
+  }
+  if (uncategorized.length > 0) {
+    sections.push({ title: "دورات أخرى", courses: uncategorized });
   }
 
   return (
@@ -133,32 +164,57 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured courses – أبيض في الوضع الفاتح، دارك في الوضع المظلم */}
-      <section className="bg-white dark:bg-[var(--color-background)] mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-[var(--color-foreground)]">
-              دورات مميزة
-            </h2>
-            <p className="mt-1 text-[var(--color-muted)]">
-              ابدأ بأحدث الدورات المنشورة
-            </p>
-          </div>
-          <Link
-            href="/courses"
-            className="text-sm font-medium text-[var(--color-primary)] hover:underline"
+      {/* أقسام الدورات — كل قسم له مكانه والدورات المرتبطة به فقط */}
+      {sections.length > 0 ? (
+        sections.map((section, idx) => (
+          <section
+            key={section.slug ?? `uncategorized-${idx}`}
+            className="bg-white dark:bg-[var(--color-background)] mx-auto max-w-6xl px-4 py-16 sm:px-6"
           >
-            عرض الكل ←
-          </Link>
-        </div>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-[var(--color-foreground)]">
+                  {section.title}
+                </h2>
+                <p className="mt-1 text-[var(--color-muted)]">
+                  {section.slug
+                    ? `دورات قسم ${section.title}`
+                    : "دورات بدون تصنيف"}
+                </p>
+              </div>
+              <Link
+                href={section.slug ? `/courses?category=${encodeURIComponent(section.slug)}` : "/courses"}
+                className="text-sm font-medium text-[var(--color-primary)] hover:underline"
+              >
+                عرض الكل ←
+              </Link>
+            </div>
 
-        {courses.length > 0 ? (
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <CourseCard key={course.id} course={course} />
-            ))}
-          </div>
-        ) : (
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {section.courses.slice(0, 6).map((course) => (
+                <CourseCard key={course.id} course={course} />
+              ))}
+            </div>
+            {section.courses.length > 6 && (
+              <div className="mt-6 text-center">
+                <Link
+                  href={section.slug ? `/courses?category=${encodeURIComponent(section.slug)}` : "/courses"}
+                  className="text-sm font-medium text-[var(--color-primary)] hover:underline"
+                >
+                  عرض كل دورات القسم ({section.courses.length})
+                </Link>
+              </div>
+            )}
+          </section>
+        ))
+      ) : (
+        <section className="bg-white dark:bg-[var(--color-background)] mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <h2 className="text-2xl font-bold text-[var(--color-foreground)]">
+            دورات مميزة
+          </h2>
+          <p className="mt-1 text-[var(--color-muted)]">
+            ابدأ بأحدث الدورات المنشورة
+          </p>
           <div className="mt-10 rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 p-12 text-center">
             <p className="text-[var(--color-muted)]">
               لا توجد دورات حالياً. تأكد من ضبط <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">DATABASE_URL</code> في{" "}
@@ -166,8 +222,8 @@ export default async function HomePage() {
               ، وإذا كانت الجداول غير موجودة نفّذ سكربت <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">scripts/init-neon-database.sql</code> في Neon (SQL Editor).
             </p>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* تعليقات الطلاب — قسم منفصل بخلفية رمادية + صورة شخصية افتراضية */}
       <section className="reviews-section border-t border-[var(--color-border)] bg-[var(--color-reviews-bg)] px-4 py-16 sm:px-6">

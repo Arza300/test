@@ -125,6 +125,19 @@ export async function createCategory(data: {
   return rowToCamel(rows[0] as Record<string, unknown>) as Category;
 }
 
+/** البحث عن قسم بالاسم (name أو name_ar) — للمطابقة عند كتابة اسم قسم جديد */
+export async function getCategoryByName(name: string): Promise<Category | null> {
+  const n = name.trim();
+  if (!n) return null;
+  const rows = await sql`
+    SELECT * FROM "Category"
+    WHERE LOWER(TRIM(name)) = LOWER(${n})
+       OR (name_ar IS NOT NULL AND LOWER(TRIM(name_ar)) = LOWER(${n}))
+    LIMIT 1
+  `;
+  return (rowToCamel(rows[0] as Record<string, unknown>) as Category) ?? null;
+}
+
 // ----- Course -----
 export async function getCourseBySlug(slug: string): Promise<(Course & { category?: Category }) | null> {
   const rows = await sql`
@@ -180,20 +193,42 @@ export async function getCoursesPublished(withCategory = true): Promise<(Course 
 }
 
 export async function getCoursesWithCounts(): Promise<
-  Array<Record<string, unknown> & { lessonsCount: number; enrollmentsCount: number }>
+  Array<
+    Record<string, unknown> & {
+      lessonsCount: number;
+      enrollmentsCount: number;
+      category?: { id: string; name: string; nameAr?: string | null; slug: string } | null;
+    }
+  >
 > {
   const rows = await sql`
     SELECT c.*,
       (SELECT COUNT(*)::int FROM "Lesson" WHERE course_id = c.id) as lessons_count,
-      (SELECT COUNT(*)::int FROM "Enrollment" WHERE course_id = c.id) as enrollments_count
+      (SELECT COUNT(*)::int FROM "Enrollment" WHERE course_id = c.id) as enrollments_count,
+      cat.id as cat_id, cat.name as cat_name, cat.name_ar as cat_name_ar, cat.slug as cat_slug, cat."order" as cat_order
     FROM "Course" c
-    ORDER BY c."order" ASC, c.created_at DESC
+    LEFT JOIN "Category" cat ON c.category_id = cat.id
+    ORDER BY cat."order" ASC NULLS LAST, c."order" ASC, c.created_at DESC
   `;
-  return (rows as Record<string, unknown>[]).map((r) => ({
-    ...rowToCamel(r),
-    lessonsCount: Number((r as { lessons_count?: number }).lessons_count ?? 0),
-    enrollmentsCount: Number((r as { enrollments_count?: number }).enrollments_count ?? 0),
-  })) as Array<Record<string, unknown> & { lessonsCount: number; enrollmentsCount: number }>;
+  return (rows as Record<string, unknown>[]).map((r) => {
+    const category =
+      r.cat_id != null
+        ? rowToCamel({ id: r.cat_id, name: r.cat_name, name_ar: r.cat_name_ar, slug: r.cat_slug })
+        : null;
+    const { cat_id, cat_name, cat_name_ar, cat_slug, cat_order, ...rest } = r;
+    return {
+      ...rowToCamel(rest),
+      lessonsCount: Number((r as { lessons_count?: number }).lessons_count ?? 0),
+      enrollmentsCount: Number((r as { enrollments_count?: number }).enrollments_count ?? 0),
+      category: category as { id: string; name: string; nameAr?: string | null; slug: string } | null,
+    };
+  }) as Array<
+    Record<string, unknown> & {
+      lessonsCount: number;
+      enrollmentsCount: number;
+      category?: { id: string; name: string; nameAr?: string | null; slug: string } | null;
+    }
+  >;
 }
 
 export async function getCoursesAll(): Promise<(Course & { category?: Category })[]> {
@@ -229,21 +264,23 @@ export async function createCourse(data: {
   is_published: boolean;
   created_by_id: string;
   max_quiz_attempts?: number | null;
+  category_id?: string | null;
 }): Promise<Course> {
   const id = generateId();
+  const catId = data.category_id ?? null;
   let rows: Record<string, unknown>[];
   try {
     rows = await sql`
-      INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id, max_quiz_attempts)
-      VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id}, ${data.max_quiz_attempts ?? null})
+      INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id, max_quiz_attempts, category_id)
+      VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id}, ${data.max_quiz_attempts ?? null}, ${catId})
       RETURNING *
     `;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("max_quiz_attempts") || (msg.includes("column") && msg.includes("does not exist"))) {
+    if (msg.includes("max_quiz_attempts") || msg.includes("category_id") || (msg.includes("column") && msg.includes("does not exist"))) {
       rows = await sql`
-        INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id)
-        VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id})
+        INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id, category_id)
+        VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id}, ${catId})
         RETURNING *
       `;
     } else {
@@ -267,6 +304,7 @@ export async function updateCourse(
     price?: number;
     is_published?: boolean;
     max_quiz_attempts?: number | null;
+    category_id?: string | null;
   }
 ): Promise<void> {
   if (data.title !== undefined) await sql`UPDATE "Course" SET title = ${data.title}, updated_at = NOW() WHERE id = ${id}`;
@@ -277,6 +315,7 @@ export async function updateCourse(
   if (data.price !== undefined) await sql`UPDATE "Course" SET price = ${data.price}, updated_at = NOW() WHERE id = ${id}`;
   if (data.is_published !== undefined) await sql`UPDATE "Course" SET is_published = ${data.is_published}, updated_at = NOW() WHERE id = ${id}`;
   if (data.max_quiz_attempts !== undefined) await sql`UPDATE "Course" SET max_quiz_attempts = ${data.max_quiz_attempts}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.category_id !== undefined) await sql`UPDATE "Course" SET category_id = ${data.category_id}, updated_at = NOW() WHERE id = ${id}`;
 }
 
 export async function deleteCourse(id: string): Promise<void> {
