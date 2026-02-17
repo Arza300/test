@@ -86,24 +86,25 @@ export function Header({ platformName }: { platformName?: string | null }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--color-surface)]/80">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-14 min-h-14 max-w-6xl items-center justify-between gap-3 px-3 sm:h-16 sm:px-6">
         <Link
           href="/"
-          className="text-xl font-bold text-[var(--color-foreground)] transition hover:opacity-90"
+          className="min-w-0 max-w-[45%] truncate text-base font-bold text-[var(--color-foreground)] transition hover:opacity-90 sm:max-w-[220px] sm:text-xl md:max-w-none"
+          title={platformName?.trim() || "منصة أستاذ عصام محي"}
         >
           {platformName?.trim() || "منصة أستاذ عصام محي"}
         </Link>
-        <nav className="flex items-center gap-3 sm:gap-6">
+        <nav className="flex flex-shrink-0 items-center gap-2 sm:gap-6">
           <ThemeToggle />
           <Link
             href="/"
-            className="text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-foreground)]"
+            className="hidden text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-foreground)] sm:inline-block"
           >
             الرئيسية
           </Link>
           <Link
             href="/courses"
-            className="text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-foreground)]"
+            className="hidden text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-foreground)] sm:inline-block"
           >
             الدورات
           </Link>
@@ -112,20 +113,20 @@ export function Header({ platformName }: { platformName?: string | null }) {
           ) : session ? (
             <UserMenu />
           ) : (
-            <>
+            <span className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="text-sm font-medium text-[var(--color-muted)] transition hover:text-[var(--color-foreground)]"
+                className="whitespace-nowrap rounded-[var(--radius-btn)] border border-[var(--color-border)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)] transition hover:bg-[var(--color-border)]/50 active:opacity-90 min-[400px]:px-4"
               >
                 تسجيل الدخول
               </Link>
               <Link
                 href="/register"
-                className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
+                className="whitespace-nowrap rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-3 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)] active:opacity-90 min-[400px]:px-4"
               >
                 إنشاء حساب
               </Link>
-            </>
+            </span>
           )}
         </nav>
       </div>
