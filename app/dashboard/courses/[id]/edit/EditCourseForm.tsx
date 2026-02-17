@@ -9,6 +9,10 @@ type QuestionOptionRow = { text: string; isCorrect: boolean };
 type QuestionRow = { type: "MULTIPLE_CHOICE" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
 type QuizRow = { title: string; questions: QuestionRow[] };
 
+/** بيانات السؤال القادمة من الـ API قد تحتوي على نوع ESSAY (دورات قديمة) */
+type InitialQuestionRow = { type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE"; questionText: string; options?: QuestionOptionRow[] };
+type InitialQuizRow = { title: string; questions: InitialQuestionRow[] };
+
 type InitialData = {
   id: string;
   title: string;
@@ -20,7 +24,7 @@ type InitialData = {
   maxQuizAttempts: number | null;
   categoryId: string;
   lessons: LessonRow[];
-  quizzes: QuizRow[];
+  quizzes: InitialQuizRow[];
 };
 
 const defaultLesson: LessonRow = { title: "", videoUrl: "", content: "", pdfUrl: "" };
