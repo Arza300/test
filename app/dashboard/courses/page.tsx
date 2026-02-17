@@ -17,6 +17,8 @@ export default async function DashboardCoursesPage() {
   const coursesPlain = courses.map((c) => {
     const row = c as Record<string, unknown>;
     const cat = row.category as { id: string; name: string; nameAr?: string | null; slug: string } | null | undefined;
+    const rawImg = row.imageUrl ?? row.image_url;
+    const imageUrl: string | null = rawImg !== null && rawImg !== undefined && typeof rawImg === "string" ? rawImg : null;
     return {
       id: String(row.id ?? ""),
       title: String(row.title ?? ""),
@@ -24,7 +26,7 @@ export default async function DashboardCoursesPage() {
       slug: String(row.slug ?? ""),
       isPublished: Boolean(row.isPublished ?? row.is_published ?? false),
       price: Number(row.price ?? 0),
-      imageUrl: typeof row.imageUrl === "string" ? row.imageUrl : typeof row.image_url === "string" ? row.image_url : null,
+      imageUrl,
       lessonsCount: Number(row.lessonsCount ?? 0),
       enrollmentsCount: Number(row.enrollmentsCount ?? 0),
       category: cat
