@@ -100,11 +100,10 @@ export default async function CoursePage({ params }: Props) {
               <div className="relative mb-4">
                 <img
                   src="/instructor.png"
-                  alt="عصام محي"
+                  alt="المدرس"
                   className="h-32 w-32 border-2 border-black border-dotted object-cover"
                 />
                 <div className="absolute bottom-0 right-0 h-6 w-6 rounded-full border-4 border-[var(--color-surface)] bg-[var(--color-success)]" />
-                {/* أيقونات تطفو بجانب صورة المدرس */}
                 <img
                   src="/images/ruler.png"
                   alt=""
@@ -124,11 +123,9 @@ export default async function CoursePage({ params }: Props) {
                   aria-hidden
                 />
               </div>
-              <h3 className="text-xl font-bold text-[var(--color-foreground)]">عصام محي</h3>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">مدرس محترف</p>
-              <div className="mt-4 w-full border-t border-[var(--color-border)] pt-4">
+              <div className="mt-2 w-full border-t border-[var(--color-border)] pt-4">
                 <p className="text-sm text-[var(--color-muted)]">
-                  خبير في البرمجة والتطوير مع سنوات من الخبرة في تعليم الطلاب
+                  ابدأ التعلم اليوم واصنع مستقبلك خطوة بخطوة.
                 </p>
               </div>
             </div>
