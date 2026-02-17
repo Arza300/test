@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { getUserById, getEnrollmentsWithCourseByUserId, countUsersByRole, countCourses, getAllQuizAttemptsForAdmin, getTotalPlatformEarnings } from "@/lib/db";
+import { getUserById, getEnrolledCoursesForUser, countUsersByRole, countCourses, getAllQuizAttemptsForAdmin, getTotalPlatformEarnings } from "@/lib/db";
+import { MyCoursesSection } from "./MyCoursesSection";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -14,7 +15,7 @@ export default async function DashboardPage() {
 
   if (isStudent) {
     const user = await getUserById(session.user.id);
-    const enrollments = user ? await getEnrollmentsWithCourseByUserId(session.user.id) : [];
+    const enrolledCourses = user ? await getEnrolledCoursesForUser(session.user.id) : [];
     const balance = user ? Number(user.balance) : 0;
 
     return (
@@ -54,32 +55,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
-          <h2 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">
-            دوراتي
-          </h2>
-          {enrollments.length > 0 ? (
-            <ul className="space-y-2">
-              {enrollments.map((e) => (
-                <li key={e.id}>
-                  <Link
-                    href={`/courses/${e.course.slug}`}
-                    className="block rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 transition hover:border-[var(--color-primary)]/30"
-                  >
-                    {e.course.titleAr ?? e.course.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-[var(--color-muted)]">
-              لم تسجّل في أي دورة بعد.{" "}
-              <Link href="/courses" className="text-[var(--color-primary)] font-medium hover:underline">
-                تصفح الدورات
-              </Link>
-            </p>
-          )}
-        </div>
+        <MyCoursesSection courses={enrolledCourses} />
       </div>
     );
   }

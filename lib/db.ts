@@ -888,6 +888,26 @@ export async function getEnrollmentsWithCourseByUserId(userId: string): Promise<
   })) as Array<Enrollment & { course: { id: string; title: string; titleAr: string | null; slug: string } }>;
 }
 
+/** دورات الطالب المسجّل فيها — بنفس شكل الكورسات في الصفحة الرئيسية (للعرض كبطاقات) */
+export async function getEnrolledCoursesForUser(userId: string): Promise<(Course & { category?: Category })[]> {
+  const rows = await sql`
+    SELECT c.*, cat.id as cat_id, cat.name as cat_name, cat.name_ar as cat_name_ar, cat.slug as cat_slug
+    FROM "Enrollment" e
+    JOIN "Course" c ON c.id = e.course_id
+    LEFT JOIN "Category" cat ON c.category_id = cat.id
+    WHERE e.user_id = ${userId}
+    ORDER BY e.enrolled_at DESC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => {
+    const category = r.cat_id
+      ? rowToCamel({ id: r.cat_id, name: r.cat_name, name_ar: r.cat_name_ar, slug: r.cat_slug })
+      : null;
+    const { cat_id, cat_name, cat_name_ar, cat_slug, ...rest } = r;
+    const base = rowToCamel(rest) ?? {};
+    return { ...base, category };
+  }) as unknown as (Course & { category?: Category })[];
+}
+
 export async function getUserByEmailExcludingId(email: string, excludeUserId: string): Promise<User | null> {
   const rows = await sql`SELECT * FROM "User" WHERE email = ${email} AND id != ${excludeUserId} LIMIT 1`;
   return (rows[0] as User) ?? null;
