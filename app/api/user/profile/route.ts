@@ -3,13 +3,15 @@ import { getServerSession } from "next-auth";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { updateUser } from "@/lib/db";
+import { getUserByEmailExcludingId, updateUser } from "@/lib/db";
+
+const ROLES = ["ADMIN", "ASSISTANT_ADMIN", "STUDENT"] as const;
 
 const updateSchema = z.object({
   name: z.string().min(2, "الاسم حرفين على الأقل").optional(),
   password: z.string().min(6, "كلمة المرور 6 أحرف على الأقل").optional(),
-}).refine((d) => d.name !== undefined || d.password !== undefined, {
-  message: "أرسل الاسم أو كلمة المرور للتحديث",
+  email: z.string().email("بريد إلكتروني غير صالح").optional(),
+  role: z.enum(ROLES).optional(),
 });
 
 export async function PATCH(request: NextRequest) {
@@ -33,8 +35,31 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const data: { name?: string; password_hash?: string } = {};
+  const data: {
+    name?: string;
+    email?: string;
+    role?: "ADMIN" | "ASSISTANT_ADMIN" | "STUDENT";
+    password_hash?: string;
+  } = {};
+
   if (parsed.data.name !== undefined) data.name = parsed.data.name.trim();
+
+  if (parsed.data.email !== undefined) {
+    const email = parsed.data.email.trim();
+    const existing = await getUserByEmailExcludingId(email, session.user.id);
+    if (existing) {
+      return NextResponse.json({ error: "البريد الإلكتروني مستخدم لحساب آخر" }, { status: 400 });
+    }
+    data.email = email;
+  }
+
+  if (parsed.data.role !== undefined) {
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "لا يمكنك تغيير الرتبة" }, { status: 403 });
+    }
+    data.role = parsed.data.role;
+  }
+
   if (parsed.data.password !== undefined) {
     data.password_hash = await hash(parsed.data.password, 12);
   }

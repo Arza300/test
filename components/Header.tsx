@@ -49,6 +49,13 @@ function UserMenu() {
           >
             لوحة التحكم
           </Link>
+          <Link
+            href="/dashboard/profile"
+            className="block px-3 py-2 text-sm hover:bg-[var(--color-border)]/50"
+            onClick={() => setOpen(false)}
+          >
+            تعديل بيانات الحساب
+          </Link>
           {(session.user.role === "ADMIN" || session.user.role === "ASSISTANT_ADMIN") && (
             <Link
               href="/dashboard/courses/new"

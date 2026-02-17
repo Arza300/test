@@ -5,14 +5,16 @@
 
 -- 1) المستخدمون
 CREATE TABLE IF NOT EXISTS "User" (
-  id             TEXT PRIMARY KEY,
-  email          TEXT NOT NULL UNIQUE,
-  password_hash  TEXT NOT NULL,
-  name           TEXT NOT NULL,
-  role           TEXT NOT NULL DEFAULT 'STUDENT' CHECK (role IN ('ADMIN', 'ASSISTANT_ADMIN', 'STUDENT')),
-  balance        DECIMAL(10, 2) NOT NULL DEFAULT 0,
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id              TEXT PRIMARY KEY,
+  email           TEXT NOT NULL UNIQUE,
+  password_hash   TEXT NOT NULL,
+  name            TEXT NOT NULL,
+  role            TEXT NOT NULL DEFAULT 'STUDENT' CHECK (role IN ('ADMIN', 'ASSISTANT_ADMIN', 'STUDENT')),
+  balance         DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  student_number  TEXT,
+  guardian_number TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 2) التصنيفات

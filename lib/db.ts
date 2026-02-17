@@ -50,11 +50,13 @@ export async function createUser(data: {
   password_hash: string;
   name: string;
   role?: UserRole;
+  student_number?: string | null;
+  guardian_number?: string | null;
 }): Promise<User> {
   const id = generateId();
   await sql`
-    INSERT INTO "User" (id, email, password_hash, name, role)
-    VALUES (${id}, ${data.email}, ${data.password_hash}, ${data.name}, ${data.role ?? "STUDENT"})
+    INSERT INTO "User" (id, email, password_hash, name, role, student_number, guardian_number)
+    VALUES (${id}, ${data.email}, ${data.password_hash}, ${data.name}, ${data.role ?? "STUDENT"}, ${data.student_number ?? null}, ${data.guardian_number ?? null})
   `;
   const u = await getUserById(id);
   if (!u) throw new Error("فشل إنشاء المستخدم");
@@ -63,13 +65,15 @@ export async function createUser(data: {
 
 export async function updateUser(
   id: string,
-  data: { name?: string; email?: string; role?: UserRole; balance?: string; password_hash?: string }
+  data: { name?: string; email?: string; role?: UserRole; balance?: string; password_hash?: string; student_number?: string | null; guardian_number?: string | null }
 ): Promise<void> {
   if (data.name !== undefined) await sql`UPDATE "User" SET name = ${data.name}, updated_at = NOW() WHERE id = ${id}`;
   if (data.email !== undefined) await sql`UPDATE "User" SET email = ${data.email}, updated_at = NOW() WHERE id = ${id}`;
   if (data.role !== undefined) await sql`UPDATE "User" SET role = ${data.role}, updated_at = NOW() WHERE id = ${id}`;
   if (data.balance !== undefined) await sql`UPDATE "User" SET balance = ${data.balance}, updated_at = NOW() WHERE id = ${id}`;
   if (data.password_hash !== undefined) await sql`UPDATE "User" SET password_hash = ${data.password_hash}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.student_number !== undefined) await sql`UPDATE "User" SET student_number = ${data.student_number}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.guardian_number !== undefined) await sql`UPDATE "User" SET guardian_number = ${data.guardian_number}, updated_at = NOW() WHERE id = ${id}`;
 }
 
 // ----- Category -----

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import Link from "next/link";
+import { DashboardNav } from "./DashboardNav";
 
 export default async function DashboardLayout({
   children,
@@ -9,7 +9,8 @@ export default async function DashboardLayout({
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const isStaff = session.user.role === "ADMIN" || session.user.role === "ASSISTANT_ADMIN";
+  const isAdmin = session.user.role === "ADMIN";
+  const isAssistant = session.user.role === "ASSISTANT_ADMIN";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -18,55 +19,7 @@ export default async function DashboardLayout({
           لوحة التحكم
         </h1>
         <nav className="flex flex-wrap items-center gap-2">
-          {isStaff ? (
-            <>
-              <Link
-                href="/dashboard/students"
-                className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--color-border)]/50"
-              >
-                الطلاب
-              </Link>
-              <Link
-                href="/dashboard/courses"
-                className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--color-border)]/50"
-              >
-                إدارة الكورسات
-              </Link>
-              <Link
-                href="/dashboard/statistics"
-                className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--color-border)]/50"
-              >
-                إحصائيات الطلاب
-              </Link>
-              <Link
-                href="/dashboard/live-streams"
-                className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--color-border)]/50"
-              >
-                البثوث المباشرة
-              </Link>
-              <Link
-                href="/dashboard/courses/new"
-                className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
-              >
-                إنشاء دورة
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/courses"
-                className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-medium transition hover:bg-[var(--color-border)]/50"
-              >
-                الكورسات المتاحة
-              </Link>
-              <Link
-                href="/dashboard/profile"
-                className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
-              >
-                تعديل بيانات الحساب
-              </Link>
-            </>
-          )}
+          <DashboardNav isAdmin={isAdmin} isAssistant={isAssistant} />
         </nav>
       </div>
       {children}

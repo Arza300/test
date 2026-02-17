@@ -11,6 +11,8 @@ export interface User {
   name: string;
   role: UserRole;
   balance: string;
+  student_number?: string | null;
+  guardian_number?: string | null;
   created_at: Date;
   updated_at: Date;
 }

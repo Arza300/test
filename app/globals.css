@@ -21,38 +21,44 @@ html.light {
   --color-success: #059669;
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
   --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+  --color-reviews-bg: #f1f5f9;
+  --color-reviews-avatar: #e2e8f0;
 }
 
-/* الوضع الليلي: الألوان الحالية */
+/* الوضع الليلي: أسود عادي */
 html.dark {
-  --color-background: #0c0a09;
+  --color-background: #000000;
   --color-foreground: #fafaf9;
-  --color-surface: #1c1917;
-  --color-border: #292524;
+  --color-surface: #0a0a0a;
+  --color-border: #1a1a1a;
   --color-primary: #2dd4bf;
   --color-primary-hover: #5eead4;
   --color-primary-light: #134e4a;
   --color-accent: #f59e0b;
   --color-muted: #a8a29e;
   --color-success: #059669;
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3);
-  --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.4);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.5);
+  --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+  --color-reviews-bg: #171717;
+  --color-reviews-avatar: #262626;
 }
 
-/* افتراضي: وضع ليلي إذا لم يُختر وضع */
+/* افتراضي: وضع ليلي إذا لم يُختر وضع — أسود عادي */
 html:not(.light):not(.dark) {
-  --color-background: #0c0a09;
+  --color-background: #000000;
   --color-foreground: #fafaf9;
-  --color-surface: #1c1917;
-  --color-border: #292524;
+  --color-surface: #0a0a0a;
+  --color-border: #1a1a1a;
   --color-primary: #2dd4bf;
   --color-primary-hover: #5eead4;
   --color-primary-light: #134e4a;
   --color-accent: #f59e0b;
   --color-muted: #a8a29e;
   --color-success: #059669;
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3);
-  --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.4);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.5);
+  --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+  --color-reviews-bg: #171717;
+  --color-reviews-avatar: #262626;
 }
 
 :root {
@@ -104,6 +110,36 @@ html.light .home-hero-gradient {
     #ffffff 50%,
     #ffffff 100%
   ) !important;
+}
+
+/* Hero SaaS: full width, wave at bottom */
+.hero-saas {
+  width: 100%;
+}
+
+.hero-saas .hero-stars {
+  opacity: 0.9;
+}
+
+/* لون التموج: أبيض في الوضع الساطع، أسود في الوضع المظلم فقط (حسب مفتاح الثيم) */
+html.light .hero-wave-fill {
+  fill: #ffffff;
+}
+html.dark .hero-wave-fill {
+  fill: #000000;
+}
+.hero-wave-fill {
+  transition: fill 0.3s ease;
+}
+
+/* حركة خفيفة للنجوم (تلميع مثل النجوم الحقيقية) */
+@keyframes hero-star-twinkle {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.75; }
+}
+
+.hero-star-dot {
+  animation: hero-star-twinkle 5s ease-in-out infinite;
 }
 
 /* دعم RTL للعربية */

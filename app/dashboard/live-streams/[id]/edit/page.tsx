@@ -20,7 +20,7 @@ function toDateTimeLocal(d: Date | string): string {
 export default async function EditLiveStreamPage({ params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
-  if (session.user.role !== "ADMIN" && session.user.role !== "ASSISTANT_ADMIN") {
+  if (session.user.role !== "ADMIN") {
     redirect("/dashboard");
   }
 

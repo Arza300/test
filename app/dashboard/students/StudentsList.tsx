@@ -18,6 +18,8 @@ type Student = {
   email: string;
   role: string;
   balance: number;
+  student_number?: string | null;
+  guardian_number?: string | null;
   _count: { enrollments: number };
   enrollments: Enrollment[];
 };
@@ -26,12 +28,16 @@ export function StudentsList({
   students: initialStudents,
   courses,
   isAdmin,
+  canAddBalance = false,
   canManageEnrollments = true,
+  canEditFullProfile = true,
 }: {
   students: Student[];
   courses: Course[];
   isAdmin: boolean;
+  canAddBalance?: boolean;
   canManageEnrollments?: boolean;
+  canEditFullProfile?: boolean;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -39,6 +45,9 @@ export function StudentsList({
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editStudentNumber, setEditStudentNumber] = useState("");
+  const [editGuardianNumber, setEditGuardianNumber] = useState("");
   const [coursesStudent, setCoursesStudent] = useState<Student | null>(null);
   const [addCourseId, setAddCourseId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,7 +60,9 @@ export function StudentsList({
     return initialStudents.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
-        s.email.toLowerCase().includes(q)
+        s.email.toLowerCase().includes(q) ||
+        (s.student_number ?? "").toLowerCase().includes(q) ||
+        (s.guardian_number ?? "").toLowerCase().includes(q)
     );
   }, [initialStudents, search]);
 
@@ -60,6 +71,9 @@ export function StudentsList({
     setEditName(s.name);
     setEditEmail(s.email);
     setEditRole(s.role);
+    setEditPassword("");
+    setEditStudentNumber(s.student_number ?? "");
+    setEditGuardianNumber(s.guardian_number ?? "");
     setError("");
   }
 
@@ -68,14 +82,20 @@ export function StudentsList({
     if (!editStudent) return;
     setError("");
     setLoading(true);
+    const payload: { name?: string; email?: string; role?: string; password?: string; student_number?: string | null; guardian_number?: string | null } = {
+      name: editName.trim(),
+      student_number: editStudentNumber.trim() || null,
+      guardian_number: editGuardianNumber.trim() || null,
+    };
+    if (canEditFullProfile) {
+      payload.email = editEmail.trim();
+      payload.role = editRole;
+    }
+    if (editPassword.trim().length >= 6) payload.password = editPassword.trim();
     const res = await fetch(`/api/dashboard/students/${editStudent.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: editName.trim(),
-        email: editEmail.trim(),
-        role: editRole,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     setLoading(false);
@@ -156,12 +176,12 @@ export function StudentsList({
   return (
     <div>
       <div className="mb-4">
-        <label className="block text-sm font-medium text-[var(--color-foreground)]">بحث بالاسم أو البريد</label>
+        <label className="block text-sm font-medium text-[var(--color-foreground)]">بحث بالاسم أو البريد أو رقم الطالب أو رقم ولي الأمر</label>
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="اكتب اسم الطالب أو البريد..."
+          placeholder="اسم الطالب، البريد، رقم الطالب، رقم ولي الأمر..."
           className="mt-1 w-full max-w-md rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
         />
       </div>
@@ -171,9 +191,11 @@ export function StudentsList({
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]/50">
               <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">الاسم</th>
               <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">البريد</th>
+              <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">رقم الطالب</th>
+              <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">رقم ولي الأمر</th>
               <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">رصيد</th>
               <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">الدورات</th>
-              {isAdmin && (
+              {canAddBalance && (
                 <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">إضافة رصيد</th>
               )}
               {canManageEnrollments && (
@@ -187,9 +209,11 @@ export function StudentsList({
               <tr key={s.id} className="border-b border-[var(--color-border)] last:border-0">
                 <td className="p-3 font-medium text-[var(--color-foreground)]">{s.name}</td>
                 <td className="p-3 text-[var(--color-muted)]">{s.email}</td>
+                <td className="p-3 text-[var(--color-foreground)]">{s.student_number ?? "—"}</td>
+                <td className="p-3 text-[var(--color-foreground)]">{s.guardian_number ?? "—"}</td>
                 <td className="p-3">{Number(s.balance).toFixed(2)} ج.م</td>
                 <td className="p-3">{s._count.enrollments}</td>
-                {isAdmin && (
+                {canAddBalance && (
                   <td className="p-3">
                     <AddBalanceButton studentId={s.id} studentName={s.name} />
                   </td>
@@ -310,27 +334,63 @@ export function StudentsList({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--color-foreground)]">البريد الإلكتروني</label>
+                <label className="block text-sm font-medium text-[var(--color-foreground)]">رقم الطالب</label>
                 <input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
+                  type="text"
+                  value={editStudentNumber}
+                  onChange={(e) => setEditStudentNumber(e.target.value)}
                   className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
-                  required
+                  placeholder="رقم الطالب"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--color-foreground)]">رتبة الحساب</label>
-                <select
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value)}
+                <label className="block text-sm font-medium text-[var(--color-foreground)]">رقم ولي الأمر</label>
+                <input
+                  type="text"
+                  value={editGuardianNumber}
+                  onChange={(e) => setEditGuardianNumber(e.target.value)}
                   className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
-                >
-                  <option value="STUDENT">طالب</option>
-                  <option value="ASSISTANT_ADMIN">مساعد أدمن</option>
-                  <option value="ADMIN">أدمن</option>
-                </select>
+                  placeholder="رقم ولي الأمر"
+                />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-foreground)]">كلمة المرور الجديدة (اختياري)</label>
+                <input
+                  type="password"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder="اتركه فارغاً للإبقاء على كلمة المرور الحالية"
+                  className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+                  minLength={6}
+                  autoComplete="new-password"
+                />
+              </div>
+              {canEditFullProfile && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-foreground)]">البريد الإلكتروني</label>
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-foreground)]">رتبة الحساب</label>
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+                    >
+                      <option value="STUDENT">طالب</option>
+                      <option value="ASSISTANT_ADMIN">مساعد أدمن</option>
+                      <option value="ADMIN">أدمن</option>
+                    </select>
+                  </div>
+                </>
+              )}
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"

@@ -10,7 +10,7 @@ type Props = { params: Promise<{ id: string }> };
 export default async function EditCoursePage({ params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
-  if (session.user.role !== "ADMIN" && session.user.role !== "ASSISTANT_ADMIN") {
+  if (session.user.role !== "ADMIN") {
     redirect("/dashboard");
   }
 

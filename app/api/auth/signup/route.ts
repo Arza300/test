@@ -7,6 +7,8 @@ const signupSchema = z.object({
   email: z.string().email("بريد إلكتروني غير صالح"),
   password: z.string().min(6, "كلمة المرور 6 أحرف على الأقل"),
   name: z.string().min(2, "الاسم حرفين على الأقل"),
+  student_number: z.string().optional(),
+  guardian_number: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { email, password, name } = parsed.data;
+    const { email, password, name, student_number, guardian_number } = parsed.data;
 
     const existing = await getUserByEmail(email);
     if (existing) {
@@ -35,6 +37,8 @@ export async function POST(request: NextRequest) {
       password_hash: passwordHash,
       name,
       role: "STUDENT",
+      student_number: student_number?.trim() || null,
+      guardian_number: guardian_number?.trim() || null,
     });
 
     return NextResponse.json({ success: true });

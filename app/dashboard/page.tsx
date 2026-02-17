@@ -23,11 +23,19 @@ export default async function DashboardPage() {
           <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
             مرحباً، {session.user.name}
           </h2>
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-[var(--color-muted)]">رصيدك الحالي:</span>
-            <span className="text-2xl font-bold text-[var(--color-primary)]">
-              {Number(balance).toFixed(2)} ج.م
-            </span>
+          <div className="mt-4 flex flex-wrap items-center gap-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[var(--color-muted)]">رصيدك الحالي:</span>
+              <span className="text-2xl font-bold text-[var(--color-primary)]">
+                {Number(balance).toFixed(2)} ج.م
+              </span>
+            </div>
+            <Link
+              href="/dashboard/add-balance"
+              className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
+            >
+              إضافة رصيد
+            </Link>
           </div>
         </div>
 
@@ -86,49 +94,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* الصف الأول: الطلاب | إحصائيات الطلاب */}
       <div className="grid gap-6 sm:grid-cols-2">
         <Link
           href="/dashboard/students"
-        className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-      >
-        <h3 className="font-semibold text-[var(--color-foreground)]">الطلاب</h3>
-        <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">
-          {studentsCount}
-        </p>
-        <p className="mt-1 text-sm text-[var(--color-muted)]">عرض القائمة وإدارة الطلاب</p>
-      </Link>
-      <Link
-        href="/dashboard/courses"
-        className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-      >
-        <h3 className="font-semibold text-[var(--color-foreground)]">إدارة الكورسات</h3>
-        <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">
-          {coursesCount}
-        </p>
-        <p className="mt-1 text-sm text-[var(--color-muted)]">تعديل أو حذف الدورات · إنشاء دورة جديدة</p>
-      </Link>
-      <Link
-        href="/dashboard/live-streams"
-        className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-      >
-        <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
-        <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بثوط Zoom أو Google Meet وربطها بالكورسات</p>
-      </Link>
-        {isAdmin && (
-          <div className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              كمدير، يمكنك إضافة رصيد لحسابات الطلاب من صفحة{" "}
-              <Link href="/dashboard/students" className="font-medium underline">
-                الطلاب
-              </Link>
-              .
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* إحصائيات الطلاب — بجانب الاختيارات الكبيرة */}
-      <div className="grid gap-6 sm:grid-cols-2">
+          className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+        >
+          <h3 className="font-semibold text-[var(--color-foreground)]">{isAdmin ? "الطلاب والحسابات" : "الطلاب"}</h3>
+          <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">
+            {studentsCount}
+          </p>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">إدارة الطلاب، تعديل الحسابات، إضافة الأرصدة</p>
+        </Link>
         <Link
           href="/dashboard/statistics"
           className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
@@ -147,6 +124,41 @@ export default async function DashboardPage() {
           <p className="mt-2 text-sm text-[var(--color-muted)]">عرض التفاصيل والدرجات وإجمالي الأرباح</p>
         </Link>
       </div>
+
+      {/* إدارة الكورسات | البثوث المباشرة — للأدمن فقط */}
+      {isAdmin && (
+        <div className="grid gap-6 sm:grid-cols-2">
+          <Link
+            href="/dashboard/courses"
+            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+          >
+            <h3 className="font-semibold text-[var(--color-foreground)]">إدارة الكورسات</h3>
+            <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">
+              {coursesCount}
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">تعديل أو حذف الدورات · إنشاء دورة جديدة</p>
+          </Link>
+          <Link
+            href="/dashboard/live-streams"
+            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+          >
+            <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بث من خلال Zoom أو Google Meet وربطه بكورس مرفوع مسبقاً في المنصة</p>
+          </Link>
+        </div>
+      )}
+
+      {(isAdmin || isAssistant) && (
+        <div className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            يمكنك إضافة رصيد لحسابات الطلاب وتعديل أسمائهم وكلمات المرور من صفحة{" "}
+            <Link href="/dashboard/students" className="font-medium underline">
+              الطلاب
+            </Link>
+            .
+          </p>
+        </div>
+      )}
     </div>
   );
 }

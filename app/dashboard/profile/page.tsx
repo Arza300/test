@@ -12,6 +12,9 @@ export default async function ProfilePage() {
   const user = await getUserById(session.user.id);
   if (!user) redirect("/login");
 
+  const isAdmin = session.user.role === "ADMIN";
+  const isStaff = isAdmin || session.user.role === "ASSISTANT_ADMIN";
+
   return (
     <div>
       <Link
@@ -23,10 +26,17 @@ export default async function ProfilePage() {
       <h2 className="mt-6 text-xl font-bold text-[var(--color-foreground)]">
         تعديل بيانات الحساب
       </h2>
-      <p className="mt-1 text-sm text-[var(--color-muted)]">
-        البريد الحالي: {user.email} (لا يمكن تغييره من هنا)
-      </p>
-      <ProfileForm defaultName={user.name} />
+      {!isStaff && (
+        <p className="mt-1 text-sm text-[var(--color-muted)]">
+          البريد الحالي: {user.email} (لا يمكن تغييره من هنا)
+        </p>
+      )}
+      <ProfileForm
+        defaultName={user.name ?? ""}
+        defaultEmail={isStaff ? (user.email ?? "") : undefined}
+        defaultRole={isStaff ? (user.role ?? "STUDENT") : undefined}
+        canChangeRole={isAdmin}
+      />
     </div>
   );
 }

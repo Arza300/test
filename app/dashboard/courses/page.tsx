@@ -8,7 +8,7 @@ import { CoursesManageList } from "./CoursesManageList";
 export default async function DashboardCoursesPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
-  if (session.user.role !== "ADMIN" && session.user.role !== "ASSISTANT_ADMIN") {
+  if (session.user.role !== "ADMIN") {
     redirect("/dashboard");
   }
 

@@ -8,6 +8,8 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [studentNumber, setStudentNumber] = useState("");
+  const [guardianNumber, setGuardianNumber] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -19,7 +21,13 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({
+        email,
+        password,
+        name,
+        student_number: studentNumber.trim() || undefined,
+        guardian_number: guardianNumber.trim() || undefined,
+      }),
     });
     const data = await res.json().catch(() => ({}));
     setLoading(false);
@@ -79,6 +87,38 @@ export default function RegisterPage() {
               required
               className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
               placeholder="example@email.com"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="student_number"
+              className="block text-sm font-medium text-[var(--color-foreground)]"
+            >
+              رقم الطالب
+            </label>
+            <input
+              id="student_number"
+              type="text"
+              value={studentNumber}
+              onChange={(e) => setStudentNumber(e.target.value)}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+              placeholder="رقم الطالب"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="guardian_number"
+              className="block text-sm font-medium text-[var(--color-foreground)]"
+            >
+              رقم ولي الأمر
+            </label>
+            <input
+              id="guardian_number"
+              type="text"
+              value={guardianNumber}
+              onChange={(e) => setGuardianNumber(e.target.value)}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+              placeholder="رقم ولي الأمر"
             />
           </div>
           <div>

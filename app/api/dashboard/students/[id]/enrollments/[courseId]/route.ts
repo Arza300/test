@@ -9,7 +9,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; courseId: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "ASSISTANT_ADMIN")) {
+  if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
   }
 

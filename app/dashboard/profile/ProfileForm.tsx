@@ -3,14 +3,35 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function ProfileForm({ defaultName }: { defaultName: string }) {
+const ROLES = [
+  { value: "ADMIN", label: "أدمن" },
+  { value: "ASSISTANT_ADMIN", label: "مساعد أدمن" },
+  { value: "STUDENT", label: "طالب" },
+] as const;
+
+type Props = {
+  defaultName: string;
+  defaultEmail?: string;
+  defaultRole?: string;
+  canChangeRole?: boolean;
+};
+
+export function ProfileForm({ defaultName, defaultEmail, defaultRole, canChangeRole }: Props) {
   const [name, setName] = useState(defaultName);
+  const [email, setEmail] = useState(defaultEmail ?? "");
+  const [role, setRole] = useState(defaultRole ?? "STUDENT");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const hasChanges =
+    name !== defaultName ||
+    (defaultEmail !== undefined && email !== defaultEmail) ||
+    (canChangeRole && defaultRole !== undefined && role !== defaultRole) ||
+    password.length >= 6;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,13 +46,16 @@ export function ProfileForm({ defaultName }: { defaultName: string }) {
       return;
     }
     setLoading(true);
+    const body: { name?: string; email?: string; role?: string; password?: string } = {};
+    if (name.trim()) body.name = name.trim();
+    if (defaultEmail !== undefined && email.trim()) body.email = email.trim();
+    if (canChangeRole && defaultRole !== undefined && role) body.role = role;
+    if (password) body.password = password;
+
     const res = await fetch("/api/user/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...(name.trim() && { name: name.trim() }),
-        ...(password && { password }),
-      }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     setLoading(false);
@@ -70,6 +94,40 @@ export function ProfileForm({ defaultName }: { defaultName: string }) {
           className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
         />
       </div>
+      {defaultEmail !== undefined && (
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-[var(--color-foreground)]">
+            البريد الإلكتروني
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+            required
+          />
+        </div>
+      )}
+      {canChangeRole && defaultRole !== undefined && (
+        <div>
+          <label htmlFor="role" className="block text-sm font-medium text-[var(--color-foreground)]">
+            رتبة الحساب
+          </label>
+          <select
+            id="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+          >
+            {ROLES.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-[var(--color-foreground)]">
           كلمة مرور جديدة (اتركها فارغة إن لم تُرد التغيير)
@@ -97,7 +155,7 @@ export function ProfileForm({ defaultName }: { defaultName: string }) {
       </div>
       <button
         type="submit"
-        disabled={loading || (name === defaultName && !password)}
+        disabled={loading || !hasChanges}
         className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-6 py-2 font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
       >
         {loading ? "جاري الحفظ..." : "حفظ التغييرات"}
