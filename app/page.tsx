@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { unstable_noStore } from "next/cache";
-import { getCoursesPublished, getCategories } from "@/lib/db";
+import { getCoursesPublished, getCategories, getReviews, getHomepageSettings } from "@/lib/db";
 import { CourseCard } from "@/components/CourseCard";
 
 /** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
@@ -13,10 +13,17 @@ export default async function HomePage() {
   unstable_noStore();
   let courses: CourseWithCategory[] = [];
   let categories: Awaited<ReturnType<typeof getCategories>> = [];
+  let reviews: Awaited<ReturnType<typeof getReviews>> = [];
+  let homepageSettings = await getHomepageSettings();
   try {
     [courses, categories] = await Promise.all([getCoursesPublished(true), getCategories()]);
   } catch {
     // لا قاعدة بيانات أو غير متصلة - نعرض واجهة بدون دورات
+  }
+  try {
+    reviews = await getReviews();
+  } catch {
+    // جدول التعليقات قد يكون غير موجود بعد — نعرض الصفحة بدون تعليقات
   }
 
   /** تجميع الدورات حسب القسم: كل قسم له قائمة دورات، ودورات بدون قسم في قائمة منفصلة */
@@ -102,10 +109,10 @@ export default async function HomePage() {
           <div className="flex flex-col items-center gap-12 lg:flex-row lg:items-center lg:justify-between lg:gap-20">
             <div className="flex-1 text-center lg:text-right order-2 lg:order-1">
               <h1 className="text-5xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl">
-                أستاذ / عصام محي
+                {homepageSettings.heroTitle || "أستاذ / عصام محي"}
               </h1>
               <p className="mt-6 text-2xl font-medium text-sky-200/90 sm:text-3xl">
-                ادرسها... يمكن تفهم المعلومة صح!
+                {homepageSettings.heroSlogan || "ادرسها... يمكن تفهم المعلومة صح!"}
               </p>
               <div className="mt-10 flex flex-wrap justify-center gap-4 lg:justify-start">
                 <Link
@@ -120,8 +127,8 @@ export default async function HomePage() {
             <div className="flex-shrink-0 order-1 lg:order-2">
               <div className="relative">
                 <img
-                  src="/instructor.png"
-                  alt="عصام محي"
+                  src={homepageSettings.teacherImageUrl || "/instructor.png"}
+                  alt={homepageSettings.heroTitle || "عصام محي"}
                   className="h-60 w-60 rounded-2xl border-2 border-white/20 object-cover shadow-2xl sm:h-72 sm:w-72 lg:h-80 lg:w-80"
                 />
                 <img
@@ -217,15 +224,13 @@ export default async function HomePage() {
           </p>
           <div className="mt-10 rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 p-12 text-center">
             <p className="text-[var(--color-muted)]">
-              لا توجد دورات حالياً. تأكد من ضبط <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">DATABASE_URL</code> في{" "}
-              <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">.env</code>
-              ، وإذا كانت الجداول غير موجودة نفّذ سكربت <code className="rounded bg-[var(--color-border)] px-1.5 py-0.5 text-sm">scripts/init-neon-database.sql</code> في Neon (SQL Editor).
+              لا توجد دورات حتى الآن. نأمل إضافتها قريباً.
             </p>
           </div>
         </section>
       )}
 
-      {/* تعليقات الطلاب — قسم منفصل بخلفية رمادية + صورة شخصية افتراضية */}
+      {/* تعليقات الطلاب — من قاعدة البيانات */}
       <section className="reviews-section border-t border-[var(--color-border)] bg-[var(--color-reviews-bg)] px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-2xl font-bold text-[var(--color-foreground)]">
@@ -234,44 +239,29 @@ export default async function HomePage() {
           <p className="mt-1 text-[var(--color-muted)]">
             تجارب حقيقية من طلاب المنصة
           </p>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="flex gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-reviews-avatar)] text-lg font-semibold text-[var(--color-muted)]">
-                أ
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[var(--color-foreground)]">
-                  الدورة كانت واضحة جداً والشرح مريح، استفدت فعلاً وخلّيني أكمّل باقي الكورسات هنا.
-                </p>
-                <p className="mt-3 text-sm font-medium text-[var(--color-primary)]">أحمد م.</p>
-                <p className="text-xs text-[var(--color-muted)]">طالب — دورة البرمجة</p>
-              </div>
+          {reviews.length > 0 ? (
+            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {reviews.map((r) => {
+                const letter = (r.avatarLetter && r.avatarLetter.trim()) || (r.authorName.trim()[0] ?? "؟");
+                return (
+                  <div key={r.id} className="flex gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-reviews-avatar)] text-lg font-semibold text-[var(--color-muted)]">
+                      {letter}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-[var(--color-primary)]">{r.authorName}</p>
+                      {r.authorTitle ? (
+                        <p className="mt-0.5 text-xs text-[var(--color-muted)]">{r.authorTitle}</p>
+                      ) : null}
+                      <p className="mt-3 text-[var(--color-foreground)]">{r.text}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-reviews-avatar)] text-lg font-semibold text-[var(--color-muted)]">
-                س
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[var(--color-foreground)]">
-                  أول مرة أتابع شرح عربي يكون بهذا المستوى، المدرس فعلاً فاهم وبيوصّل الفكرة من غير تعقيد.
-                </p>
-                <p className="mt-3 text-sm font-medium text-[var(--color-primary)]">سارة ك.</p>
-                <p className="text-xs text-[var(--color-muted)]">طالبة — دورة التصميم</p>
-              </div>
-            </div>
-            <div className="flex gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-reviews-avatar)] text-lg font-semibold text-[var(--color-muted)]">
-                ي
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[var(--color-foreground)]">
-                  أنا كنت متوقّع إن الأونلاين ممل، لكن المنصة دي غيرت فكرتي والوقت بيعدي وأنا بفهم. أنصح أي حد يبدأ.
-                </p>
-                <p className="mt-3 text-sm font-medium text-[var(--color-primary)]">يوسف ح.</p>
-                <p className="text-xs text-[var(--color-muted)]">طالب — دورة التطوير</p>
-              </div>
-            </div>
-          </div>
+          ) : (
+            <p className="mt-10 text-center text-[var(--color-muted)]">لا توجد تعليقات حتى الآن.</p>
+          )}
         </div>
       </section>
 

@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SessionProvider } from "@/components/SessionProvider";
 import { InspectGuard } from "@/components/InspectGuard";
+import { getHomepageSettings } from "@/lib/db";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -18,11 +19,18 @@ export const metadata: Metadata = {
   description: "منصة تعليمية حديثة لدورات البرمجة والتصميم والتطوير",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  let platformName: string | null = null;
+  try {
+    const settings = await getHomepageSettings();
+    platformName = settings.platformName;
+  } catch {
+    // استخدام الافتراضي في الهيدر
+  }
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <head>
@@ -43,7 +51,7 @@ export default function RootLayout({
         />
         <SessionProvider>
           <InspectGuard />
-          <Header />
+          <Header platformName={platformName} />
           <main className="flex-1">{children}</main>
           <Footer />
         </SessionProvider>

@@ -29,6 +29,24 @@ export interface Category {
   updated_at: Date;
 }
 
+export interface Review {
+  id: string;
+  text: string;
+  authorName: string;
+  authorTitle: string | null;
+  avatarLetter: string | null;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface HomepageSetting {
+  teacherImageUrl: string | null;
+  heroTitle: string | null;
+  heroSlogan: string | null;
+  platformName: string | null;
+}
+
 export interface Course {
   id: string;
   title: string;

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
-import type { User, UserRole, Course, Category, Enrollment, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider } from "./types";
+import type { User, UserRole, Course, Category, Review, HomepageSetting, Enrollment, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider } from "./types";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL غير معرّف");
@@ -138,7 +138,95 @@ export async function getCategoryByName(name: string): Promise<Category | null> 
   return (rowToCamel(rows[0] as Record<string, unknown>) as Category) ?? null;
 }
 
-// ----- Course -----
+// ----- Review (تعليقات الطلاب) -----
+export async function getReviews(): Promise<Review[]> {
+  const rows = await sql`SELECT * FROM "Review" ORDER BY "order" ASC, created_at DESC`;
+  return rowsToCamel(rows as Record<string, unknown>[]) as Review[];
+}
+
+export async function getReviewById(id: string): Promise<Review | null> {
+  const rows = await sql`SELECT * FROM "Review" WHERE id = ${id} LIMIT 1`;
+  return (rowToCamel(rows[0] as Record<string, unknown>) as Review) ?? null;
+}
+
+export async function createReview(data: {
+  text: string;
+  author_name: string;
+  author_title?: string | null;
+  avatar_letter?: string | null;
+  order?: number;
+}): Promise<Review> {
+  const id = generateId();
+  const rows = await sql`
+    INSERT INTO "Review" (id, text, author_name, author_title, avatar_letter, "order")
+    VALUES (${id}, ${data.text}, ${data.author_name}, ${data.author_title ?? null}, ${data.avatar_letter ?? null}, ${data.order ?? 0})
+    RETURNING *
+  `;
+  const row = rows[0] as Record<string, unknown> | undefined;
+  if (!row) throw new Error("فشل إنشاء التعليق");
+  return rowToCamel(row) as Review;
+}
+
+export async function updateReview(
+  id: string,
+  data: { text?: string; author_name?: string; author_title?: string | null; avatar_letter?: string | null; order?: number }
+): Promise<void> {
+  if (data.text !== undefined) await sql`UPDATE "Review" SET text = ${data.text}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.author_name !== undefined) await sql`UPDATE "Review" SET author_name = ${data.author_name}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.author_title !== undefined) await sql`UPDATE "Review" SET author_title = ${data.author_title}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.avatar_letter !== undefined) await sql`UPDATE "Review" SET avatar_letter = ${data.avatar_letter}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.order !== undefined) await sql`UPDATE "Review" SET "order" = ${data.order}, updated_at = NOW() WHERE id = ${id}`;
+}
+
+export async function deleteReview(id: string): Promise<void> {
+  await sql`DELETE FROM "Review" WHERE id = ${id}`;
+}
+
+// ----- HomepageSetting (إعدادات الصفحة الرئيسية) -----
+const HOMEPAGE_DEFAULTS: HomepageSetting = {
+  teacherImageUrl: "/instructor.png",
+  heroTitle: "أستاذ / عصام محي",
+  heroSlogan: "ادرسها... يمكن تفهم المعلومة صح!",
+  platformName: "منصة أستاذ عصام محي",
+};
+
+export async function getHomepageSettings(): Promise<HomepageSetting> {
+  try {
+    const rows = await sql`SELECT * FROM "HomepageSetting" WHERE id = 'default' LIMIT 1`;
+    const row = rows[0] as Record<string, unknown> | undefined;
+    if (!row) return HOMEPAGE_DEFAULTS;
+    const c = rowToCamel(row) as Record<string, unknown>;
+    return {
+      teacherImageUrl: (c.teacherImageUrl as string) ?? HOMEPAGE_DEFAULTS.teacherImageUrl,
+      heroTitle: (c.heroTitle as string) ?? HOMEPAGE_DEFAULTS.heroTitle,
+      heroSlogan: (c.heroSlogan as string) ?? HOMEPAGE_DEFAULTS.heroSlogan,
+      platformName: (c.platformName as string) ?? HOMEPAGE_DEFAULTS.platformName,
+    };
+  } catch {
+    return HOMEPAGE_DEFAULTS;
+  }
+}
+
+export async function updateHomepageSettings(data: {
+  teacher_image_url?: string | null;
+  hero_title?: string | null;
+  hero_slogan?: string | null;
+  platform_name?: string | null;
+}): Promise<void> {
+  if (data.teacher_image_url !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET teacher_image_url = ${data.teacher_image_url}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_title !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_title = ${data.hero_title}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slogan !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slogan = ${data.hero_slogan}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.platform_name !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET platform_name = ${data.platform_name}, updated_at = NOW() WHERE id = 'default'`;
+  }
+}
+
 export async function getCourseBySlug(slug: string): Promise<(Course & { category?: Category }) | null> {
   const rows = await sql`
     SELECT c.*, cat.id as cat_id, cat.name as cat_name, cat.name_ar as cat_name_ar, cat.slug as cat_slug

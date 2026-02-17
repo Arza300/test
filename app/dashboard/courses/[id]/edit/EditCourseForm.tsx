@@ -299,7 +299,7 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
                 type="text"
                 value={form.categoryName}
                 onChange={(e) => setForm((f) => ({ ...f, categoryName: e.target.value, categoryId: "" }))}
-                placeholder="مثال: برمجة، تصميم، لغة عربية"
+                placeholder="اكتب هنا اسم المرحلة التعليمية"
                 className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
               />
             </div>

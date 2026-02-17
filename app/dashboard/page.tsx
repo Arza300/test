@@ -139,6 +139,20 @@ export default async function DashboardPage() {
             <p className="mt-1 text-sm text-[var(--color-muted)]">تعديل أو حذف الدورات · إنشاء دورة جديدة</p>
           </Link>
           <Link
+            href="/dashboard/settings/homepage"
+            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+          >
+            <h3 className="font-semibold text-[var(--color-foreground)]">إعدادات الصفحة الرئيسية</h3>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">صورة المدرس واسم المنصة والعنوان والشعار</p>
+          </Link>
+          <Link
+            href="/dashboard/reviews"
+            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+          >
+            <h3 className="font-semibold text-[var(--color-foreground)]">تعليقات الطلاب</h3>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">إدارة تعليقات الطلاب المعروضة في الصفحة الرئيسية (إضافة / تعديل / حذف)</p>
+          </Link>
+          <Link
             href="/dashboard/live-streams"
             className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
           >

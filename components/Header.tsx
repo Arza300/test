@@ -81,7 +81,7 @@ function UserMenu() {
   );
 }
 
-export function Header() {
+export function Header({ platformName }: { platformName?: string | null }) {
   const { data: session, status } = useSession();
 
   return (
@@ -91,7 +91,7 @@ export function Header() {
           href="/"
           className="text-xl font-bold text-[var(--color-foreground)] transition hover:opacity-90"
         >
-          منصة أستاذ عصام محي
+          {platformName?.trim() || "منصة أستاذ عصام محي"}
         </Link>
         <nav className="flex items-center gap-3 sm:gap-6">
           <ThemeToggle />

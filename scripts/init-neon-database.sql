@@ -167,3 +167,30 @@ CREATE TABLE IF NOT EXISTS "LiveStream" (
 
 CREATE INDEX IF NOT EXISTS "LiveStream_course_id_idx" ON "LiveStream"(course_id);
 CREATE INDEX IF NOT EXISTS "LiveStream_scheduled_at_idx" ON "LiveStream"(scheduled_at);
+
+-- 12) تعليقات الطلاب (للصفحة الرئيسية)
+CREATE TABLE IF NOT EXISTS "Review" (
+  id             TEXT PRIMARY KEY,
+  text           TEXT NOT NULL,
+  author_name    TEXT NOT NULL,
+  author_title   TEXT,
+  avatar_letter  TEXT,
+  "order"        INT NOT NULL DEFAULT 0,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS "Review_order_idx" ON "Review"("order");
+
+-- 13) إعدادات الصفحة الرئيسية (صورة المدرس والنصوص)
+CREATE TABLE IF NOT EXISTS "HomepageSetting" (
+  id                  TEXT PRIMARY KEY DEFAULT 'default',
+  teacher_image_url   TEXT,
+  hero_title          TEXT,
+  hero_slogan         TEXT,
+  platform_name       TEXT,
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO "HomepageSetting" (id, teacher_image_url, hero_title, hero_slogan, platform_name)
+VALUES ('default', '/instructor.png', 'أستاذ / عصام محي', 'ادرسها... يمكن تفهم المعلومة صح!', 'منصة أستاذ عصام محي')
+ON CONFLICT (id) DO NOTHING;

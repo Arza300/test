@@ -64,6 +64,12 @@ export function DashboardNav({
           <NavLink href="/dashboard/courses">
             إدارة الكورسات
           </NavLink>
+          <NavLink href="/dashboard/reviews">
+            تعليقات الطلاب
+          </NavLink>
+          <NavLink href="/dashboard/settings/homepage">
+            إعدادات الصفحة الرئيسية
+          </NavLink>
           <NavLink href="/dashboard/live-streams">
             البثوث المباشرة
           </NavLink>
