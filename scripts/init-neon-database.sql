@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS "Review" (
 );
 CREATE INDEX IF NOT EXISTS "Review_order_idx" ON "Review"("order");
 
--- 13) إعدادات الصفحة الرئيسية (صورة المدرس، النصوص، روابط واتساب/فيسبوك، عنوان التبويب، لون خلفية الهيرو)
+-- 13) إعدادات الصفحة الرئيسية (صورة المدرس، النصوص، روابط واتساب/فيسبوك، عنوان التبويب، لون الهيرو، نصوص الفوتر)
 CREATE TABLE IF NOT EXISTS "HomepageSetting" (
   id                  TEXT PRIMARY KEY DEFAULT 'default',
   teacher_image_url   TEXT,
@@ -207,6 +207,9 @@ CREATE TABLE IF NOT EXISTS "HomepageSetting" (
   facebook_url        TEXT,
   page_title          TEXT,
   hero_bg_preset      TEXT,
+  footer_title        TEXT,
+  footer_tagline      TEXT,
+  footer_copyright    TEXT,
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -215,9 +218,12 @@ ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS whatsapp_url TEXT;
 ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS facebook_url TEXT;
 ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS page_title TEXT;
 ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_bg_preset TEXT;
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS footer_title TEXT;
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS footer_tagline TEXT;
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS footer_copyright TEXT;
 
 -- إدراج الصف الافتراضي إن لم يكن موجوداً
-INSERT INTO "HomepageSetting" (id, teacher_image_url, hero_title, hero_slogan, platform_name, whatsapp_url, facebook_url, page_title, hero_bg_preset, updated_at)
+INSERT INTO "HomepageSetting" (id, teacher_image_url, hero_title, hero_slogan, platform_name, whatsapp_url, facebook_url, page_title, hero_bg_preset, footer_title, footer_tagline, footer_copyright, updated_at)
 VALUES (
   'default',
   '/instructor.png',
@@ -228,6 +234,9 @@ VALUES (
   'https://www.facebook.com/profile.php?id=61562686209159',
   'منصتي التعليمية | دورات وتعلم أونلاين',
   'navy',
+  'منصتي التعليمية',
+  'تعلم بأسلوب حديث ومنهجية واضحة',
+  'منصتي التعليمية. جميع الحقوق محفوظة.',
   NOW()
 )
 ON CONFLICT (id) DO NOTHING;
@@ -235,9 +244,12 @@ ON CONFLICT (id) DO NOTHING;
 -- تعيين قيم افتراضية للأعمدة الجديدة لو الصف كان موجوداً من قبل
 UPDATE "HomepageSetting"
 SET
-  whatsapp_url   = COALESCE(whatsapp_url, 'https://wa.me/201023005622'),
-  facebook_url   = COALESCE(facebook_url, 'https://www.facebook.com/profile.php?id=61562686209159'),
-  page_title     = COALESCE(page_title, 'منصتي التعليمية | دورات وتعلم أونلاين'),
-  hero_bg_preset = COALESCE(hero_bg_preset, 'navy'),
-  updated_at     = NOW()
+  whatsapp_url     = COALESCE(whatsapp_url, 'https://wa.me/201023005622'),
+  facebook_url     = COALESCE(facebook_url, 'https://www.facebook.com/profile.php?id=61562686209159'),
+  page_title       = COALESCE(page_title, 'منصتي التعليمية | دورات وتعلم أونلاين'),
+  hero_bg_preset   = COALESCE(hero_bg_preset, 'navy'),
+  footer_title     = COALESCE(footer_title, 'منصتي التعليمية'),
+  footer_tagline   = COALESCE(footer_tagline, 'تعلم بأسلوب حديث ومنهجية واضحة'),
+  footer_copyright = COALESCE(footer_copyright, 'منصتي التعليمية. جميع الحقوق محفوظة.'),
+  updated_at       = NOW()
 WHERE id = 'default';

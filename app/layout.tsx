@@ -27,17 +27,27 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
+const DEFAULT_FOOTER_TITLE = "منصتي التعليمية";
+const DEFAULT_FOOTER_TAGLINE = "تعلم بأسلوب حديث ومنهجية واضحة";
+const DEFAULT_FOOTER_COPYRIGHT = "منصتي التعليمية. جميع الحقوق محفوظة.";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   let platformName: string | null = null;
+  let footerTitle = DEFAULT_FOOTER_TITLE;
+  let footerTagline = DEFAULT_FOOTER_TAGLINE;
+  let footerCopyright = DEFAULT_FOOTER_COPYRIGHT;
   try {
     const settings = await getHomepageSettings();
     platformName = settings.platformName;
+    if (settings.footerTitle?.trim()) footerTitle = settings.footerTitle.trim();
+    if (settings.footerTagline?.trim()) footerTagline = settings.footerTagline.trim();
+    if (settings.footerCopyright?.trim()) footerCopyright = settings.footerCopyright.trim();
   } catch {
-    // استخدام الافتراضي في الهيدر
+    // استخدام الافتراضي في الهيدر والفوتر
   }
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
@@ -61,7 +71,7 @@ export default async function RootLayout({
           <InspectGuard />
           <Header platformName={platformName} />
           <main className="flex-1">{children}</main>
-          <Footer />
+          <Footer footerTitle={footerTitle} footerTagline={footerTagline} footerCopyright={footerCopyright} />
         </SessionProvider>
       </body>
     </html>

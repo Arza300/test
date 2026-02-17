@@ -192,6 +192,9 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   facebookUrl: "https://www.facebook.com/profile.php?id=61562686209159",
   pageTitle: "منصتي التعليمية | دورات وتعلم أونلاين",
   heroBgPreset: "navy",
+  footerTitle: "منصتي التعليمية",
+  footerTagline: "تعلم بأسلوب حديث ومنهجية واضحة",
+  footerCopyright: "منصتي التعليمية. جميع الحقوق محفوظة.",
 };
 
 export async function getHomepageSettings(): Promise<HomepageSetting> {
@@ -205,10 +208,14 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       heroTitle: (c.heroTitle as string) ?? HOMEPAGE_DEFAULTS.heroTitle,
       heroSlogan: (c.heroSlogan as string) ?? HOMEPAGE_DEFAULTS.heroSlogan,
       platformName: (c.platformName as string) ?? HOMEPAGE_DEFAULTS.platformName,
-      whatsappUrl: (c.whatsappUrl as string) ?? HOMEPAGE_DEFAULTS.whatsappUrl,
-      facebookUrl: (c.facebookUrl as string) ?? HOMEPAGE_DEFAULTS.facebookUrl,
+      /* لا نستخدم الافتراضي عند الحذف — لو القيمة null أو فارغة نرجع null حتى يختفي الزر */
+      whatsappUrl: c.whatsappUrl != null && String(c.whatsappUrl).trim() !== "" ? String(c.whatsappUrl).trim() : null,
+      facebookUrl: c.facebookUrl != null && String(c.facebookUrl).trim() !== "" ? String(c.facebookUrl).trim() : null,
       pageTitle: (c.pageTitle as string) ?? HOMEPAGE_DEFAULTS.pageTitle,
       heroBgPreset: (c.heroBgPreset as string) ?? HOMEPAGE_DEFAULTS.heroBgPreset,
+      footerTitle: (c.footerTitle as string) ?? HOMEPAGE_DEFAULTS.footerTitle,
+      footerTagline: (c.footerTagline as string) ?? HOMEPAGE_DEFAULTS.footerTagline,
+      footerCopyright: (c.footerCopyright as string) ?? HOMEPAGE_DEFAULTS.footerCopyright,
     };
   } catch {
     return HOMEPAGE_DEFAULTS;
@@ -224,6 +231,9 @@ export async function updateHomepageSettings(data: {
   facebook_url?: string | null;
   page_title?: string | null;
   hero_bg_preset?: string | null;
+  footer_title?: string | null;
+  footer_tagline?: string | null;
+  footer_copyright?: string | null;
 }): Promise<void> {
   if (data.teacher_image_url !== undefined) {
     await sql`UPDATE "HomepageSetting" SET teacher_image_url = ${data.teacher_image_url}, updated_at = NOW() WHERE id = 'default'`;
@@ -248,6 +258,15 @@ export async function updateHomepageSettings(data: {
   }
   if (data.hero_bg_preset !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_bg_preset = ${data.hero_bg_preset}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.footer_title !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET footer_title = ${data.footer_title}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.footer_tagline !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET footer_tagline = ${data.footer_tagline}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.footer_copyright !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET footer_copyright = ${data.footer_copyright}, updated_at = NOW() WHERE id = 'default'`;
   }
 }
 

@@ -33,6 +33,9 @@ export async function PUT(request: NextRequest) {
     facebookUrl?: string | null;
     pageTitle?: string | null;
     heroBgPreset?: string | null;
+    footerTitle?: string | null;
+    footerTagline?: string | null;
+    footerCopyright?: string | null;
   };
   try {
     body = await request.json();
@@ -49,6 +52,9 @@ export async function PUT(request: NextRequest) {
       facebook_url: body.facebookUrl !== undefined ? body.facebookUrl : undefined,
       page_title: body.pageTitle !== undefined ? body.pageTitle : undefined,
       hero_bg_preset: body.heroBgPreset !== undefined ? body.heroBgPreset : undefined,
+      footer_title: body.footerTitle !== undefined ? body.footerTitle : undefined,
+      footer_tagline: body.footerTagline !== undefined ? body.footerTagline : undefined,
+      footer_copyright: body.footerCopyright !== undefined ? body.footerCopyright : undefined,
     });
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { HomepageSetting, HeroBgPreset } from "@/lib/types";
 
@@ -17,6 +17,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [form, setForm] = useState({
     teacherImageUrl: initialSettings.teacherImageUrl ?? "",
     heroTitle: initialSettings.heroTitle ?? "",
@@ -26,13 +27,23 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     whatsappUrl: initialSettings.whatsappUrl ?? "",
     facebookUrl: initialSettings.facebookUrl ?? "",
     heroBgPreset: (initialSettings.heroBgPreset as HeroBgPreset) || "navy",
+    footerTitle: initialSettings.footerTitle ?? "",
+    footerTagline: initialSettings.footerTagline ?? "",
+    footerCopyright: initialSettings.footerCopyright ?? "",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
 
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => setSuccess(""), 4000);
+    return () => clearTimeout(t);
+  }, [success]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setSaving(true);
     try {
       const res = await fetch("/api/dashboard/settings/homepage", {
@@ -47,11 +58,16 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           whatsappUrl: form.whatsappUrl.trim() || null,
           facebookUrl: form.facebookUrl.trim() || null,
           heroBgPreset: form.heroBgPreset || null,
+          footerTitle: form.footerTitle.trim() || null,
+          footerTagline: form.footerTagline.trim() || null,
+          footerCopyright: form.footerCopyright.trim() || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "فشل الحفظ");
+      setSuccess("تم حفظ التغييرات");
       router.refresh();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "فشل حفظ الإعدادات");
     } finally {
@@ -64,6 +80,11 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
       {error && (
         <div className="rounded-[var(--radius-btn)] bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
           {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-[var(--radius-btn)] bg-emerald-500/15 px-3 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+          {success}
         </div>
       )}
 
@@ -195,13 +216,44 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
               placeholder="منصتي التعليمية | دورات وتعلم أونلاين"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">عنوان الفوتر (أسفل الموقع)</label>
+            <input
+              type="text"
+              value={form.footerTitle}
+              onChange={(e) => setForm((f) => ({ ...f, footerTitle: e.target.value }))}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              placeholder="منصتي التعليمية"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">وصف الفوتر (تحت العنوان)</label>
+            <input
+              type="text"
+              value={form.footerTagline}
+              onChange={(e) => setForm((f) => ({ ...f, footerTagline: e.target.value }))}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              placeholder="تعلم بأسلوب حديث ومنهجية واضحة"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">نص حقوق النشر (أسفل الصفحة)</label>
+            <input
+              type="text"
+              value={form.footerCopyright}
+              onChange={(e) => setForm((f) => ({ ...f, footerCopyright: e.target.value }))}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              placeholder="منصتي التعليمية. جميع الحقوق محفوظة."
+            />
+            <p className="mt-1 text-xs text-[var(--color-muted)]">يُعرض كـ: © السنة الحالية ثم النص أعلاه.</p>
+          </div>
         </div>
       </div>
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
         <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">روابط التواصل (الصفحة الرئيسية)</h3>
         <p className="mb-3 text-sm text-[var(--color-muted)]">
-          روابط أزرار واتساب وفيسبوك الثابتة في أسفل يمين الصفحة الرئيسية.
+          رابط واحد لواتساب ورابط واحد لفيسبوك فقط (أزرار ثابتة أسفل يمين الصفحة). اترك الحقل فارغاً لإخفاء الزر من الصفحة.
         </p>
         <div className="space-y-4">
           <div>
@@ -213,6 +265,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
               className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
               placeholder="https://wa.me/201023005622"
             />
+            <p className="mt-1 text-xs text-[var(--color-muted)]">فارغ = عدم عرض زر واتساب.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-foreground)]">رابط فيسبوك</label>
@@ -223,6 +276,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
               className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
               placeholder="https://www.facebook.com/..."
             />
+            <p className="mt-1 text-xs text-[var(--color-muted)]">فارغ = عدم عرض زر فيسبوك.</p>
           </div>
         </div>
       </div>

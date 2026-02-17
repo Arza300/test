@@ -52,6 +52,12 @@ export interface HomepageSetting {
   facebookUrl: string | null;
   pageTitle: string | null;
   heroBgPreset: HeroBgPreset | string | null;
+  /** عنوان الفوتر (مثلاً: منصتي التعليمية) */
+  footerTitle: string | null;
+  /** وصف قصير تحت العنوان (مثلاً: تعلم بأسلوب حديث...) */
+  footerTagline: string | null;
+  /** نص حقوق النشر — يظهر بعد © والسنة (السنة تُضاف تلقائياً) */
+  footerCopyright: string | null;
 }
 
 export interface Course {
