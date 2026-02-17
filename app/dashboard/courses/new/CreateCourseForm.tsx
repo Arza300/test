@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 type CategoryOption = { id: string; name: string; nameAr?: string | null };
 type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: string };
 type QuestionOptionRow = { text: string; isCorrect: boolean };
-type QuestionRow = { type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
+type QuestionRow = { type: "MULTIPLE_CHOICE" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
 type QuizRow = { title: string; questions: QuestionRow[] };
 
 export function CreateCourseForm() {
@@ -79,7 +79,7 @@ export function CreateCourseForm() {
       )
     );
   }
-  function setQuestionType(qi: number, qti: number, type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE") {
+  function setQuestionType(qi: number, qti: number, type: "MULTIPLE_CHOICE" | "TRUE_FALSE") {
     setQuizzes((q) =>
       q.map((x, i) =>
         i === qi
@@ -93,9 +93,7 @@ export function CreateCourseForm() {
                       options:
                         type === "MULTIPLE_CHOICE"
                           ? qt.options.length ? qt.options : [{ text: "", isCorrect: false }]
-                          : type === "TRUE_FALSE"
-                            ? [{ text: "صح", isCorrect: true }, { text: "خطأ", isCorrect: false }]
-                            : [],
+                          : [{ text: "صح", isCorrect: true }, { text: "خطأ", isCorrect: false }],
                     }
                   : qt
               ),
@@ -428,7 +426,7 @@ export function CreateCourseForm() {
 
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
         <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">الاختبارات</h3>
-        <p className="mb-4 text-sm text-[var(--color-muted)]">اختياري: يمكنك إنشاء الكورس بدون اختبارات، أو إضافة اختبارات وأسئلة اختيارية أو مقالية</p>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">اختياري: يمكنك إنشاء الكورس بدون اختبارات، أو إضافة اختبارات وأسئلة اختيار من متعدد أو صح وخطأ</p>
         <div className="mb-6">
           <label className="block text-sm font-medium text-[var(--color-foreground)]">
             حد مرات دخول الاختبار (اختياري)
@@ -465,12 +463,11 @@ export function CreateCourseForm() {
                   <span className="text-sm font-medium">سؤال {qti + 1}</span>
                   <select
                     value={q.type}
-                    onChange={(e) => setQuestionType(qi, qti, e.target.value as "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE")}
+                    onChange={(e) => setQuestionType(qi, qti, e.target.value as "MULTIPLE_CHOICE" | "TRUE_FALSE")}
                     className="rounded border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-1 text-sm"
                   >
-                    <option value="MULTIPLE_CHOICE">اختياري</option>
+                    <option value="MULTIPLE_CHOICE">اختياري من متعدد</option>
                     <option value="TRUE_FALSE">صح وخطأ</option>
-                    <option value="ESSAY">مقالي</option>
                   </select>
                   {quiz.questions.length > 1 && (
                     <button type="button" onClick={() => removeQuestion(qi, qti)} className="text-sm text-red-600 hover:underline">
@@ -487,20 +484,19 @@ export function CreateCourseForm() {
                 />
                 {(q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE") && (
                   <div className="space-y-1">
+                    <p className="text-xs text-[var(--color-muted)]">
+                      {q.type === "TRUE_FALSE" ? "اكتب الإجابتين وحدد الصحيحة:" : "اكتب الخيارات وحدد الإجابة الصحيحة:"}
+                    </p>
                     {q.options.map((opt, oi) => (
                       <div key={oi} className="flex items-center gap-2">
-                        {q.type === "TRUE_FALSE" ? (
-                          <span className="flex-1 text-sm">{opt.text}</span>
-                        ) : (
-                          <input
-                            type="text"
-                            value={opt.text}
-                            onChange={(e) => updateOption(qi, qti, oi, "text", e.target.value)}
-                            placeholder={`خيار ${oi + 1}`}
-                            className="flex-1 rounded border border-[var(--color-border)] px-2 py-1 text-sm"
-                          />
-                        )}
-                        <label className="flex items-center gap-1 text-sm">
+                        <input
+                          type="text"
+                          value={opt.text}
+                          onChange={(e) => updateOption(qi, qti, oi, "text", e.target.value)}
+                          placeholder={q.type === "TRUE_FALSE" ? (oi === 0 ? "مثال: صح" : "مثال: خطأ") : `خيار ${oi + 1}`}
+                          className="flex-1 rounded border border-[var(--color-border)] px-2 py-1 text-sm"
+                        />
+                        <label className="flex items-center gap-1 text-sm whitespace-nowrap">
                           <input
                             type="radio"
                             name={`q-${qi}-${qti}-correct`}
