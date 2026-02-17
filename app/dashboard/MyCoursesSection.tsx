@@ -9,18 +9,19 @@ import type { Category } from "@/lib/types";
 type CourseWithCategory = Course & { category?: Category };
 
 function toCourseCardCourse(c: CourseWithCategory) {
+  const raw = c as unknown as Record<string, unknown>;
   const cat = c.category as { name?: string; nameAr?: string | null } | undefined;
   return {
     id: c.id,
     title: c.title,
-    titleAr: (c as Record<string, unknown>).titleAr ?? c.title_ar,
+    titleAr: raw.titleAr ?? c.title_ar,
     slug: c.slug,
-    shortDesc: (c as Record<string, unknown>).shortDesc ?? c.short_desc,
+    shortDesc: raw.shortDesc ?? c.short_desc,
     duration: c.duration,
     level: c.level,
-    imageUrl: (c as Record<string, unknown>).imageUrl ?? c.image_url,
+    imageUrl: raw.imageUrl ?? c.image_url,
     price: c.price,
-    category: cat ? { name: cat.name ?? "", nameAr: cat.nameAr ?? cat.name } : undefined,
+    category: cat ? { name: cat.name ?? "", nameAr: (cat as Record<string, unknown>).nameAr ?? cat.name } : undefined,
   };
 }
 
@@ -31,7 +32,8 @@ export function MyCoursesSection({ courses }: { courses: CourseWithCategory[] })
     const q = search.trim().toLowerCase();
     if (!q) return courses;
     return courses.filter((c) => {
-      const title = String((c as Record<string, unknown>).titleAr ?? c.title_ar ?? c.title ?? "").toLowerCase();
+      const r = c as unknown as Record<string, unknown>;
+      const title = String(r.titleAr ?? c.title_ar ?? c.title ?? "").toLowerCase();
       const titleEn = String(c.title ?? "").toLowerCase();
       const slug = String(c.slug ?? "").toLowerCase();
       return title.includes(q) || titleEn.includes(q) || slug.includes(q);
