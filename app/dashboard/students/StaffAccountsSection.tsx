@@ -116,7 +116,7 @@ export function StaffAccountsSection({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg">
             <h3 className="text-lg font-semibold text-[var(--color-foreground)]">
-              تعديل بيانات الحساب — {editUser.roleLabel}
+              تعديل بيانات الحساب — {roleLabel[editUser.role] ?? editUser.role}
             </h3>
             <form onSubmit={handleSave} className="mt-4 space-y-3">
               {error && (
