@@ -25,7 +25,7 @@ function LoginForm() {
     });
     setLoading(false);
     if (res?.error) {
-      setError("البريد الإلكتروني او كلمة المرور غير صحيحة");
+      setError("البريد/رقم الهاتف أو كلمة المرور غير صحيحة");
       return;
     }
     router.push(callbackUrl);
@@ -52,16 +52,17 @@ function LoginForm() {
               htmlFor="email"
               className="block text-sm font-medium text-[var(--color-foreground)]"
             >
-              البريد الإلكتروني
+              البريد الإلكتروني أو رقم الهاتف
             </label>
             <input
               id="email"
-              type="email"
+              type="text"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-              placeholder="example@email.com"
+              placeholder="example@email.com أو 01xxxxxxxxx"
             />
           </div>
           <div>

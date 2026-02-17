@@ -40,6 +40,32 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return (rows[0] as User) ?? null;
 }
 
+/** تسجيل الدخول بالبريد أو رقم الهاتف: إذا القيمة تحتوي @ نبحث بالبريد، وإلا بالرقم (مقارنة بعد حذف غير الأرقام) */
+export async function getUserByEmailOrPhone(emailOrPhone: string): Promise<User | null> {
+  const trimmed = emailOrPhone.trim();
+  if (trimmed.includes("@")) {
+    return getUserByEmail(trimmed);
+  }
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length < 10) return null;
+
+  const matchByDigits = async (norm: string) => {
+    const rows = await sql`
+      SELECT * FROM "User"
+      WHERE REGEXP_REPLACE(COALESCE(guardian_number, ''), '[^0-9]', '', 'g') = ${norm}
+         OR REGEXP_REPLACE(COALESCE(student_number, ''), '[^0-9]', '', 'g') = ${norm}
+      LIMIT 1
+    `;
+    return (rows[0] as User) ?? null;
+  };
+
+  const user = await matchByDigits(digits);
+  if (user) return user;
+  if (digits.startsWith("20") && digits.length === 12) return matchByDigits("0" + digits.slice(2));
+  if (digits.startsWith("0") && digits.length === 11) return matchByDigits("20" + digits.slice(1));
+  return null;
+}
+
 export async function getUserById(id: string): Promise<User | null> {
   const rows = await sql`SELECT * FROM "User" WHERE id = ${id} LIMIT 1`;
   return (rows[0] as User) ?? null;

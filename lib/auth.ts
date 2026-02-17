@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { getUserByEmail } from "@/lib/db";
+import { getUserByEmailOrPhone } from "@/lib/db";
 import type { UserRole } from "@/lib/types";
 
 export const authOptions: NextAuthOptions = {
@@ -9,12 +9,12 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "البريد الإلكتروني", type: "email" },
+        email: { label: "البريد الإلكتروني أو رقم الهاتف", type: "text" },
         password: { label: "كلمة المرور", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        const user = await getUserByEmail(credentials.email);
+        const user = await getUserByEmailOrPhone(credentials.email);
         if (!user) return null;
         const ok = await compare(credentials.password, user.password_hash);
         if (!ok) return null;
