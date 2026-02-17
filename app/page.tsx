@@ -55,18 +55,30 @@ export default async function HomePage() {
     sections.push({ title: "دورات أخرى", courses: uncategorized });
   }
 
+  const HERO_BG_GRADIENTS: Record<string, { from: string; to: string }> = {
+    navy: { from: "#14162E", to: "#1E2145" },
+    indigo: { from: "#1e1b4b", to: "#312e81" },
+    purple: { from: "#2e1065", to: "#4c1d95" },
+    teal: { from: "#134e4a", to: "#0f766e" },
+    forest: { from: "#14532d", to: "#166534" },
+    slate: { from: "#0f172a", to: "#1e293b" },
+  };
+  const heroBg = homepageSettings.heroBgPreset?.trim() && HERO_BG_GRADIENTS[homepageSettings.heroBgPreset]
+    ? HERO_BG_GRADIENTS[homepageSettings.heroBgPreset]
+    : HERO_BG_GRADIENTS.navy;
+
   return (
     <div>
-      {/* Hero – modern SaaS style: navy gradient, star dots, smooth bottom wave */}
+      {/* Hero – modern SaaS style: gradient, star dots, smooth bottom wave */}
       <section
         className="hero-saas relative min-h-screen w-full flex items-center justify-center overflow-hidden"
         aria-label="Hero"
       >
-        {/* Dark navy gradient background */}
+        {/* خلفية الهيرو — اللون من إعدادات الأدمن */}
         <div
           className="absolute inset-0 w-full h-full"
           style={{
-            background: "linear-gradient(180deg, #14162E 0%, #1E2145 100%)",
+            background: `linear-gradient(180deg, ${heroBg.from} 0%, ${heroBg.to} 100%)`,
           }}
         />
 

@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS "Review" (
 );
 CREATE INDEX IF NOT EXISTS "Review_order_idx" ON "Review"("order");
 
--- 13) إعدادات الصفحة الرئيسية (صورة المدرس، النصوص، روابط واتساب/فيسبوك، عنوان التبويب)
+-- 13) إعدادات الصفحة الرئيسية (صورة المدرس، النصوص، روابط واتساب/فيسبوك، عنوان التبويب، لون خلفية الهيرو)
 CREATE TABLE IF NOT EXISTS "HomepageSetting" (
   id                  TEXT PRIMARY KEY DEFAULT 'default',
   teacher_image_url   TEXT,
@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS "HomepageSetting" (
   whatsapp_url        TEXT,
   facebook_url        TEXT,
   page_title          TEXT,
+  hero_bg_preset      TEXT,
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -213,9 +214,10 @@ CREATE TABLE IF NOT EXISTS "HomepageSetting" (
 ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS whatsapp_url TEXT;
 ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS facebook_url TEXT;
 ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS page_title TEXT;
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_bg_preset TEXT;
 
 -- إدراج الصف الافتراضي إن لم يكن موجوداً
-INSERT INTO "HomepageSetting" (id, teacher_image_url, hero_title, hero_slogan, platform_name, whatsapp_url, facebook_url, page_title, updated_at)
+INSERT INTO "HomepageSetting" (id, teacher_image_url, hero_title, hero_slogan, platform_name, whatsapp_url, facebook_url, page_title, hero_bg_preset, updated_at)
 VALUES (
   'default',
   '/instructor.png',
@@ -225,6 +227,7 @@ VALUES (
   'https://wa.me/201023005622',
   'https://www.facebook.com/profile.php?id=61562686209159',
   'منصتي التعليمية | دورات وتعلم أونلاين',
+  'navy',
   NOW()
 )
 ON CONFLICT (id) DO NOTHING;
@@ -232,8 +235,9 @@ ON CONFLICT (id) DO NOTHING;
 -- تعيين قيم افتراضية للأعمدة الجديدة لو الصف كان موجوداً من قبل
 UPDATE "HomepageSetting"
 SET
-  whatsapp_url = COALESCE(whatsapp_url, 'https://wa.me/201023005622'),
-  facebook_url = COALESCE(facebook_url, 'https://www.facebook.com/profile.php?id=61562686209159'),
-  page_title   = COALESCE(page_title, 'منصتي التعليمية | دورات وتعلم أونلاين'),
-  updated_at   = NOW()
+  whatsapp_url   = COALESCE(whatsapp_url, 'https://wa.me/201023005622'),
+  facebook_url   = COALESCE(facebook_url, 'https://www.facebook.com/profile.php?id=61562686209159'),
+  page_title     = COALESCE(page_title, 'منصتي التعليمية | دورات وتعلم أونلاين'),
+  hero_bg_preset = COALESCE(hero_bg_preset, 'navy'),
+  updated_at     = NOW()
 WHERE id = 'default';

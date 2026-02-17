@@ -191,6 +191,7 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   whatsappUrl: "https://wa.me/201023005622",
   facebookUrl: "https://www.facebook.com/profile.php?id=61562686209159",
   pageTitle: "منصتي التعليمية | دورات وتعلم أونلاين",
+  heroBgPreset: "navy",
 };
 
 export async function getHomepageSettings(): Promise<HomepageSetting> {
@@ -207,6 +208,7 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       whatsappUrl: (c.whatsappUrl as string) ?? HOMEPAGE_DEFAULTS.whatsappUrl,
       facebookUrl: (c.facebookUrl as string) ?? HOMEPAGE_DEFAULTS.facebookUrl,
       pageTitle: (c.pageTitle as string) ?? HOMEPAGE_DEFAULTS.pageTitle,
+      heroBgPreset: (c.heroBgPreset as string) ?? HOMEPAGE_DEFAULTS.heroBgPreset,
     };
   } catch {
     return HOMEPAGE_DEFAULTS;
@@ -221,6 +223,7 @@ export async function updateHomepageSettings(data: {
   whatsapp_url?: string | null;
   facebook_url?: string | null;
   page_title?: string | null;
+  hero_bg_preset?: string | null;
 }): Promise<void> {
   if (data.teacher_image_url !== undefined) {
     await sql`UPDATE "HomepageSetting" SET teacher_image_url = ${data.teacher_image_url}, updated_at = NOW() WHERE id = 'default'`;
@@ -242,6 +245,9 @@ export async function updateHomepageSettings(data: {
   }
   if (data.page_title !== undefined) {
     await sql`UPDATE "HomepageSetting" SET page_title = ${data.page_title}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_bg_preset !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_bg_preset = ${data.hero_bg_preset}, updated_at = NOW() WHERE id = 'default'`;
   }
 }
 

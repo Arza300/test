@@ -32,6 +32,7 @@ export async function PUT(request: NextRequest) {
     whatsappUrl?: string | null;
     facebookUrl?: string | null;
     pageTitle?: string | null;
+    heroBgPreset?: string | null;
   };
   try {
     body = await request.json();
@@ -47,6 +48,7 @@ export async function PUT(request: NextRequest) {
       whatsapp_url: body.whatsappUrl !== undefined ? body.whatsappUrl : undefined,
       facebook_url: body.facebookUrl !== undefined ? body.facebookUrl : undefined,
       page_title: body.pageTitle !== undefined ? body.pageTitle : undefined,
+      hero_bg_preset: body.heroBgPreset !== undefined ? body.heroBgPreset : undefined,
     });
     return NextResponse.json({ success: true });
   } catch (error) {

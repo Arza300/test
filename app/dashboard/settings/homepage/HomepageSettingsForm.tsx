@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { HomepageSetting } from "@/lib/types";
+import type { HomepageSetting, HeroBgPreset } from "@/lib/types";
+
+const HERO_BG_OPTIONS: { id: HeroBgPreset; label: string; from: string; to: string }[] = [
+  { id: "navy", label: "أزرق داكن (افتراضي)", from: "#14162E", to: "#1E2145" },
+  { id: "indigo", label: "نيلي", from: "#1e1b4b", to: "#312e81" },
+  { id: "purple", label: "بنفسجي", from: "#2e1065", to: "#4c1d95" },
+  { id: "teal", label: "تركواز", from: "#134e4a", to: "#0f766e" },
+  { id: "forest", label: "أخضر غامق", from: "#14532d", to: "#166534" },
+  { id: "slate", label: "رمادي أزرق", from: "#0f172a", to: "#1e293b" },
+];
 
 export function HomepageSettingsForm({ initialSettings }: { initialSettings: HomepageSetting }) {
   const router = useRouter();
@@ -16,6 +25,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     pageTitle: initialSettings.pageTitle ?? "",
     whatsappUrl: initialSettings.whatsappUrl ?? "",
     facebookUrl: initialSettings.facebookUrl ?? "",
+    heroBgPreset: (initialSettings.heroBgPreset as HeroBgPreset) || "navy",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
@@ -36,6 +46,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           pageTitle: form.pageTitle.trim() || null,
           whatsappUrl: form.whatsappUrl.trim() || null,
           facebookUrl: form.facebookUrl.trim() || null,
+          heroBgPreset: form.heroBgPreset || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -111,6 +122,34 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           placeholder="/instructor.png أو رابط صورة"
           className="mt-2 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
         />
+
+        <div className="mt-6">
+          <h4 className="mb-2 text-sm font-semibold text-[var(--color-foreground)]">لون خلفية الهيرو (وراء صورة المدرس)</h4>
+          <p className="mb-3 text-sm text-[var(--color-muted)]">
+            اختر لون الخلفية التي تظهر في الصفحة الرئيسية خلف صورة المدرس والعنوان.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {HERO_BG_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, heroBgPreset: opt.id }))}
+                className={`flex flex-col items-center gap-1 rounded-[var(--radius-btn)] border-2 p-2 transition ${
+                  form.heroBgPreset === opt.id
+                    ? "border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30"
+                    : "border-[var(--color-border)] hover:border-[var(--color-muted)]"
+                }`}
+                title={opt.label}
+              >
+                <span
+                  className="h-10 w-14 rounded border border-white/20"
+                  style={{ background: `linear-gradient(180deg, ${opt.from} 0%, ${opt.to} 100%)` }}
+                />
+                <span className="text-xs font-medium text-[var(--color-foreground)]">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">

@@ -40,6 +40,9 @@ export interface Review {
   updatedAt: Date;
 }
 
+/** مفتاح لون خلفية الهيرو (وراء صورة المدرس) — قيم صالحة: navy | indigo | purple | teal | forest | slate */
+export type HeroBgPreset = "navy" | "indigo" | "purple" | "teal" | "forest" | "slate";
+
 export interface HomepageSetting {
   teacherImageUrl: string | null;
   heroTitle: string | null;
@@ -48,6 +51,7 @@ export interface HomepageSetting {
   whatsappUrl: string | null;
   facebookUrl: string | null;
   pageTitle: string | null;
+  heroBgPreset: HeroBgPreset | string | null;
 }
 
 export interface Course {
