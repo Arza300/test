@@ -5,16 +5,14 @@
 
 -- 1) المستخدمون
 CREATE TABLE IF NOT EXISTS "User" (
-  id              TEXT PRIMARY KEY,
-  email           TEXT NOT NULL UNIQUE,
-  password_hash   TEXT NOT NULL,
-  name            TEXT NOT NULL,
-  role            TEXT NOT NULL DEFAULT 'STUDENT' CHECK (role IN ('ADMIN', 'ASSISTANT_ADMIN', 'STUDENT')),
-  balance         DECIMAL(10, 2) NOT NULL DEFAULT 0,
-  student_number  TEXT,
-  guardian_number TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id             TEXT PRIMARY KEY,
+  email          TEXT NOT NULL UNIQUE,
+  password_hash  TEXT NOT NULL,
+  name           TEXT NOT NULL,
+  role           TEXT NOT NULL DEFAULT 'STUDENT' CHECK (role IN ('ADMIN', 'ASSISTANT_ADMIN', 'STUDENT')),
+  balance        DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- 2) التصنيفات
@@ -168,6 +166,23 @@ CREATE TABLE IF NOT EXISTS "LiveStream" (
 CREATE INDEX IF NOT EXISTS "LiveStream_course_id_idx" ON "LiveStream"(course_id);
 CREATE INDEX IF NOT EXISTS "LiveStream_scheduled_at_idx" ON "LiveStream"(scheduled_at);
 
+-- إضافة أعمدة اختيارية للمستخدم (لو الجدول قديم)
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS student_number  TEXT,
+  ADD COLUMN IF NOT EXISTS guardian_number TEXT;
+
+-- إضافة عمود القسم للكورسات لو الجدول قديم وبدون العمود
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'Course' AND column_name = 'category_id'
+  ) THEN
+    ALTER TABLE "Course" ADD COLUMN category_id TEXT REFERENCES "Category"(id) ON DELETE SET NULL;
+    CREATE INDEX IF NOT EXISTS "Course_category_id_idx" ON "Course"(category_id);
+  END IF;
+END $$;
+
 -- 12) تعليقات الطلاب (للصفحة الرئيسية)
 CREATE TABLE IF NOT EXISTS "Review" (
   id             TEXT PRIMARY KEY,
@@ -179,18 +194,46 @@ CREATE TABLE IF NOT EXISTS "Review" (
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
 CREATE INDEX IF NOT EXISTS "Review_order_idx" ON "Review"("order");
 
--- 13) إعدادات الصفحة الرئيسية (صورة المدرس والنصوص)
+-- 13) إعدادات الصفحة الرئيسية (صورة المدرس، النصوص، روابط واتساب/فيسبوك، عنوان التبويب)
 CREATE TABLE IF NOT EXISTS "HomepageSetting" (
   id                  TEXT PRIMARY KEY DEFAULT 'default',
   teacher_image_url   TEXT,
   hero_title          TEXT,
   hero_slogan         TEXT,
   platform_name       TEXT,
+  whatsapp_url        TEXT,
+  facebook_url        TEXT,
+  page_title          TEXT,
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-INSERT INTO "HomepageSetting" (id, teacher_image_url, hero_title, hero_slogan, platform_name)
-VALUES ('default', '/instructor.png', 'أستاذ / عصام محي', 'ادرسها... يمكن تفهم المعلومة صح!', 'منصة أستاذ عصام محي')
+
+-- لو الجدول كان موجوداً قديماً بدون الأعمدة الجديدة نضيفها
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS whatsapp_url TEXT;
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS facebook_url TEXT;
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS page_title TEXT;
+
+-- إدراج الصف الافتراضي إن لم يكن موجوداً
+INSERT INTO "HomepageSetting" (id, teacher_image_url, hero_title, hero_slogan, platform_name, whatsapp_url, facebook_url, page_title, updated_at)
+VALUES (
+  'default',
+  '/instructor.png',
+  'أستاذ / عصام محي',
+  'ادرسها... يمكن تفهم المعلومة صح!',
+  'منصة أستاذ عصام محي',
+  'https://wa.me/201023005622',
+  'https://www.facebook.com/profile.php?id=61562686209159',
+  'منصتي التعليمية | دورات وتعلم أونلاين',
+  NOW()
+)
 ON CONFLICT (id) DO NOTHING;
+
+-- تعيين قيم افتراضية للأعمدة الجديدة لو الصف كان موجوداً من قبل
+UPDATE "HomepageSetting"
+SET
+  whatsapp_url = COALESCE(whatsapp_url, 'https://wa.me/201023005622'),
+  facebook_url = COALESCE(facebook_url, 'https://www.facebook.com/profile.php?id=61562686209159'),
+  page_title   = COALESCE(page_title, 'منصتي التعليمية | دورات وتعلم أونلاين'),
+  updated_at   = NOW()
+WHERE id = 'default';

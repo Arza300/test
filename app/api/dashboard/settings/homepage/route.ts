@@ -29,6 +29,9 @@ export async function PUT(request: NextRequest) {
     heroTitle?: string | null;
     heroSlogan?: string | null;
     platformName?: string | null;
+    whatsappUrl?: string | null;
+    facebookUrl?: string | null;
+    pageTitle?: string | null;
   };
   try {
     body = await request.json();
@@ -41,12 +44,24 @@ export async function PUT(request: NextRequest) {
       hero_title: body.heroTitle !== undefined ? body.heroTitle : undefined,
       hero_slogan: body.heroSlogan !== undefined ? body.heroSlogan : undefined,
       platform_name: body.platformName !== undefined ? body.platformName : undefined,
+      whatsapp_url: body.whatsappUrl !== undefined ? body.whatsappUrl : undefined,
+      facebook_url: body.facebookUrl !== undefined ? body.facebookUrl : undefined,
+      page_title: body.pageTitle !== undefined ? body.pageTitle : undefined,
     });
     return NextResponse.json({ success: true });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Dashboard settings/homepage PUT:", error);
-    if (msg.includes("does not exist") || msg.includes("relation") || msg.includes("HomepageSetting")) {
+    const lower = msg.toLowerCase();
+    // عمود ناقص (الجدول موجود لكن أعمدة واتساب/فيسبوك/عنوان التبويب غير موجودة)
+    if (lower.includes("column") && lower.includes("does not exist")) {
+      return NextResponse.json(
+        { error: "أعمدة ناقصة في جدول الإعدادات. نفّذ في Neon السكربت: scripts/add-homepage-settings-whatsapp-facebook-title.sql ثم أعد المحاولة." },
+        { status: 500 }
+      );
+    }
+    // جدول غير موجود أصلاً
+    if (lower.includes("does not exist") || lower.includes("relation") || lower.includes("homepagesetting")) {
       return NextResponse.json(
         { error: "جدول إعدادات الصفحة الرئيسية غير موجود. نفّذ سكربت scripts/add-homepage-settings.sql في Neon ثم أعد المحاولة." },
         { status: 500 }

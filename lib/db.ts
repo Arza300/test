@@ -188,6 +188,9 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   heroTitle: "أستاذ / عصام محي",
   heroSlogan: "ادرسها... يمكن تفهم المعلومة صح!",
   platformName: "منصة أستاذ عصام محي",
+  whatsappUrl: "https://wa.me/201023005622",
+  facebookUrl: "https://www.facebook.com/profile.php?id=61562686209159",
+  pageTitle: "منصتي التعليمية | دورات وتعلم أونلاين",
 };
 
 export async function getHomepageSettings(): Promise<HomepageSetting> {
@@ -201,6 +204,9 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       heroTitle: (c.heroTitle as string) ?? HOMEPAGE_DEFAULTS.heroTitle,
       heroSlogan: (c.heroSlogan as string) ?? HOMEPAGE_DEFAULTS.heroSlogan,
       platformName: (c.platformName as string) ?? HOMEPAGE_DEFAULTS.platformName,
+      whatsappUrl: (c.whatsappUrl as string) ?? HOMEPAGE_DEFAULTS.whatsappUrl,
+      facebookUrl: (c.facebookUrl as string) ?? HOMEPAGE_DEFAULTS.facebookUrl,
+      pageTitle: (c.pageTitle as string) ?? HOMEPAGE_DEFAULTS.pageTitle,
     };
   } catch {
     return HOMEPAGE_DEFAULTS;
@@ -212,6 +218,9 @@ export async function updateHomepageSettings(data: {
   hero_title?: string | null;
   hero_slogan?: string | null;
   platform_name?: string | null;
+  whatsapp_url?: string | null;
+  facebook_url?: string | null;
+  page_title?: string | null;
 }): Promise<void> {
   if (data.teacher_image_url !== undefined) {
     await sql`UPDATE "HomepageSetting" SET teacher_image_url = ${data.teacher_image_url}, updated_at = NOW() WHERE id = 'default'`;
@@ -224,6 +233,15 @@ export async function updateHomepageSettings(data: {
   }
   if (data.platform_name !== undefined) {
     await sql`UPDATE "HomepageSetting" SET platform_name = ${data.platform_name}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.whatsapp_url !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET whatsapp_url = ${data.whatsapp_url}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.facebook_url !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET facebook_url = ${data.facebook_url}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.page_title !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET page_title = ${data.page_title}, updated_at = NOW() WHERE id = 'default'`;
   }
 }
 

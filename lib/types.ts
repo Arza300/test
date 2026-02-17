@@ -45,6 +45,9 @@ export interface HomepageSetting {
   heroTitle: string | null;
   heroSlogan: string | null;
   platformName: string | null;
+  whatsappUrl: string | null;
+  facebookUrl: string | null;
+  pageTitle: string | null;
 }
 
 export interface Course {

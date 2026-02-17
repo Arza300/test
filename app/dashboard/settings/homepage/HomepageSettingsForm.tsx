@@ -13,6 +13,9 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     heroTitle: initialSettings.heroTitle ?? "",
     heroSlogan: initialSettings.heroSlogan ?? "",
     platformName: initialSettings.platformName ?? "",
+    pageTitle: initialSettings.pageTitle ?? "",
+    whatsappUrl: initialSettings.whatsappUrl ?? "",
+    facebookUrl: initialSettings.facebookUrl ?? "",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
@@ -30,6 +33,9 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           heroTitle: form.heroTitle.trim() || null,
           heroSlogan: form.heroSlogan.trim() || null,
           platformName: form.platformName.trim() || null,
+          pageTitle: form.pageTitle.trim() || null,
+          whatsappUrl: form.whatsappUrl.trim() || null,
+          facebookUrl: form.facebookUrl.trim() || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -138,6 +144,45 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
               onChange={(e) => setForm((f) => ({ ...f, heroSlogan: e.target.value }))}
               className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
               placeholder="ادرسها... يمكن تفهم المعلومة صح!"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">عنوان التبويب (المظهر في تاب المتصفح)</label>
+            <input
+              type="text"
+              value={form.pageTitle}
+              onChange={(e) => setForm((f) => ({ ...f, pageTitle: e.target.value }))}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              placeholder="منصتي التعليمية | دورات وتعلم أونلاين"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">روابط التواصل (الصفحة الرئيسية)</h3>
+        <p className="mb-3 text-sm text-[var(--color-muted)]">
+          روابط أزرار واتساب وفيسبوك الثابتة في أسفل يمين الصفحة الرئيسية.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">رابط واتساب</label>
+            <input
+              type="url"
+              value={form.whatsappUrl}
+              onChange={(e) => setForm((f) => ({ ...f, whatsappUrl: e.target.value }))}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              placeholder="https://wa.me/201023005622"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">رابط فيسبوك</label>
+            <input
+              type="url"
+              value={form.facebookUrl}
+              onChange={(e) => setForm((f) => ({ ...f, facebookUrl: e.target.value }))}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              placeholder="https://www.facebook.com/..."
             />
           </div>
         </div>

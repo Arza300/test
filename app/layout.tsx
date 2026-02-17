@@ -14,10 +14,18 @@ const outfit = Outfit({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "منصتي التعليمية | دورات وتعلم أونلاين",
-  description: "منصة تعليمية حديثة لدورات البرمجة والتصميم والتطوير",
-};
+const DEFAULT_TITLE = "منصتي التعليمية | دورات وتعلم أونلاين";
+const DEFAULT_DESCRIPTION = "منصة تعليمية حديثة لدورات البرمجة والتصميم والتطوير";
+
+export async function generateMetadata(): Promise<Metadata> {
+  try {
+    const settings = await getHomepageSettings();
+    const title = settings.pageTitle?.trim() || DEFAULT_TITLE;
+    return { title, description: DEFAULT_DESCRIPTION };
+  } catch {
+    return { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION };
+  }
+}
 
 export default async function RootLayout({
   children,
