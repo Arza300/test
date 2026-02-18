@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     maxQuizAttempts?: number | null;
     categoryId?: string | null;
     categoryName?: string;
+    acceptsHomework?: boolean;
     lessons?: LessonInput[];
     quizzes?: QuizInput[];
   };
