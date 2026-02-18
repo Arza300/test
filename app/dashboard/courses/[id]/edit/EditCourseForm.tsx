@@ -89,7 +89,7 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
   function removeLesson(i: number) {
     setLessons((l) => l.filter((_, idx) => idx !== i));
   }
-  function updateLesson(i: number, field: keyof LessonRow, value: string) {
+  function updateLesson(i: number, field: keyof LessonRow, value: string | boolean) {
     setLessons((l) => l.map((x, idx) => (idx === i ? { ...x, [field]: value } : x)));
   }
 
