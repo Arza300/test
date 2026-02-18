@@ -254,8 +254,8 @@ export function HomeworkSubmissionsList() {
                       <a href={row.linkUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline">
                         {row.linkUrl.length > 40 ? row.linkUrl.slice(0, 40) + "…" : row.linkUrl}
                       </a>
-                    ) : (row.fileUrl || row.file_url) ? (
-                      <a href={row.fileUrl || (row as Record<string, string>).file_url} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline">
+                    ) : row.fileUrl ? (
+                      <a href={row.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] underline">
                         {row.fileName || "فتح الملف"}
                       </a>
                     ) : (
