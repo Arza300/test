@@ -48,10 +48,13 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
   });
   const [lessons, setLessons] = useState<LessonRow[]>(
     initialData.lessons.length > 0
-      ? initialData.lessons.map((l) => ({
-          ...l,
-          acceptsHomework: (l as Record<string, unknown>).acceptsHomework ?? (l as Record<string, unknown>).accepts_homework ?? false,
-        }))
+      ? initialData.lessons.map((l) => {
+          const r = l as Record<string, unknown>;
+          return {
+            ...l,
+            acceptsHomework: Boolean(r.acceptsHomework ?? r.accepts_homework ?? false),
+          };
+        })
       : [defaultLesson]
   );
 
