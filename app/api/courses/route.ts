@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
       created_by_id: session.user.id,
       max_quiz_attempts: body.maxQuizAttempts ?? null,
       category_id: categoryId,
+      accepts_homework: !!body.acceptsHomework,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -125,6 +126,7 @@ export async function POST(request: NextRequest) {
       video_url: le.videoUrl?.trim() || null,
       pdf_url: le.pdfUrl?.trim() || null,
       order: i + 1,
+      accepts_homework: !!(le as { acceptsHomework?: boolean }).acceptsHomework,
     });
   }
 

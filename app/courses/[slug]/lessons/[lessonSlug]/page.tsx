@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getCourseWithContent, getEnrollment } from "@/lib/db";
 import { YouTubeOverlayPlayer } from "@/components/YouTubeOverlayPlayer";
 import { CourseOutlineSidebar } from "@/components/CourseOutlineSidebar";
+import { LessonHomeworkSection } from "./LessonHomeworkSection";
 
 type Props = { params: Promise<{ slug: string; lessonSlug: string }> };
 
@@ -125,6 +126,10 @@ export default async function LessonPage({ params }: Props) {
               ))}
             </div>
           ) : null}
+
+          {(lessonObj.acceptsHomework ?? lessonObj.accepts_homework) && (
+            <LessonHomeworkSection lessonId={String(lessonObj.id)} />
+          )}
 
           {/* أزرار السابق والتالي أسفل الحصة */}
           <nav className="mt-8 flex w-full items-center justify-between gap-4 border-t border-[var(--color-border)] pt-6">

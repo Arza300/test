@@ -76,8 +76,22 @@ export interface Course {
   order: number;
   category_id: string | null;
   created_by_id: string | null;
+  accepts_homework?: boolean;
   created_at: Date;
   updated_at: Date;
+}
+
+/** تسليم واجب من طالب (لحصة أو للكورس قديماً) */
+export interface HomeworkSubmission {
+  id: string;
+  course_id: string;
+  user_id: string;
+  lesson_id?: string | null;
+  submission_type: "link" | "pdf" | "image";
+  link_url: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  created_at: Date;
 }
 
 export interface Lesson {
@@ -91,6 +105,7 @@ export interface Lesson {
   duration: number | null;
   order: number;
   course_id: string;
+  accepts_homework?: boolean;
   created_at: Date;
   updated_at: Date;
 }

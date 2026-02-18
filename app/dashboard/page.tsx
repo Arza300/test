@@ -73,70 +73,93 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* الصف الأول: الطلاب | إحصائيات الطلاب */}
-      <div className="grid gap-6 sm:grid-cols-2">
-        <Link
-          href="/dashboard/students"
-          className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-        >
-          <h3 className="font-semibold text-[var(--color-foreground)]">{isAdmin ? "الطلاب والحسابات" : "الطلاب"}</h3>
-          <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">
-            {studentsCount}
-          </p>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">إدارة الطلاب، تعديل الحسابات، إضافة الأرصدة</p>
-        </Link>
-        <Link
-          href="/dashboard/statistics"
-          className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-        >
-          <h3 className="font-semibold text-[var(--color-foreground)]">إحصائيات الطلاب</h3>
-          <div className="mt-3 flex flex-wrap gap-4">
-            <span className="text-2xl font-bold text-[var(--color-primary)]">{studentsCount}</span>
-            <span className="text-sm text-[var(--color-muted)]">طالب</span>
-            <span className="text-[var(--color-muted)]">·</span>
-            <span className="text-2xl font-bold text-[var(--color-primary)]">{quizAttempts.length}</span>
-            <span className="text-sm text-[var(--color-muted)]">محاولة اختبار</span>
-            <span className="text-[var(--color-muted)]">·</span>
-            <span className="text-2xl font-bold text-[var(--color-primary)]">{totalEarnings.toFixed(2)}</span>
-            <span className="text-sm text-[var(--color-muted)]">ج.م أرباح</span>
-          </div>
-          <p className="mt-2 text-sm text-[var(--color-muted)]">عرض التفاصيل والدرجات وإجمالي الأرباح</p>
-        </Link>
-      </div>
-
-      {/* إنشاء الأكواد | إدارة الكورسات | البثوث المباشرة */}
+      {/* قسم: كورسات المنصة */}
       {(isAdmin || isAssistant) && (
+        <>
+          <div>
+            <h2 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">كورسات المنصة</h2>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {isAdmin && (
+                <Link
+                  href="/dashboard/courses"
+                  className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                >
+                  <h3 className="font-semibold text-[var(--color-foreground)]">إدارة الكورسات</h3>
+                  <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">{coursesCount}</p>
+                  <p className="mt-1 text-sm text-[var(--color-muted)]">تعديل أو حذف الدورات · إنشاء دورة جديدة</p>
+                </Link>
+              )}
+              {isAdmin && (
+                <Link
+                  href="/dashboard/courses/new"
+                  className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                >
+                  <h3 className="font-semibold text-[var(--color-foreground)]">إنشاء كورس</h3>
+                  <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة دورة جديدة بالمحتوى والحصص والاختبارات</p>
+                </Link>
+              )}
+              {isAdmin && (
+                <Link
+                  href="/dashboard/live-streams"
+                  className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                >
+                  <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
+                  <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بث عبر Zoom أو Google Meet وربطه بكورس على المنصة</p>
+                </Link>
+              )}
+              <Link
+                href="/dashboard/codes"
+                className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+              >
+                <h3 className="font-semibold text-[var(--color-foreground)]">إنشاء الأكواد</h3>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">إنشاء أكواد تفعيل مجانية لدورة وتوزيعها على الطلاب</p>
+              </Link>
+            </div>
+          </div>
+          <hr className="border-[var(--color-border)]" />
+        </>
+      )}
+
+      {/* قسم: إدارة الطلاب */}
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">إدارة الطلاب</h2>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Link
-            href="/dashboard/codes"
+            href="/dashboard/students"
             className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
           >
-            <h3 className="font-semibold text-[var(--color-foreground)]">إنشاء الأكواد</h3>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">إنشاء أكواد تفعيل مجانية لدورة وتوزيعها على الطلاب</p>
+            <h3 className="font-semibold text-[var(--color-foreground)]">{isAdmin ? "الطلاب والحسابات" : "الطلاب"}</h3>
+            <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">{studentsCount}</p>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">إدارة الطلاب، تعديل الحسابات، إضافة الأرصدة</p>
           </Link>
-          {isAdmin && (
-            <>
-              <Link
-                href="/dashboard/courses"
-                className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-              >
-                <h3 className="font-semibold text-[var(--color-foreground)]">إدارة الكورسات</h3>
-                <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">
-                  {coursesCount}
-                </p>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">تعديل أو حذف الدورات · إنشاء دورة جديدة</p>
-              </Link>
-              <Link
-                href="/dashboard/live-streams"
-                className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-              >
-                <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بث من خلال Zoom أو Google Meet وربطه بكورس مرفوع مسبقاً في المنصة</p>
-              </Link>
-            </>
+          <Link
+            href="/dashboard/statistics"
+            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+          >
+            <h3 className="font-semibold text-[var(--color-foreground)]">إحصائيات الطلاب</h3>
+            <div className="mt-3 flex flex-wrap gap-4">
+              <span className="text-2xl font-bold text-[var(--color-primary)]">{studentsCount}</span>
+              <span className="text-sm text-[var(--color-muted)]">طالب</span>
+              <span className="text-[var(--color-muted)]">·</span>
+              <span className="text-2xl font-bold text-[var(--color-primary)]">{quizAttempts.length}</span>
+              <span className="text-sm text-[var(--color-muted)]">محاولة اختبار</span>
+              <span className="text-[var(--color-muted)]">·</span>
+              <span className="text-2xl font-bold text-[var(--color-primary)]">{totalEarnings.toFixed(2)}</span>
+              <span className="text-sm text-[var(--color-muted)]">ج.م أرباح</span>
+            </div>
+            <p className="mt-2 text-sm text-[var(--color-muted)]">عرض التفاصيل والدرجات وإجمالي الأرباح</p>
+          </Link>
+          {(isAdmin || isAssistant) && (
+            <Link
+              href="/dashboard/homework"
+              className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+            >
+              <h3 className="font-semibold text-[var(--color-foreground)]">استلام واجبات الطلاب</h3>
+              <p className="mt-1 text-sm text-[var(--color-muted)]">عرض تسليمات الواجبات والبحث باسم الطالب</p>
+            </Link>
           )}
         </div>
-      )}
+      </div>
 
       {(isAdmin || isAssistant) && (
         <div className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
@@ -150,7 +173,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* تعديل تصميم المنصة — إعدادات الصفحة الرئيسية + تعليقات الطلاب */}
+      {/* قسم: تعديل تصميم المنصة */}
       {isAdmin && (
         <>
           <hr className="border-[var(--color-border)]" />

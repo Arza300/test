@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 type CategoryOption = { id: string; name: string; nameAr?: string | null };
-type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: string };
+type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: string; acceptsHomework: boolean };
 type QuestionOptionRow = { text: string; isCorrect: boolean };
 type QuestionRow = { type: "MULTIPLE_CHOICE" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
 type QuizRow = { title: string; questions: QuestionRow[] };
@@ -27,7 +27,7 @@ type InitialData = {
   quizzes: InitialQuizRow[];
 };
 
-const defaultLesson: LessonRow = { title: "", videoUrl: "", content: "", pdfUrl: "" };
+const defaultLesson: LessonRow = { title: "", videoUrl: "", content: "", pdfUrl: "", acceptsHomework: false };
 const defaultQuiz: QuizRow = { title: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] };
 
 export function EditCourseForm({ courseId, initialData }: { courseId: string; initialData: InitialData }) {
@@ -47,7 +47,12 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
     categoryName: "",
   });
   const [lessons, setLessons] = useState<LessonRow[]>(
-    initialData.lessons.length > 0 ? initialData.lessons : [defaultLesson]
+    initialData.lessons.length > 0
+      ? initialData.lessons.map((l) => ({
+          ...l,
+          acceptsHomework: (l as Record<string, unknown>).acceptsHomework ?? (l as Record<string, unknown>).accepts_homework ?? false,
+        }))
+      : [defaultLesson]
   );
 
   useEffect(() => {
@@ -185,6 +190,7 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
           videoUrl: l.videoUrl.trim() || undefined,
           content: l.content.trim() || undefined,
           pdfUrl: l.pdfUrl.trim() || undefined,
+          acceptsHomework: l.acceptsHomework,
         })),
       quizzes: quizzes
         .filter((q) => q.title.trim())
@@ -381,6 +387,10 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
                 )}
               </div>
               <textarea value={lesson.content} onChange={(e) => updateLesson(i, "content", e.target.value)} placeholder="ملاحظات أو نص الحصة (اختياري)" rows={2} className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm" />
+              <label className="flex items-center gap-2 pt-2">
+                <input type="checkbox" checked={lesson.acceptsHomework} onChange={(e) => updateLesson(i, "acceptsHomework", e.target.checked)} className="rounded border-[var(--color-border)]" />
+                <span className="text-sm text-[var(--color-foreground)]">إتاحة إرسال الواجب من الطالب لهذه الحصة (رابط / PDF / صورة)</span>
+              </label>
             </div>
           </div>
         ))}

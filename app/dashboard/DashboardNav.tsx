@@ -64,6 +64,11 @@ export function DashboardNav({
           إنشاء الأكواد
         </NavLink>
       )}
+      {(isAdmin || isAssistant) && (
+        <NavLink href="/dashboard/homework">
+          واجبات الطلاب
+        </NavLink>
+      )}
       {isAdmin && (
         <>
           <NavLink href="/dashboard/courses">

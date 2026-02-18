@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
-import type { User, UserRole, Course, Category, Review, HomepageSetting, Enrollment, ActivationCode, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider } from "./types";
+import type { User, UserRole, Course, Category, Review, HomepageSetting, Enrollment, ActivationCode, HomeworkSubmission, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider } from "./types";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL غير معرّف");
@@ -437,19 +437,27 @@ export async function createCourse(data: {
   created_by_id: string;
   max_quiz_attempts?: number | null;
   category_id?: string | null;
+  accepts_homework?: boolean;
 }): Promise<Course> {
   const id = generateId();
   const catId = data.category_id ?? null;
+  const acceptsHomework = data.accepts_homework ?? false;
   let rows: Record<string, unknown>[];
   try {
     rows = await sql`
-      INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id, max_quiz_attempts, category_id)
-      VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id}, ${data.max_quiz_attempts ?? null}, ${catId})
+      INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id, max_quiz_attempts, category_id, accepts_homework)
+      VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id}, ${data.max_quiz_attempts ?? null}, ${catId}, ${acceptsHomework})
       RETURNING *
     `;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("max_quiz_attempts") || msg.includes("category_id") || (msg.includes("column") && msg.includes("does not exist"))) {
+    if (msg.includes("accepts_homework") || msg.includes("column") && msg.includes("does not exist")) {
+      rows = await sql`
+        INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id, max_quiz_attempts, category_id)
+        VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id}, ${data.max_quiz_attempts ?? null}, ${catId})
+        RETURNING *
+      `;
+    } else if (msg.includes("max_quiz_attempts") || msg.includes("category_id")) {
       rows = await sql`
         INSERT INTO "Course" (id, title, title_ar, slug, description, short_desc, image_url, price, is_published, created_by_id, category_id)
         VALUES (${id}, ${data.title}, ${data.title_ar}, ${data.slug}, ${data.description}, ${data.short_desc ?? null}, ${data.image_url ?? null}, ${data.price}, ${data.is_published}, ${data.created_by_id}, ${catId})
@@ -477,6 +485,7 @@ export async function updateCourse(
     is_published?: boolean;
     max_quiz_attempts?: number | null;
     category_id?: string | null;
+    accepts_homework?: boolean;
   }
 ): Promise<void> {
   if (data.title !== undefined) await sql`UPDATE "Course" SET title = ${data.title}, updated_at = NOW() WHERE id = ${id}`;
@@ -488,6 +497,13 @@ export async function updateCourse(
   if (data.is_published !== undefined) await sql`UPDATE "Course" SET is_published = ${data.is_published}, updated_at = NOW() WHERE id = ${id}`;
   if (data.max_quiz_attempts !== undefined) await sql`UPDATE "Course" SET max_quiz_attempts = ${data.max_quiz_attempts}, updated_at = NOW() WHERE id = ${id}`;
   if (data.category_id !== undefined) await sql`UPDATE "Course" SET category_id = ${data.category_id}, updated_at = NOW() WHERE id = ${id}`;
+  if (data.accepts_homework !== undefined) {
+    try {
+      await sql`UPDATE "Course" SET accepts_homework = ${data.accepts_homework}, updated_at = NOW() WHERE id = ${id}`;
+    } catch {
+      /* العمود قد يكون غير موجود قبل تشغيل scripts/add-homework.sql */
+    }
+  }
 }
 
 export async function deleteCourse(id: string): Promise<void> {
@@ -519,12 +535,26 @@ export async function createLesson(data: {
   video_url?: string | null;
   pdf_url?: string | null;
   order: number;
+  accepts_homework?: boolean;
 }): Promise<Lesson> {
   const id = generateId();
-  await sql`
-    INSERT INTO "Lesson" (id, course_id, title, title_ar, slug, content, video_url, pdf_url, "order")
-    VALUES (${id}, ${data.course_id}, ${data.title}, ${data.title_ar ?? null}, ${data.slug}, ${data.content ?? null}, ${data.video_url ?? null}, ${data.pdf_url ?? null}, ${data.order})
-  `;
+  const acceptsHomework = data.accepts_homework ?? false;
+  try {
+    await sql`
+      INSERT INTO "Lesson" (id, course_id, title, title_ar, slug, content, video_url, pdf_url, "order", accepts_homework)
+      VALUES (${id}, ${data.course_id}, ${data.title}, ${data.title_ar ?? null}, ${data.slug}, ${data.content ?? null}, ${data.video_url ?? null}, ${data.pdf_url ?? null}, ${data.order}, ${acceptsHomework})
+    `;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const columnMissing = msg.includes("accepts_homework") || (msg.includes("column") && msg.includes("does not exist"));
+    if (columnMissing) {
+      await sql`ALTER TABLE "Lesson" ADD COLUMN IF NOT EXISTS accepts_homework BOOLEAN NOT NULL DEFAULT false`;
+      await sql`
+        INSERT INTO "Lesson" (id, course_id, title, title_ar, slug, content, video_url, pdf_url, "order", accepts_homework)
+        VALUES (${id}, ${data.course_id}, ${data.title}, ${data.title_ar ?? null}, ${data.slug}, ${data.content ?? null}, ${data.video_url ?? null}, ${data.pdf_url ?? null}, ${data.order}, ${acceptsHomework})
+      `;
+    } else throw err;
+  }
   const l = await getLessonById(id);
   if (!l) throw new Error("فشل إنشاء الحصة");
   return l;
@@ -797,6 +827,150 @@ export async function deleteActivationCode(id: string): Promise<void> {
 
 export async function deleteActivationCodes(ids: string[]): Promise<void> {
   for (const id of ids) await deleteActivationCode(id);
+}
+
+// ----- HomeworkSubmission (استلام واجبات الطلاب — مرتبط بحصة أو بالكورس) -----
+export async function createHomeworkSubmission(data: {
+  course_id: string;
+  user_id: string;
+  submission_type: "link" | "pdf" | "image";
+  lesson_id?: string | null;
+  link_url?: string | null;
+  file_url?: string | null;
+  file_name?: string | null;
+}): Promise<HomeworkSubmission> {
+  const id = generateId();
+  const lessonId = data.lesson_id ?? null;
+  try {
+    await sql`
+      INSERT INTO "HomeworkSubmission" (id, course_id, user_id, lesson_id, submission_type, link_url, file_url, file_name)
+      VALUES (${id}, ${data.course_id}, ${data.user_id}, ${lessonId}, ${data.submission_type}, ${data.link_url ?? null}, ${data.file_url ?? null}, ${data.file_name ?? null})
+    `;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("lesson_id") || (msg.includes("column") && msg.includes("does not exist"))) {
+      await sql`
+        INSERT INTO "HomeworkSubmission" (id, course_id, user_id, submission_type, link_url, file_url, file_name)
+        VALUES (${id}, ${data.course_id}, ${data.user_id}, ${data.submission_type}, ${data.link_url ?? null}, ${data.file_url ?? null}, ${data.file_name ?? null})
+      `;
+    } else throw err;
+  }
+  const rows = await sql`SELECT * FROM "HomeworkSubmission" WHERE id = ${id} LIMIT 1`;
+  return rowToCamel(rows[0] as Record<string, unknown>) as HomeworkSubmission;
+}
+
+export type HomeworkSubmissionWithDetails = HomeworkSubmission & {
+  course_title?: string;
+  course_title_ar?: string;
+  user_name?: string;
+  lesson_title?: string;
+  lesson_title_ar?: string;
+};
+
+export async function listHomeworkSubmissionsForAdmin(studentNameSearch?: string | null): Promise<HomeworkSubmissionWithDetails[]> {
+  const search = studentNameSearch?.trim();
+  const likePattern = search ? "%" + search + "%" : null;
+
+  async function runWithLessonJoin(): Promise<Record<string, unknown>[]> {
+    if (likePattern) {
+      const rows = await sql`
+        SELECT hs.*, c.title as course_title, c.title_ar as course_title_ar, u.name as user_name,
+               l.title as lesson_title, l.title_ar as lesson_title_ar
+        FROM "HomeworkSubmission" hs
+        JOIN "Course" c ON c.id = hs.course_id
+        JOIN "User" u ON u.id = hs.user_id
+        LEFT JOIN "Lesson" l ON l.id = hs.lesson_id
+        WHERE u.name ILIKE ${likePattern}
+        ORDER BY hs.created_at DESC
+      `;
+      return rows as Record<string, unknown>[];
+    }
+    const rows = await sql`
+      SELECT hs.*, c.title as course_title, c.title_ar as course_title_ar, u.name as user_name,
+             l.title as lesson_title, l.title_ar as lesson_title_ar
+      FROM "HomeworkSubmission" hs
+      JOIN "Course" c ON c.id = hs.course_id
+      JOIN "User" u ON u.id = hs.user_id
+      LEFT JOIN "Lesson" l ON l.id = hs.lesson_id
+      ORDER BY hs.created_at DESC
+    `;
+    return rows as Record<string, unknown>[];
+  }
+
+  async function runWithoutLessonJoin(): Promise<Record<string, unknown>[]> {
+    if (likePattern) {
+      const rows = await sql`
+        SELECT hs.*, c.title as course_title, c.title_ar as course_title_ar, u.name as user_name
+        FROM "HomeworkSubmission" hs
+        JOIN "Course" c ON c.id = hs.course_id
+        JOIN "User" u ON u.id = hs.user_id
+        WHERE u.name ILIKE ${likePattern}
+        ORDER BY hs.created_at DESC
+      `;
+      return rows as Record<string, unknown>[];
+    }
+    const rows = await sql`
+      SELECT hs.*, c.title as course_title, c.title_ar as course_title_ar, u.name as user_name
+      FROM "HomeworkSubmission" hs
+      JOIN "Course" c ON c.id = hs.course_id
+      JOIN "User" u ON u.id = hs.user_id
+      ORDER BY hs.created_at DESC
+    `;
+    return rows as Record<string, unknown>[];
+  }
+
+  let rows: Record<string, unknown>[];
+  try {
+    rows = await runWithLessonJoin();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("lesson_id") || (msg.includes("column") && msg.includes("does not exist"))) {
+      await sql`ALTER TABLE "HomeworkSubmission" ADD COLUMN IF NOT EXISTS lesson_id TEXT REFERENCES "Lesson"(id) ON DELETE CASCADE`;
+      try {
+        rows = await runWithLessonJoin();
+      } catch {
+        rows = await runWithoutLessonJoin();
+      }
+    } else {
+      rows = await runWithoutLessonJoin();
+    }
+  }
+  return rows.map((r) => rowToCamel(r) as HomeworkSubmissionWithDetails);
+}
+
+export async function getHomeworkSubmissionsByCourseAndUser(courseId: string, userId: string): Promise<HomeworkSubmission[]> {
+  const rows = await sql`
+    SELECT * FROM "HomeworkSubmission" WHERE course_id = ${courseId} AND user_id = ${userId} ORDER BY created_at DESC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => rowToCamel(r) as HomeworkSubmission);
+}
+
+export async function getHomeworkSubmissionsByLessonAndUser(lessonId: string, userId: string): Promise<HomeworkSubmission[]> {
+  try {
+    const rows = await sql`
+      SELECT * FROM "HomeworkSubmission" WHERE lesson_id = ${lessonId} AND user_id = ${userId} ORDER BY created_at DESC
+    `;
+    return (rows as Record<string, unknown>[]).map((r) => rowToCamel(r) as HomeworkSubmission);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("lesson_id") || (msg.includes("column") && msg.includes("does not exist"))) {
+      return [];
+    }
+    throw err;
+  }
+}
+
+export async function deleteHomeworkSubmissionsByIds(ids: string[]): Promise<number> {
+  const validIds = ids.filter((id) => id && String(id).trim());
+  if (validIds.length === 0) return 0;
+  for (const id of validIds) {
+    await sql`DELETE FROM "HomeworkSubmission" WHERE id = ${id}`;
+  }
+  return validIds.length;
+}
+
+export async function deleteAllHomeworkSubmissions(): Promise<void> {
+  await sql`DELETE FROM "HomeworkSubmission"`;
 }
 
 // ----- QuizAttempt (يتطلب تشغيل scripts/add-quiz-attempts.sql) -----

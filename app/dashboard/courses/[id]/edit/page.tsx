@@ -37,6 +37,7 @@ export default async function EditCoursePage({ params }: Props) {
         videoUrl: String(row.videoUrl ?? row.video_url ?? ""),
         content: String(row.content ?? ""),
         pdfUrl: String(row.pdfUrl ?? row.pdf_url ?? ""),
+        acceptsHomework: Boolean(row.acceptsHomework ?? row.accepts_homework ?? false),
       };
     }),
     quizzes: data.quizzes.map((q) => {

@@ -16,7 +16,7 @@ import {
   createCategory,
 } from "@/lib/db";
 
-type LessonInput = { title: string; titleAr?: string; videoUrl?: string; content?: string; pdfUrl?: string };
+type LessonInput = { title: string; titleAr?: string; videoUrl?: string; content?: string; pdfUrl?: string; acceptsHomework?: boolean };
 type QuestionOptionInput = { text: string; isCorrect: boolean };
 type QuestionInput = { type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE"; questionText: string; options?: QuestionOptionInput[] };
 type QuizInput = { title: string; questions: QuestionInput[] };
@@ -42,6 +42,7 @@ export async function PUT(
     maxQuizAttempts?: number | null;
     categoryId?: string | null;
     categoryName?: string;
+    acceptsHomework?: boolean;
     lessons?: LessonInput[];
     quizzes?: QuizInput[];
   };
@@ -85,6 +86,7 @@ export async function PUT(
     is_published: body.isPublished ?? true,
     max_quiz_attempts: body.maxQuizAttempts ?? null,
     ...(categoryId !== undefined && { category_id: categoryId }),
+    ...(body.acceptsHomework !== undefined && { accepts_homework: body.acceptsHomework }),
   });
 
   await deleteLessonsByCourseId(id);
@@ -101,6 +103,7 @@ export async function PUT(
       video_url: le.videoUrl?.trim() || null,
       pdf_url: le.pdfUrl?.trim() || null,
       order: i + 1,
+      accepts_homework: !!le.acceptsHomework,
     });
   }
 
@@ -173,6 +176,7 @@ export async function GET(
       videoUrl: l.videoUrl ?? l.video_url,
       content: l.content,
       pdfUrl: l.pdfUrl ?? l.pdf_url,
+      acceptsHomework: Boolean((l as { acceptsHomework?: boolean; accepts_homework?: boolean }).acceptsHomework ?? (l as { accepts_homework?: boolean }).accepts_homework ?? false),
     })),
     quizzes: data.quizzes.map((q) => ({
       title: q.title,

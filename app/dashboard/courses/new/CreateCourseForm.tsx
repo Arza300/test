@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 type CategoryOption = { id: string; name: string; nameAr?: string | null };
-type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: string };
+type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: string; acceptsHomework: boolean };
 type QuestionOptionRow = { text: string; isCorrect: boolean };
 type QuestionRow = { type: "MULTIPLE_CHOICE" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
 type QuizRow = { title: string; questions: QuestionRow[] };
@@ -24,7 +24,7 @@ export function CreateCourseForm() {
     categoryId: "",
     categoryName: "",
   });
-  const [lessons, setLessons] = useState<LessonRow[]>([{ title: "", videoUrl: "", content: "", pdfUrl: "" }]);
+  const [lessons, setLessons] = useState<LessonRow[]>([{ title: "", videoUrl: "", content: "", pdfUrl: "", acceptsHomework: false }]);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -42,12 +42,12 @@ export function CreateCourseForm() {
   }
 
   function addLesson() {
-    setLessons((l) => [...l, { title: "", videoUrl: "", content: "", pdfUrl: "" }]);
+    setLessons((l) => [...l, { title: "", videoUrl: "", content: "", pdfUrl: "", acceptsHomework: false }]);
   }
   function removeLesson(i: number) {
     setLessons((l) => l.filter((_, idx) => idx !== i));
   }
-  function updateLesson(i: number, field: keyof LessonRow, value: string) {
+  function updateLesson(i: number, field: keyof LessonRow, value: string | boolean) {
     setLessons((l) => l.map((x, idx) => (idx === i ? { ...x, [field]: value } : x)));
   }
 
@@ -156,6 +156,7 @@ export function CreateCourseForm() {
           videoUrl: l.videoUrl.trim() || undefined,
           content: l.content.trim() || undefined,
           pdfUrl: l.pdfUrl.trim() || undefined,
+          acceptsHomework: l.acceptsHomework,
         })),
       quizzes: quizzes
         .filter((q) => q.title.trim())
@@ -416,6 +417,15 @@ export function CreateCourseForm() {
                 rows={2}
                 className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
               />
+              <label className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  checked={lesson.acceptsHomework}
+                  onChange={(e) => updateLesson(i, "acceptsHomework", e.target.checked)}
+                  className="rounded border-[var(--color-border)]"
+                />
+                <span className="text-sm text-[var(--color-foreground)]">إتاحة إرسال الواجب من الطالب لهذه الحصة (رابط / PDF / صورة)</span>
+              </label>
             </div>
           </div>
         ))}
