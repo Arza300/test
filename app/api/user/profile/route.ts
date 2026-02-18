@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
-import { getUserByEmailExcludingId, updateUser } from "@/lib/db";
+import { getUserByEmailExcludingId, updateUser, clearCurrentSessionId } from "@/lib/db";
 
 const ROLES = ["ADMIN", "ASSISTANT_ADMIN", "STUDENT"] as const;
 
@@ -70,5 +70,10 @@ export async function PATCH(request: NextRequest) {
 
   await updateUser(session.user.id, data);
 
-  return NextResponse.json({ success: true });
+  const roleChanged = data.role !== undefined;
+  if (roleChanged) {
+    await clearCurrentSessionId(session.user.id);
+  }
+
+  return NextResponse.json({ success: true, roleChanged: !!roleChanged });
 }

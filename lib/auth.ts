@@ -54,7 +54,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as { role?: UserRole }).role = token.role as UserRole;
         const { getCurrentSessionId: getSessionId } = await import("@/lib/db");
         const dbSessionId = await getSessionId((session.user as { id: string }).id);
-        if (token.sessionId && dbSessionId && dbSessionId.trim() !== "" && dbSessionId !== token.sessionId) {
+        const sessionMismatch = !dbSessionId || dbSessionId.trim() === "" || dbSessionId !== token.sessionId;
+        if (token.sessionId && sessionMismatch) {
           (session as { forceLogout?: boolean }).forceLogout = true;
         }
       }

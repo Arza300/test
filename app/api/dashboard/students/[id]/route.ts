@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { hash } from "bcryptjs";
 import { authOptions } from "@/lib/auth";
-import { getUserById, getUserByEmailExcludingId, updateUser } from "@/lib/db";
+import { getUserById, getUserByEmailExcludingId, updateUser, clearCurrentSessionId } from "@/lib/db";
 
 const ROLES = ["ADMIN", "ASSISTANT_ADMIN", "STUDENT"] as const;
 
@@ -62,6 +62,10 @@ export async function PATCH(
   }
 
   await updateUser(id, data);
+
+  if (data.role !== undefined) {
+    await clearCurrentSessionId(id);
+  }
 
   return NextResponse.json({ success: true });
 }

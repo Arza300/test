@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 const ROLES = [
   { value: "ADMIN", label: "أدمن" },
@@ -61,6 +62,12 @@ export function ProfileForm({ defaultName, defaultEmail, defaultRole, canChangeR
     setLoading(false);
     if (!res.ok) {
       setError(data.error ?? "فشل التحديث");
+      return;
+    }
+    if (data.roleChanged) {
+      setSuccess("تم حفظ التغييرات. جاري تسجيل الخروج لتطبيق الرتبة الجديدة...");
+      await signOut({ callbackUrl: "/login" });
+      router.refresh();
       return;
     }
     setSuccess("تم تحديث البيانات بنجاح");
