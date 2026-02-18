@@ -127,7 +127,7 @@ export default async function LessonPage({ params }: Props) {
             </div>
           ) : null}
 
-          {(lessonObj.acceptsHomework ?? lessonObj.accepts_homework) && (
+          {Boolean(lessonObj.acceptsHomework ?? lessonObj.accepts_homework) && (
             <LessonHomeworkSection lessonId={String(lessonObj.id)} />
           )}
 
