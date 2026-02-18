@@ -42,19 +42,19 @@ export function HomeworkSubmissionsList() {
         const rows = Array.isArray(data) ? data : [];
         setSelectedIds(new Set());
         setList(rows.map((r: Record<string, unknown>) => ({
-          id: r.id,
-          courseId: r.courseId ?? r.course_id,
-          userId: r.userId ?? r.user_id,
-          submissionType: r.submissionType ?? r.submission_type ?? "",
+          id: String(r.id ?? ""),
+          courseId: r.courseId != null ? String(r.courseId) : r.course_id != null ? String(r.course_id) : undefined,
+          userId: r.userId != null ? String(r.userId) : r.user_id != null ? String(r.user_id) : undefined,
+          submissionType: String(r.submissionType ?? r.submission_type ?? ""),
           linkUrl: (r.linkUrl ?? r.link_url) as string | null,
           fileUrl: (r.fileUrl ?? r.file_url) as string | null,
           fileName: (r.fileName ?? r.file_name) as string | null,
-          createdAt: (r.createdAt ?? r.created_at) as string,
-          courseTitle: r.courseTitle ?? r.course_title,
-          courseTitleAr: r.courseTitleAr ?? r.course_title_ar,
-          userName: r.userName ?? r.user_name,
-          lessonTitle: r.lessonTitle ?? r.lesson_title,
-          lessonTitleAr: r.lessonTitleAr ?? r.lesson_title_ar,
+          createdAt: String(r.createdAt ?? r.created_at ?? ""),
+          courseTitle: r.courseTitle != null ? String(r.courseTitle) : r.course_title != null ? String(r.course_title) : undefined,
+          courseTitleAr: r.courseTitleAr != null ? String(r.courseTitleAr) : r.course_title_ar != null ? String(r.course_title_ar) : undefined,
+          userName: r.userName != null ? String(r.userName) : r.user_name != null ? String(r.user_name) : undefined,
+          lessonTitle: r.lessonTitle != null ? String(r.lessonTitle) : r.lesson_title != null ? String(r.lesson_title) : undefined,
+          lessonTitleAr: r.lessonTitleAr != null ? String(r.lessonTitleAr) : r.lesson_title_ar != null ? String(r.lesson_title_ar) : undefined,
         })));
       })
       .catch((e) => {
