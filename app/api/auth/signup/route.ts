@@ -3,13 +3,22 @@ import { hash } from "bcryptjs";
 import { getUserByEmail, createUser } from "@/lib/db";
 import { z } from "zod";
 
-const signupSchema = z.object({
-  email: z.string().email("بريد إلكتروني غير صالح"),
-  password: z.string().min(6, "كلمة المرور 6 أحرف على الأقل"),
-  name: z.string().min(2, "الاسم حرفين على الأقل"),
-  student_number: z.string().optional(),
-  guardian_number: z.string().optional(),
-});
+function digitsOnly(s: string): string {
+  return s.replace(/\D/g, "");
+}
+
+const signupSchema = z
+  .object({
+    email: z.string().email("بريد إلكتروني غير صالح"),
+    password: z.string().min(6, "كلمة المرور 6 أحرف على الأقل"),
+    name: z.string().min(2, "الاسم حرفين على الأقل"),
+    student_number: z.string().min(1, "رقم الهاتف مطلوب"),
+    guardian_number: z.string().optional(),
+  })
+  .refine(
+    (data) => digitsOnly(data.student_number).length === 11,
+    { message: "رقم الهاتف يجب أن يكون 11 رقماً", path: ["student_number"] }
+  );
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +46,7 @@ export async function POST(request: NextRequest) {
       password_hash: passwordHash,
       name,
       role: "STUDENT",
-      student_number: student_number?.trim() || null,
+      student_number: student_number.trim(),
       guardian_number: guardian_number?.trim() || null,
     });
 

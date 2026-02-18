@@ -132,6 +132,16 @@ export interface Enrollment {
   enrolled_at: Date;
 }
 
+/** كود تفعيل مجاني لدورة — للأدمن إنشاؤه وللطالب تفعيله */
+export interface ActivationCode {
+  id: string;
+  course_id: string;
+  code: string;
+  created_at: Date;
+  used_at: Date | null;
+  used_by_user_id: string | null;
+}
+
 export type LiveStreamProvider = "zoom" | "google_meet";
 
 export interface LiveStream {

@@ -17,6 +17,11 @@ export default function RegisterPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    const digits = studentNumber.replace(/\D/g, "");
+    if (digits.length !== 11) {
+      setError("رقم الهاتف يجب أن يكون 11 رقماً");
+      return;
+    }
     setLoading(true);
     const res = await fetch("/api/auth/signup", {
       method: "POST",
@@ -94,16 +99,19 @@ export default function RegisterPage() {
               htmlFor="student_number"
               className="block text-sm font-medium text-[var(--color-foreground)]"
             >
-              رقم الطالب
+              رقم الهاتف
             </label>
             <input
               id="student_number"
-              type="text"
+              type="tel"
+              inputMode="numeric"
               value={studentNumber}
               onChange={(e) => setStudentNumber(e.target.value)}
-              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
-              placeholder="رقم الطالب"
+              required
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-right text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+              placeholder="01234567890"
             />
+            <p className="mt-1 text-right text-xs text-[var(--color-muted)]">01234567890</p>
           </div>
           <div>
             <label

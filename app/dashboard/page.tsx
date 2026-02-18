@@ -4,6 +4,7 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { getUserById, getEnrolledCoursesForUser, countUsersByRole, countCourses, getAllQuizAttemptsForAdmin, getTotalPlatformEarnings } from "@/lib/db";
 import { MyCoursesSection } from "./MyCoursesSection";
+import { ActivateCodeSection } from "./ActivateCodeSection";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -55,6 +56,8 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
+        <ActivateCodeSection />
+
         <MyCoursesSection courses={enrolledCourses} />
       </div>
     );
@@ -101,26 +104,37 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* إدارة الكورسات | البثوث المباشرة — للأدمن فقط */}
-      {isAdmin && (
-        <div className="grid gap-6 sm:grid-cols-2">
+      {/* إنشاء الأكواد | إدارة الكورسات | البثوث المباشرة */}
+      {(isAdmin || isAssistant) && (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Link
-            href="/dashboard/courses"
+            href="/dashboard/codes"
             className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
           >
-            <h3 className="font-semibold text-[var(--color-foreground)]">إدارة الكورسات</h3>
-            <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">
-              {coursesCount}
-            </p>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">تعديل أو حذف الدورات · إنشاء دورة جديدة</p>
+            <h3 className="font-semibold text-[var(--color-foreground)]">إنشاء الأكواد</h3>
+            <p className="mt-1 text-sm text-[var(--color-muted)]">إنشاء أكواد تفعيل مجانية لدورة وتوزيعها على الطلاب</p>
           </Link>
-          <Link
-            href="/dashboard/live-streams"
-            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-          >
-            <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بث من خلال Zoom أو Google Meet وربطه بكورس مرفوع مسبقاً في المنصة</p>
-          </Link>
+          {isAdmin && (
+            <>
+              <Link
+                href="/dashboard/courses"
+                className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+              >
+                <h3 className="font-semibold text-[var(--color-foreground)]">إدارة الكورسات</h3>
+                <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">
+                  {coursesCount}
+                </p>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">تعديل أو حذف الدورات · إنشاء دورة جديدة</p>
+              </Link>
+              <Link
+                href="/dashboard/live-streams"
+                className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+              >
+                <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بث من خلال Zoom أو Google Meet وربطه بكورس مرفوع مسبقاً في المنصة</p>
+              </Link>
+            </>
+          )}
         </div>
       )}
 

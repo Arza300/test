@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
-import type { User, UserRole, Course, Category, Review, HomepageSetting, Enrollment, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider } from "./types";
+import type { User, UserRole, Course, Category, Review, HomepageSetting, Enrollment, ActivationCode, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider } from "./types";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL غير معرّف");
@@ -40,29 +40,51 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return (rows[0] as User) ?? null;
 }
 
-/** تسجيل الدخول بالبريد أو رقم الهاتف: إذا القيمة تحتوي @ نبحث بالبريد، وإلا بالرقم (مقارنة بعد حذف غير الأرقام) */
+/** تحويل الأرقام العربية ٠-٩ إلى إنجليزية */
+function normalizeArabicDigits(s: string): string {
+  const arabic = "٠١٢٣٤٥٦٧٨٩";
+  let out = "";
+  for (const c of s) {
+    const i = arabic.indexOf(c);
+    out += i >= 0 ? String(i) : c;
+  }
+  return out;
+}
+
+/** تسجيل الدخول بالبريد أو رقم الهاتف: إذا القيمة تحتوي @ نبحث بالبريد، وإلا بالرقم (مقارنة بعد حذف غير الأرقام وتوحيد صيغ 0 و 20) */
 export async function getUserByEmailOrPhone(emailOrPhone: string): Promise<User | null> {
   const trimmed = emailOrPhone.trim();
   if (trimmed.includes("@")) {
     return getUserByEmail(trimmed);
   }
-  const digits = trimmed.replace(/\D/g, "");
+  const withWesternDigits = normalizeArabicDigits(trimmed);
+  const digits = withWesternDigits.replace(/\D/g, "");
   if (digits.length < 10) return null;
 
   const matchByDigits = async (norm: string) => {
     const rows = await sql`
       SELECT * FROM "User"
-      WHERE REGEXP_REPLACE(COALESCE(guardian_number, ''), '[^0-9]', '', 'g') = ${norm}
-         OR REGEXP_REPLACE(COALESCE(student_number, ''), '[^0-9]', '', 'g') = ${norm}
+      WHERE REGEXP_REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(guardian_number, ''), '٠','0'),'١','1'),'٢','2'),'٣','3'),'٤','4'),'٥','5'),'٦','6'),'٧','7'),'٨','8'),'٩','9'), '[^0-9]', '', 'g') = ${norm}
+         OR REGEXP_REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(student_number, ''), '٠','0'),'١','1'),'٢','2'),'٣','3'),'٤','4'),'٥','5'),'٦','6'),'٧','7'),'٨','8'),'٩','9'), '[^0-9]', '', 'g') = ${norm}
       LIMIT 1
     `;
     return (rows[0] as User) ?? null;
   };
 
-  const user = await matchByDigits(digits);
+  let user = await matchByDigits(digits);
   if (user) return user;
-  if (digits.startsWith("20") && digits.length === 12) return matchByDigits("0" + digits.slice(2));
-  if (digits.startsWith("0") && digits.length === 11) return matchByDigits("20" + digits.slice(1));
+  if (digits.startsWith("20") && digits.length === 12) {
+    user = await matchByDigits("0" + digits.slice(2));
+    if (user) return user;
+  }
+  if (digits.startsWith("0") && digits.length === 11) {
+    user = await matchByDigits("20" + digits.slice(1));
+    if (user) return user;
+  }
+  if (digits.length === 10) {
+    user = await matchByDigits("0" + digits);
+    if (user) return user;
+  }
   return null;
 }
 
@@ -698,6 +720,83 @@ export async function createEnrollment(userId: string, courseId: string): Promis
 
 export async function deleteEnrollment(userId: string, courseId: string): Promise<void> {
   await sql`DELETE FROM "Enrollment" WHERE user_id = ${userId} AND course_id = ${courseId}`;
+}
+
+// ----- ActivationCode (أكواد التفعيل المجانية للدورات) -----
+function generateCodeString(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 10; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+export async function createActivationCodes(courseId: string, count: number): Promise<{ id: string; code: string }[]> {
+  const created: { id: string; code: string }[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < count; i++) {
+    let code = generateCodeString();
+    while (seen.has(code)) code = generateCodeString();
+    seen.add(code);
+    const id = generateId();
+    await sql`
+      INSERT INTO "ActivationCode" (id, course_id, code, used_at, used_by_user_id)
+      VALUES (${id}, ${courseId}, ${code}, NULL, NULL)
+    `;
+    created.push({ id, code });
+  }
+  return created;
+}
+
+export type ActivationCodeWithCourse = ActivationCode & { course_title?: string; course_title_ar?: string };
+
+export async function listActivationCodes(courseId?: string | null): Promise<ActivationCodeWithCourse[]> {
+  const rows = courseId
+    ? await sql`
+        SELECT ac.*, c.title as course_title, c.title_ar as course_title_ar
+        FROM "ActivationCode" ac
+        JOIN "Course" c ON c.id = ac.course_id
+        WHERE ac.course_id = ${courseId}
+        ORDER BY ac.created_at DESC
+      `
+    : await sql`
+        SELECT ac.*, c.title as course_title, c.title_ar as course_title_ar
+        FROM "ActivationCode" ac
+        JOIN "Course" c ON c.id = ac.course_id
+        ORDER BY ac.created_at DESC
+      `;
+  return (rows as Record<string, unknown>[]).map((r) => rowToCamel(r) as ActivationCodeWithCourse);
+}
+
+export async function getActivationCodeByCode(code: string): Promise<(ActivationCode & { courseId: string }) | null> {
+  const trimmed = code.trim().toUpperCase();
+  if (!trimmed) return null;
+  const rows = await sql`
+    SELECT * FROM "ActivationCode" WHERE UPPER(TRIM(code)) = ${trimmed} AND used_at IS NULL LIMIT 1
+  `;
+  const r = rows[0] as Record<string, unknown> | undefined;
+  if (!r) return null;
+  return rowToCamel(r) as ActivationCode & { courseId: string };
+}
+
+export async function useActivationCode(codeId: string, userId: string): Promise<{ courseId: string } | null> {
+  const rows = await sql`
+    SELECT id, course_id FROM "ActivationCode" WHERE id = ${codeId} AND used_at IS NULL LIMIT 1
+  `;
+  const row = rows[0] as { id: string; course_id: string } | undefined;
+  if (!row) return null;
+  await sql`
+    UPDATE "ActivationCode" SET used_at = NOW(), used_by_user_id = ${userId} WHERE id = ${codeId}
+  `;
+  await createEnrollment(userId, row.course_id);
+  return { courseId: row.course_id };
+}
+
+export async function deleteActivationCode(id: string): Promise<void> {
+  await sql`DELETE FROM "ActivationCode" WHERE id = ${id}`;
+}
+
+export async function deleteActivationCodes(ids: string[]): Promise<void> {
+  for (const id of ids) await deleteActivationCode(id);
 }
 
 // ----- QuizAttempt (يتطلب تشغيل scripts/add-quiz-attempts.sql) -----
