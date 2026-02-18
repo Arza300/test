@@ -91,20 +91,7 @@ function LoginForm() {
               {error}
             </div>
           )}
-          <form onSubmit={handleForceLogoutOther} className="mt-6 space-y-4">
-            <div>
-              <label htmlFor="concurrent-password" className="block text-sm font-medium text-[var(--color-foreground)]">
-                تأكيد كلمة المرور
-              </label>
-              <input
-                id="concurrent-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
-              />
-            </div>
+          <form onSubmit={handleForceLogoutOther} className="mt-6">
             <button
               type="submit"
               disabled={forceLogoutLoading}
