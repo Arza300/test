@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SessionProvider } from "@/components/SessionProvider";
 import { InspectGuard } from "@/components/InspectGuard";
+import { ForceLogoutGuard } from "@/components/ForceLogoutGuard";
 import { getHomepageSettings } from "@/lib/db";
 
 const outfit = Outfit({
@@ -69,6 +70,7 @@ export default async function RootLayout({
         />
         <SessionProvider>
           <InspectGuard />
+          <ForceLogoutGuard />
           <Header platformName={platformName} />
           <main className="flex-1">{children}</main>
           <Footer footerTitle={footerTitle} footerTagline={footerTagline} footerCopyright={footerCopyright} />

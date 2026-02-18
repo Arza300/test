@@ -71,6 +71,25 @@ export async function getUserById(id: string): Promise<User | null> {
   return (rows[0] as User) ?? null;
 }
 
+/** جلسة واحدة نشطة لكل مستخدم — نستخدمها لمنع تسجيل الدخول من أكثر من جهاز */
+export async function getCurrentSessionId(userId: string): Promise<string | null> {
+  try {
+    const rows = await sql`SELECT current_session_id FROM "User" WHERE id = ${userId} LIMIT 1`;
+    const val = (rows[0] as { current_session_id?: string | null })?.current_session_id;
+    return val ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setCurrentSessionId(userId: string, sessionId: string): Promise<void> {
+  await sql`UPDATE "User" SET current_session_id = ${sessionId} WHERE id = ${userId}`;
+}
+
+export async function clearCurrentSessionId(userId: string): Promise<void> {
+  await sql`UPDATE "User" SET current_session_id = NULL WHERE id = ${userId}`;
+}
+
 export async function createUser(data: {
   email: string;
   password_hash: string;

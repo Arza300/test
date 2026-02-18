@@ -168,8 +168,9 @@ CREATE INDEX IF NOT EXISTS "LiveStream_scheduled_at_idx" ON "LiveStream"(schedul
 
 -- إضافة أعمدة اختيارية للمستخدم (لو الجدول قديم)
 ALTER TABLE "User"
-  ADD COLUMN IF NOT EXISTS student_number  TEXT,
-  ADD COLUMN IF NOT EXISTS guardian_number TEXT;
+  ADD COLUMN IF NOT EXISTS student_number      TEXT,
+  ADD COLUMN IF NOT EXISTS guardian_number     TEXT,
+  ADD COLUMN IF NOT EXISTS current_session_id  TEXT;
 
 -- إضافة عمود القسم للكورسات لو الجدول قديم وبدون العمود
 DO $$

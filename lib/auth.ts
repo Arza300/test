@@ -1,8 +1,12 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { getUserByEmailOrPhone } from "@/lib/db";
+import { randomUUID } from "crypto";
+import { getUserByEmailOrPhone, getCurrentSessionId, setCurrentSessionId } from "@/lib/db";
 import type { UserRole } from "@/lib/types";
+import { CONCURRENT_SESSION_ERROR } from "@/lib/auth-constants";
+
+export { CONCURRENT_SESSION_ERROR };
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -18,12 +22,19 @@ export const authOptions: NextAuthOptions = {
         if (!user) return null;
         const ok = await compare(credentials.password, user.password_hash);
         if (!ok) return null;
+        const existingSessionId = await getCurrentSessionId(user.id);
+        if (existingSessionId != null && existingSessionId !== "") {
+          throw new Error(CONCURRENT_SESSION_ERROR);
+        }
+        const sessionId = randomUUID();
+        await setCurrentSessionId(user.id, sessionId);
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           image: null,
+          sessionId,
         };
       },
     }),
@@ -33,6 +44,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: UserRole }).role;
+        token.sessionId = (user as { sessionId?: string }).sessionId;
       }
       return token;
     },
@@ -40,6 +52,11 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string;
         (session.user as { role?: UserRole }).role = token.role as UserRole;
+        const { getCurrentSessionId: getSessionId } = await import("@/lib/db");
+        const dbSessionId = await getSessionId((session.user as { id: string }).id);
+        if (token.sessionId && dbSessionId !== token.sessionId) {
+          (session as { forceLogout?: boolean }).forceLogout = true;
+        }
       }
       return session;
     },

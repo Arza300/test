@@ -13,6 +13,7 @@ export interface User {
   balance: string;
   student_number?: string | null;
   guardian_number?: string | null;
+  current_session_id?: string | null;
   created_at: Date;
   updated_at: Date;
 }
