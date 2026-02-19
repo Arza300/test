@@ -3,7 +3,7 @@ import Link from "next/link";
 import { unstable_noStore } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getCourseWithContent, getEnrollment, getUserById, getLiveStreamsByCourseId } from "@/lib/db";
+import { getCourseWithContent, getEnrollment, getUserById, getLiveStreamsByCourseId, getHomepageSettings } from "@/lib/db";
 import { EnrollButton } from "./EnrollButton";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -78,6 +78,7 @@ export default async function CoursePage({ params }: Props) {
   const coursePrice = Number((course as Record<string, unknown>).price) || 0;
 
   const liveStreams = canAccessContent ? await getLiveStreamsByCourseId(course.id) : [];
+  const homepageSettings = await getHomepageSettings();
   const formatStreamDate = (d: Date | string) => {
     const date = typeof d === "string" ? new Date(d) : d;
     return new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(date);
@@ -129,19 +130,19 @@ export default async function CoursePage({ params }: Props) {
                 />
                 <div className="absolute bottom-0 right-0 h-6 w-6 rounded-full border-4 border-[var(--color-surface)] bg-[var(--color-success)]" />
                 <img
-                  src="/images/ruler.png"
+                  src={homepageSettings.heroFloatImage1 || "/images/ruler.png"}
                   alt=""
                   className="float-icon float-icon-1 absolute -left-8 top-0 h-9 w-9 object-contain drop-shadow sm:-left-9 sm:h-10 sm:w-10"
                   aria-hidden
                 />
                 <img
-                  src="/images/notebook.png"
+                  src={homepageSettings.heroFloatImage2 || "/images/notebook.png"}
                   alt=""
                   className="float-icon float-icon-2 absolute -right-8 bottom-2 h-9 w-9 object-contain drop-shadow sm:-right-9 sm:h-10 sm:w-10"
                   aria-hidden
                 />
                 <img
-                  src="/images/pencil.png"
+                  src={homepageSettings.heroFloatImage3 || "/images/pencil.png"}
                   alt=""
                   className="float-icon float-icon-3 absolute -bottom-2 left-1 h-8 w-8 object-contain drop-shadow sm:left-2 sm:h-9 sm:w-9"
                   aria-hidden

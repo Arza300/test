@@ -233,6 +233,9 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   facebookUrl: "https://www.facebook.com/profile.php?id=61562686209159",
   pageTitle: "منصتي التعليمية | دورات وتعلم أونلاين",
   heroBgPreset: "navy",
+  heroFloatImage1: "/images/ruler.png",
+  heroFloatImage2: "/images/notebook.png",
+  heroFloatImage3: "/images/pencil.png",
   footerTitle: "منصتي التعليمية",
   footerTagline: "تعلم بأسلوب حديث ومنهجية واضحة",
   footerCopyright: "منصتي التعليمية. جميع الحقوق محفوظة.",
@@ -254,6 +257,9 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       facebookUrl: c.facebookUrl != null && String(c.facebookUrl).trim() !== "" ? String(c.facebookUrl).trim() : null,
       pageTitle: (c.pageTitle as string) ?? HOMEPAGE_DEFAULTS.pageTitle,
       heroBgPreset: (c.heroBgPreset as string) ?? HOMEPAGE_DEFAULTS.heroBgPreset,
+      heroFloatImage1: (c.heroFloatImage1 as string) ?? HOMEPAGE_DEFAULTS.heroFloatImage1,
+      heroFloatImage2: (c.heroFloatImage2 as string) ?? HOMEPAGE_DEFAULTS.heroFloatImage2,
+      heroFloatImage3: (c.heroFloatImage3 as string) ?? HOMEPAGE_DEFAULTS.heroFloatImage3,
       footerTitle: (c.footerTitle as string) ?? HOMEPAGE_DEFAULTS.footerTitle,
       footerTagline: (c.footerTagline as string) ?? HOMEPAGE_DEFAULTS.footerTagline,
       footerCopyright: (c.footerCopyright as string) ?? HOMEPAGE_DEFAULTS.footerCopyright,
@@ -272,6 +278,9 @@ export async function updateHomepageSettings(data: {
   facebook_url?: string | null;
   page_title?: string | null;
   hero_bg_preset?: string | null;
+  hero_float_image_1?: string | null;
+  hero_float_image_2?: string | null;
+  hero_float_image_3?: string | null;
   footer_title?: string | null;
   footer_tagline?: string | null;
   footer_copyright?: string | null;
@@ -299,6 +308,15 @@ export async function updateHomepageSettings(data: {
   }
   if (data.hero_bg_preset !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_bg_preset = ${data.hero_bg_preset}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_float_image_1 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_float_image_1 = ${data.hero_float_image_1}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_float_image_2 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_float_image_2 = ${data.hero_float_image_2}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_float_image_3 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_float_image_3 = ${data.hero_float_image_3}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.footer_title !== undefined) {
     await sql`UPDATE "HomepageSetting" SET footer_title = ${data.footer_title}, updated_at = NOW() WHERE id = 'default'`;

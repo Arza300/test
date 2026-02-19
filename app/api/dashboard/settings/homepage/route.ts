@@ -33,6 +33,9 @@ export async function PUT(request: NextRequest) {
     facebookUrl?: string | null;
     pageTitle?: string | null;
     heroBgPreset?: string | null;
+    heroFloatImage1?: string | null;
+    heroFloatImage2?: string | null;
+    heroFloatImage3?: string | null;
     footerTitle?: string | null;
     footerTagline?: string | null;
     footerCopyright?: string | null;
@@ -52,6 +55,9 @@ export async function PUT(request: NextRequest) {
       facebook_url: body.facebookUrl !== undefined ? body.facebookUrl : undefined,
       page_title: body.pageTitle !== undefined ? body.pageTitle : undefined,
       hero_bg_preset: body.heroBgPreset !== undefined ? body.heroBgPreset : undefined,
+      hero_float_image_1: body.heroFloatImage1 !== undefined ? body.heroFloatImage1 : undefined,
+      hero_float_image_2: body.heroFloatImage2 !== undefined ? body.heroFloatImage2 : undefined,
+      hero_float_image_3: body.heroFloatImage3 !== undefined ? body.heroFloatImage3 : undefined,
       footer_title: body.footerTitle !== undefined ? body.footerTitle : undefined,
       footer_tagline: body.footerTagline !== undefined ? body.footerTagline : undefined,
       footer_copyright: body.footerCopyright !== undefined ? body.footerCopyright : undefined,

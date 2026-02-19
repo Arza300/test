@@ -144,19 +144,19 @@ export default async function HomePage() {
                   className="h-60 w-60 rounded-2xl border-2 border-white/20 object-cover shadow-2xl sm:h-72 sm:w-72 lg:h-80 lg:w-80"
                 />
                 <img
-                  src="/images/ruler.png"
+                  src={homepageSettings.heroFloatImage1 || "/images/ruler.png"}
                   alt=""
                   className="float-icon float-icon-1 absolute -left-10 top-0 h-12 w-12 object-contain drop-shadow-lg sm:-left-12 sm:top-2 sm:h-14 sm:w-14 lg:-left-14 lg:top-0 lg:h-16 lg:w-16"
                   aria-hidden
                 />
                 <img
-                  src="/images/notebook.png"
+                  src={homepageSettings.heroFloatImage2 || "/images/notebook.png"}
                   alt=""
                   className="float-icon float-icon-2 absolute -right-10 bottom-4 h-12 w-12 object-contain drop-shadow-lg sm:-right-12 sm:bottom-6 sm:h-14 sm:w-14 lg:-right-14 lg:bottom-4 lg:h-16 lg:w-16"
                   aria-hidden
                 />
                 <img
-                  src="/images/pencil.png"
+                  src={homepageSettings.heroFloatImage3 || "/images/pencil.png"}
                   alt=""
                   className="float-icon float-icon-3 absolute -bottom-4 left-2 h-11 w-11 object-contain drop-shadow-lg sm:left-4 sm:-bottom-5 sm:h-12 sm:w-12 lg:left-2 lg:-bottom-4 lg:h-14 lg:w-14"
                   aria-hidden

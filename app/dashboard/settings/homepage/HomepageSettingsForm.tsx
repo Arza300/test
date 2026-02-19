@@ -27,12 +27,16 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     whatsappUrl: initialSettings.whatsappUrl ?? "",
     facebookUrl: initialSettings.facebookUrl ?? "",
     heroBgPreset: (initialSettings.heroBgPreset as HeroBgPreset) || "navy",
+    heroFloatImage1: initialSettings.heroFloatImage1 ?? "",
+    heroFloatImage2: initialSettings.heroFloatImage2 ?? "",
+    heroFloatImage3: initialSettings.heroFloatImage3 ?? "",
     footerTitle: initialSettings.footerTitle ?? "",
     footerTagline: initialSettings.footerTagline ?? "",
     footerCopyright: initialSettings.footerCopyright ?? "",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
+  const [floatImageUploading, setFloatImageUploading] = useState<1 | 2 | 3 | null>(null);
 
   useEffect(() => {
     if (!success) return;
@@ -58,6 +62,9 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           whatsappUrl: form.whatsappUrl.trim() || null,
           facebookUrl: form.facebookUrl.trim() || null,
           heroBgPreset: form.heroBgPreset || null,
+          heroFloatImage1: form.heroFloatImage1.trim() || null,
+          heroFloatImage2: form.heroFloatImage2.trim() || null,
+          heroFloatImage3: form.heroFloatImage3.trim() || null,
           footerTitle: form.footerTitle.trim() || null,
           footerTagline: form.footerTagline.trim() || null,
           footerCopyright: form.footerCopyright.trim() || null,
@@ -169,6 +176,132 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
                 <span className="text-xs font-medium text-[var(--color-foreground)]">{opt.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <h3 className="mb-2 text-lg font-semibold text-[var(--color-foreground)]">الصور الصغيرة العائمة حول صورة المدرس</h3>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">
+          تظهر هذه الصور بجانب صورة المدرس في الصفحة الرئيسية. يمكنك إدخال رابط لكل صورة أو ترك الحقل فارغاً لاستخدام الافتراضي.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">صورة عائمة ١ (يسار أعلى)</label>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {form.heroFloatImage1 ? (
+                <img src={form.heroFloatImage1} alt="" className="h-10 w-10 rounded object-cover border border-[var(--color-border)]" />
+              ) : null}
+              <input
+                type="text"
+                value={form.heroFloatImage1}
+                onChange={(e) => setForm((f) => ({ ...f, heroFloatImage1: e.target.value }))}
+                placeholder="/images/ruler.png أو رابط"
+                className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
+              />
+              <label className="shrink-0 cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-sm font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-primary)]/20 disabled:opacity-50">
+                {floatImageUploading === 1 ? "جاري الرفع..." : "إضافة صورة"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={floatImageUploading !== null}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setFloatImageUploading(1);
+                    try {
+                      const fd = new FormData();
+                      fd.set("file", f);
+                      const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok && data.url) setForm((prev) => ({ ...prev, heroFloatImage1: data.url }));
+                    } finally {
+                      setFloatImageUploading(null);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">صورة عائمة ٢ (يمين أسفل)</label>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {form.heroFloatImage2 ? (
+                <img src={form.heroFloatImage2} alt="" className="h-10 w-10 rounded object-cover border border-[var(--color-border)]" />
+              ) : null}
+              <input
+                type="text"
+                value={form.heroFloatImage2}
+                onChange={(e) => setForm((f) => ({ ...f, heroFloatImage2: e.target.value }))}
+                placeholder="/images/notebook.png أو رابط"
+                className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
+              />
+              <label className="shrink-0 cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-sm font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-primary)]/20 disabled:opacity-50">
+                {floatImageUploading === 2 ? "جاري الرفع..." : "إضافة صورة"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={floatImageUploading !== null}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setFloatImageUploading(2);
+                    try {
+                      const fd = new FormData();
+                      fd.set("file", f);
+                      const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok && data.url) setForm((prev) => ({ ...prev, heroFloatImage2: data.url }));
+                    } finally {
+                      setFloatImageUploading(null);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">صورة عائمة ٣ (أسفل يسار)</label>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {form.heroFloatImage3 ? (
+                <img src={form.heroFloatImage3} alt="" className="h-10 w-10 rounded object-cover border border-[var(--color-border)]" />
+              ) : null}
+              <input
+                type="text"
+                value={form.heroFloatImage3}
+                onChange={(e) => setForm((f) => ({ ...f, heroFloatImage3: e.target.value }))}
+                placeholder="/images/pencil.png أو رابط"
+                className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
+              />
+              <label className="shrink-0 cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-sm font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-primary)]/20 disabled:opacity-50">
+                {floatImageUploading === 3 ? "جاري الرفع..." : "إضافة صورة"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={floatImageUploading !== null}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setFloatImageUploading(3);
+                    try {
+                      const fd = new FormData();
+                      fd.set("file", f);
+                      const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok && data.url) setForm((prev) => ({ ...prev, heroFloatImage3: data.url }));
+                    } finally {
+                      setFloatImageUploading(null);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
           </div>
         </div>
       </div>

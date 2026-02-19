@@ -53,6 +53,10 @@ export interface HomepageSetting {
   facebookUrl: string | null;
   pageTitle: string | null;
   heroBgPreset: HeroBgPreset | string | null;
+  /** روابط الصور الصغيرة العائمة حول صورة المدرس (1: يسار أعلى، 2: يمين أسفل، 3: أسفل يسار) */
+  heroFloatImage1: string | null;
+  heroFloatImage2: string | null;
+  heroFloatImage3: string | null;
   /** عنوان الفوتر (مثلاً: منصتي التعليمية) */
   footerTitle: string | null;
   /** وصف قصير تحت العنوان (مثلاً: تعلم بأسلوب حديث...) */
