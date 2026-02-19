@@ -8,6 +8,7 @@ type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: str
 type QuestionOptionRow = { text: string; isCorrect: boolean };
 type QuestionRow = { type: "MULTIPLE_CHOICE" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
 type QuizRow = { title: string; questions: QuestionRow[] };
+type ContentOrderEntry = { type: "lesson"; index: number } | { type: "quiz"; index: number };
 
 export function CreateCourseForm() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export function CreateCourseForm() {
       .catch(() => {});
   }, []);
   const [quizzes, setQuizzes] = useState<QuizRow[]>([{ title: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
+  const [contentOrder, setContentOrder] = useState<ContentOrderEntry[]>([{ type: "lesson", index: 0 }, { type: "quiz", index: 0 }]);
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
   const [pdfUploading, setPdfUploading] = useState<number | null>(null);
@@ -43,9 +45,15 @@ export function CreateCourseForm() {
 
   function addLesson() {
     setLessons((l) => [...l, { title: "", videoUrl: "", content: "", pdfUrl: "", acceptsHomework: false }]);
+    setContentOrder((c) => [...c, { type: "lesson", index: c.filter((x) => x.type === "lesson").length }]);
   }
   function removeLesson(i: number) {
     setLessons((l) => l.filter((_, idx) => idx !== i));
+    setContentOrder((c) =>
+      c
+        .filter((e) => !(e.type === "lesson" && e.index === i))
+        .map((e) => (e.type === "lesson" && e.index > i ? { ...e, index: e.index - 1 } : e))
+    );
   }
   function updateLesson(i: number, field: keyof LessonRow, value: string | boolean) {
     setLessons((l) => l.map((x, idx) => (idx === i ? { ...x, [field]: value } : x)));
@@ -53,9 +61,15 @@ export function CreateCourseForm() {
 
   function addQuiz() {
     setQuizzes((q) => [...q, { title: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
+    setContentOrder((c) => [...c, { type: "quiz", index: c.filter((x) => x.type === "quiz").length }]);
   }
   function removeQuiz(qi: number) {
     setQuizzes((q) => q.filter((_, i) => i !== qi));
+    setContentOrder((c) =>
+      c
+        .filter((e) => !(e.type === "quiz" && e.index === qi))
+        .map((e) => (e.type === "quiz" && e.index > qi ? { ...e, index: e.index - 1 } : e))
+    );
   }
   function updateQuizTitle(qi: number, title: string) {
     setQuizzes((q) => q.map((x, i) => (i === qi ? { ...x, title } : x)));
@@ -133,11 +147,57 @@ export function CreateCourseForm() {
     );
   }
 
+  function moveContentOrder(fromIndex: number, direction: "up" | "down") {
+    const toIndex = direction === "up" ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= contentOrder.length) return;
+    setContentOrder((c) => {
+      const next = [...c];
+      const t = next[fromIndex];
+      next[fromIndex] = next[toIndex];
+      next[toIndex] = t;
+      return next;
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     const slug = slugify(form.title || "course");
+    const validLessons = lessons.filter((l) => l.title.trim());
+    const validQuizzes = quizzes
+      .filter((q) => q.title.trim())
+      .filter((q) => q.questions.some((qt) => qt.questionText.trim()) && q.questions.filter((qt) => qt.questionText.trim()).length > 0)
+      .map((q) => ({
+        title: q.title.trim(),
+        questions: q.questions
+          .filter((qt) => qt.questionText.trim())
+          .map((qt) => ({
+            type: qt.type,
+            questionText: qt.questionText.trim(),
+            options:
+              qt.type === "MULTIPLE_CHOICE"
+                ? qt.options.filter((o) => o.text.trim()).map((o) => ({ text: o.text.trim(), isCorrect: o.isCorrect }))
+                : qt.type === "TRUE_FALSE"
+                  ? qt.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }))
+                  : undefined,
+          })),
+      }));
+    const validLessonIndices = lessons.map((l, i) => (l.title.trim() ? i : -1)).filter((i) => i >= 0);
+    const validQuizIndices = quizzes
+      .map((q, i) => (q.title.trim() && q.questions.some((qt) => qt.questionText.trim()) ? i : -1))
+      .filter((i) => i >= 0);
+    const filteredContentOrder = contentOrder
+      .filter(
+        (e) =>
+          (e.type === "lesson" && validLessonIndices.includes(e.index)) || (e.type === "quiz" && validQuizIndices.includes(e.index))
+      )
+      .map((e) =>
+        e.type === "lesson"
+          ? { type: "lesson" as const, index: validLessonIndices.indexOf(e.index) }
+          : { type: "quiz" as const, index: validQuizIndices.indexOf(e.index) }
+      );
+
     const payload = {
       title: form.title.trim(),
       slug,
@@ -149,33 +209,15 @@ export function CreateCourseForm() {
       ...(form.categoryName.trim()
         ? { categoryName: form.categoryName.trim() }
         : form.categoryId ? { categoryId: form.categoryId } : {}),
-      lessons: lessons
-        .filter((l) => l.title.trim())
-        .map((l) => ({
+      lessons: validLessons.map((l) => ({
           title: l.title.trim(),
           videoUrl: l.videoUrl.trim() || undefined,
           content: l.content.trim() || undefined,
           pdfUrl: l.pdfUrl.trim() || undefined,
           acceptsHomework: l.acceptsHomework,
         })),
-      quizzes: quizzes
-        .filter((q) => q.title.trim())
-        .map((q) => ({
-          title: q.title.trim(),
-          questions: q.questions
-            .filter((qt) => qt.questionText.trim())
-            .map((qt) => ({
-              type: qt.type,
-              questionText: qt.questionText.trim(),
-              options:
-                qt.type === "MULTIPLE_CHOICE"
-                  ? qt.options.filter((o) => o.text.trim()).map((o) => ({ text: o.text.trim(), isCorrect: o.isCorrect }))
-                  : qt.type === "TRUE_FALSE"
-                    ? qt.options.map((o) => ({ text: o.text, isCorrect: o.isCorrect }))
-                    : undefined,
-            })),
-        }))
-        .filter((q) => q.questions.length > 0),
+      quizzes: validQuizzes,
+      contentOrder: filteredContentOrder,
     };
     const res = await fetch("/api/courses", {
       method: "POST",
@@ -552,6 +594,51 @@ export function CreateCourseForm() {
         <button type="button" onClick={addQuiz} className="rounded-[var(--radius-btn)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium">
           + إضافة اختبار
         </button>
+      </section>
+
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <h3 className="mb-2 text-lg font-semibold text-[var(--color-foreground)]">ترتيب محتويات الكورس</h3>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">
+          تحكم في ترتيب الحصص والاختبارات كما تظهر للطالب. يمكنك وضع اختبار بين حصتين باستخدام أزرار الأعلى/الأسفل.
+        </p>
+        <ul className="space-y-2">
+          {contentOrder.map((entry, pos) => {
+            const label =
+              entry.type === "lesson"
+                ? `حصة ${entry.index + 1}${lessons[entry.index]?.title?.trim() ? ": " + lessons[entry.index].title.trim() : ""}`
+                : `اختبار ${entry.index + 1}${quizzes[entry.index]?.title?.trim() ? ": " + quizzes[entry.index].title.trim() : ""}`;
+            return (
+              <li
+                key={`${entry.type}-${entry.index}-${pos}`}
+                className="flex items-center justify-between gap-2 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              >
+                <span className="text-sm text-[var(--color-foreground)]">
+                  {pos + 1}. {label}
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveContentOrder(pos, "up")}
+                    disabled={pos === 0}
+                    className="rounded border border-[var(--color-border)] px-2 py-1 text-xs disabled:opacity-40"
+                    title="نقل لأعلى"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveContentOrder(pos, "down")}
+                    disabled={pos === contentOrder.length - 1}
+                    className="rounded border border-[var(--color-border)] px-2 py-1 text-xs disabled:opacity-40"
+                    title="نقل لأسفل"
+                  >
+                    ↓
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       <div className="flex gap-3">

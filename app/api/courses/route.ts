@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     acceptsHomework?: boolean;
     lessons?: LessonInput[];
     quizzes?: QuizInput[];
+    contentOrder?: Array<{ type: "lesson"; index: number } | { type: "quiz"; index: number }>;
   };
   try {
     body = await request.json();
@@ -115,29 +116,38 @@ export async function POST(request: NextRequest) {
   }
 
   const lessons = body.lessons ?? [];
+  const quizzes = body.quizzes ?? [];
+  const contentOrder = body.contentOrder ?? [
+    ...lessons.map((_, i) => ({ type: "lesson" as const, index: i })),
+    ...quizzes.map((_, i) => ({ type: "quiz" as const, index: i })),
+  ];
+
   for (let i = 0; i < lessons.length; i++) {
     const le = lessons[i];
     const lessonSlug = `${slug.trim()}-${i + 1}`.replace(/\s+/g, "-");
+    const order = contentOrder.findIndex((e) => e.type === "lesson" && e.index === i);
+    const orderVal = order >= 0 ? order : i;
     await createLesson({
       course_id: course.id,
       title: le.title?.trim() || `حصة ${i + 1}`,
-      title_ar: le.titleAr?.trim() || null,
+      title_ar: (le as { titleAr?: string }).titleAr?.trim() || null,
       slug: lessonSlug,
       content: le.content?.trim() || null,
       video_url: le.videoUrl?.trim() || null,
       pdf_url: le.pdfUrl?.trim() || null,
-      order: i + 1,
+      order: orderVal,
       accepts_homework: !!(le as { acceptsHomework?: boolean }).acceptsHomework,
     });
   }
 
-  const quizzes = body.quizzes ?? [];
   for (let qi = 0; qi < quizzes.length; qi++) {
     const q = quizzes[qi];
+    const order = contentOrder.findIndex((e) => e.type === "quiz" && e.index === qi);
+    const orderVal = order >= 0 ? order : lessons.length + qi;
     const quiz = await createQuiz({
       course_id: course.id,
       title: q.title?.trim() || `اختبار ${qi + 1}`,
-      order: qi + 1,
+      order: orderVal,
     });
     const questions = q.questions ?? [];
     for (let qti = 0; qti < questions.length; qti++) {
