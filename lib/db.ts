@@ -247,6 +247,10 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
     const row = rows[0] as Record<string, unknown> | undefined;
     if (!row) return HOMEPAGE_DEFAULTS;
     const c = rowToCamel(row) as Record<string, unknown>;
+    /* أعمدة hero_float_image_1/2/3 تتحول إلى heroFloatImage_1 لا heroFloatImage1 فنقرأ من الصف الخام */
+    const heroFloat1 = row.hero_float_image_1 != null && String(row.hero_float_image_1).trim() !== "" ? String(row.hero_float_image_1).trim() : null;
+    const heroFloat2 = row.hero_float_image_2 != null && String(row.hero_float_image_2).trim() !== "" ? String(row.hero_float_image_2).trim() : null;
+    const heroFloat3 = row.hero_float_image_3 != null && String(row.hero_float_image_3).trim() !== "" ? String(row.hero_float_image_3).trim() : null;
     return {
       teacherImageUrl: (c.teacherImageUrl as string) ?? HOMEPAGE_DEFAULTS.teacherImageUrl,
       heroTitle: (c.heroTitle as string) ?? HOMEPAGE_DEFAULTS.heroTitle,
@@ -257,9 +261,9 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       facebookUrl: c.facebookUrl != null && String(c.facebookUrl).trim() !== "" ? String(c.facebookUrl).trim() : null,
       pageTitle: (c.pageTitle as string) ?? HOMEPAGE_DEFAULTS.pageTitle,
       heroBgPreset: (c.heroBgPreset as string) ?? HOMEPAGE_DEFAULTS.heroBgPreset,
-      heroFloatImage1: (c.heroFloatImage1 as string) ?? HOMEPAGE_DEFAULTS.heroFloatImage1,
-      heroFloatImage2: (c.heroFloatImage2 as string) ?? HOMEPAGE_DEFAULTS.heroFloatImage2,
-      heroFloatImage3: (c.heroFloatImage3 as string) ?? HOMEPAGE_DEFAULTS.heroFloatImage3,
+      heroFloatImage1: heroFloat1 ?? HOMEPAGE_DEFAULTS.heroFloatImage1,
+      heroFloatImage2: heroFloat2 ?? HOMEPAGE_DEFAULTS.heroFloatImage2,
+      heroFloatImage3: heroFloat3 ?? HOMEPAGE_DEFAULTS.heroFloatImage3,
       footerTitle: (c.footerTitle as string) ?? HOMEPAGE_DEFAULTS.footerTitle,
       footerTagline: (c.footerTagline as string) ?? HOMEPAGE_DEFAULTS.footerTagline,
       footerCopyright: (c.footerCopyright as string) ?? HOMEPAGE_DEFAULTS.footerCopyright,
