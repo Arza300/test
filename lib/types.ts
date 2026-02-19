@@ -232,3 +232,24 @@ export interface QuestionOptionApp {
   isCorrect: boolean;
   questionId: string;
 }
+
+/** محادثة بين موظف (أدمن/مساعد) وطالب */
+export interface Conversation {
+  id: string;
+  staffUserId: string;
+  studentUserId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** رسالة داخل محادثة */
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  messageType: "text" | "image" | "file";
+  content: string | null;
+  fileUrl: string | null;
+  fileName: string | null;
+  createdAt: Date;
+}

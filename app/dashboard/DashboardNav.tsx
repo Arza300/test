@@ -42,12 +42,17 @@ export function DashboardNav({
 
   if (!isStaff) {
     return (
-      <Link
-        href="/courses"
-        className={`${baseClass} ${inactiveClass}`}
-      >
-        الكورسات المتاحة
-      </Link>
+      <>
+        <NavLink href="/dashboard/messages">
+          الرسائل الواردة
+        </NavLink>
+        <Link
+          href="/courses"
+          className={`${baseClass} ${inactiveClass}`}
+        >
+          الكورسات المتاحة
+        </Link>
+      </>
     );
   }
 
@@ -69,10 +74,18 @@ export function DashboardNav({
           واجبات الطلاب
         </NavLink>
       )}
+      {(isAdmin || isAssistant) && (
+        <NavLink href="/dashboard/messages">
+          تواصل خاص مع الطلبة
+        </NavLink>
+      )}
       {isAdmin && (
         <>
           <NavLink href="/dashboard/courses">
             إدارة الكورسات
+          </NavLink>
+          <NavLink href="/dashboard/courses/new" exact>
+            إنشاء دورة
           </NavLink>
           <NavLink href="/dashboard/reviews">
             تعليقات الطلاب
@@ -82,9 +95,6 @@ export function DashboardNav({
           </NavLink>
           <NavLink href="/dashboard/live-streams">
             البثوث المباشرة
-          </NavLink>
-          <NavLink href="/dashboard/courses/new" exact>
-            إنشاء دورة
           </NavLink>
         </>
       )}

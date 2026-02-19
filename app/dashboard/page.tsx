@@ -21,42 +21,57 @@ export default async function DashboardPage() {
 
     return (
       <div className="space-y-8">
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
-          <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
-            مرحباً، {session.user.name}
-          </h2>
-          <div className="mt-4 flex flex-wrap items-center gap-4">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[var(--color-muted)]">رصيدك الحالي:</span>
-              <span className="text-2xl font-bold text-[var(--color-primary)]">
-                {Number(balance).toFixed(2)} ج.م
-              </span>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
+            <h2 className="text-lg font-semibold text-[var(--color-foreground)]">
+              مرحباً، {session.user.name}
+            </h2>
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[var(--color-muted)]">رصيدك الحالي:</span>
+                <span className="text-2xl font-bold text-[var(--color-primary)]">
+                  {Number(balance).toFixed(2)} ج.م
+                </span>
+              </div>
+              <Link
+                href="/dashboard/add-balance"
+                className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
+              >
+                إضافة رصيد
+              </Link>
             </div>
+          </div>
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
+            <h2 className="mb-2 text-lg font-semibold text-[var(--color-foreground)]">
+              الكورسات المتاحة
+            </h2>
+            <p className="mb-4 text-sm text-[var(--color-muted)]">
+              تصفح جميع الدورات وسجّل في ما يناسبك
+            </p>
             <Link
-              href="/dashboard/add-balance"
-              className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
+              href="/courses"
+              className="inline-flex rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
             >
-              إضافة رصيد
+              عرض الكورسات
             </Link>
           </div>
         </div>
 
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
-          <h2 className="mb-2 text-lg font-semibold text-[var(--color-foreground)]">
-            الكورسات المتاحة
-          </h2>
-          <p className="mb-4 text-sm text-[var(--color-muted)]">
-            تصفح جميع الدورات وسجّل في ما يناسبك
-          </p>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <ActivateCodeSection />
           <Link
-            href="/courses"
-            className="inline-flex rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-primary-hover)]"
+            href="/dashboard/messages"
+            className="flex flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] text-center transition hover:border-[var(--color-primary)]/30"
           >
-            عرض الكورسات
+            <h2 className="text-lg font-semibold text-[var(--color-foreground)]">الرسائل الواردة</h2>
+            <p className="mt-2 text-sm text-[var(--color-muted)]">
+              عرض الرسائل والمحادثات من الإدارة أو المدرس
+            </p>
+            <span className="mt-4 inline-flex w-fit rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-5 py-2.5 text-base font-medium text-white transition hover:bg-[var(--color-primary-hover)]">
+              فتح الرسائل
+            </span>
           </Link>
         </div>
-
-        <ActivateCodeSection />
 
         <MyCoursesSection courses={enrolledCourses} />
       </div>
@@ -82,7 +97,7 @@ export default async function DashboardPage() {
               {isAdmin && (
                 <Link
                   href="/dashboard/courses"
-                  className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                  className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
                 >
                   <h3 className="font-semibold text-[var(--color-foreground)]">إدارة الكورسات</h3>
                   <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">{coursesCount}</p>
@@ -92,7 +107,7 @@ export default async function DashboardPage() {
               {isAdmin && (
                 <Link
                   href="/dashboard/courses/new"
-                  className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                  className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
                 >
                   <h3 className="font-semibold text-[var(--color-foreground)]">إنشاء كورس</h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة دورة جديدة بالمحتوى والحصص والاختبارات</p>
@@ -101,7 +116,7 @@ export default async function DashboardPage() {
               {isAdmin && (
                 <Link
                   href="/dashboard/live-streams"
-                  className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                  className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
                 >
                   <h3 className="font-semibold text-[var(--color-foreground)]">البثوث المباشرة</h3>
                   <p className="mt-1 text-sm text-[var(--color-muted)]">إضافة بث عبر Zoom أو Google Meet وربطه بكورس على المنصة</p>
@@ -109,7 +124,7 @@ export default async function DashboardPage() {
               )}
               <Link
                 href="/dashboard/codes"
-                className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
               >
                 <h3 className="font-semibold text-[var(--color-foreground)]">إنشاء الأكواد</h3>
                 <p className="mt-1 text-sm text-[var(--color-muted)]">إنشاء أكواد تفعيل مجانية لدورة وتوزيعها على الطلاب</p>
@@ -123,10 +138,10 @@ export default async function DashboardPage() {
       {/* قسم: إدارة الطلاب */}
       <div>
         <h2 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">إدارة الطلاب</h2>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <Link
             href="/dashboard/students"
-            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+            className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
           >
             <h3 className="font-semibold text-[var(--color-foreground)]">{isAdmin ? "الطلاب والحسابات" : "الطلاب"}</h3>
             <p className="mt-1 text-3xl font-bold text-[var(--color-primary)]">{studentsCount}</p>
@@ -134,29 +149,32 @@ export default async function DashboardPage() {
           </Link>
           <Link
             href="/dashboard/statistics"
-            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+            className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
           >
             <h3 className="font-semibold text-[var(--color-foreground)]">إحصائيات الطلاب</h3>
-            <div className="mt-3 flex flex-wrap gap-4">
-              <span className="text-2xl font-bold text-[var(--color-primary)]">{studentsCount}</span>
-              <span className="text-sm text-[var(--color-muted)]">طالب</span>
-              <span className="text-[var(--color-muted)]">·</span>
-              <span className="text-2xl font-bold text-[var(--color-primary)]">{quizAttempts.length}</span>
-              <span className="text-sm text-[var(--color-muted)]">محاولة اختبار</span>
-              <span className="text-[var(--color-muted)]">·</span>
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
               <span className="text-2xl font-bold text-[var(--color-primary)]">{totalEarnings.toFixed(2)}</span>
               <span className="text-sm text-[var(--color-muted)]">ج.م أرباح</span>
             </div>
             <p className="mt-2 text-sm text-[var(--color-muted)]">عرض التفاصيل والدرجات وإجمالي الأرباح</p>
           </Link>
           {(isAdmin || isAssistant) && (
-            <Link
-              href="/dashboard/homework"
-              className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
-            >
-              <h3 className="font-semibold text-[var(--color-foreground)]">استلام واجبات الطلاب</h3>
-              <p className="mt-1 text-sm text-[var(--color-muted)]">عرض تسليمات الواجبات والبحث باسم الطالب</p>
-            </Link>
+            <>
+              <Link
+                href="/dashboard/homework"
+                className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
+              >
+                <h3 className="font-semibold text-[var(--color-foreground)]">استلام واجبات الطلاب</h3>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">عرض تسليمات الواجبات والبحث باسم الطالب</p>
+              </Link>
+              <Link
+                href="/dashboard/messages"
+                className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
+              >
+                <h3 className="font-semibold text-[var(--color-foreground)]">تواصل خاص مع الطلبة</h3>
+                <p className="mt-1 text-sm text-[var(--color-muted)]">محادثة مع طالب، إرسال رسائل أو صور أو ملفات</p>
+              </Link>
+            </>
           )}
         </div>
       </div>
@@ -182,14 +200,14 @@ export default async function DashboardPage() {
             <div className="grid gap-6 sm:grid-cols-2">
               <Link
                 href="/dashboard/settings/homepage"
-                className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
               >
                 <h3 className="font-semibold text-[var(--color-foreground)]">إعدادات الصفحة الرئيسية</h3>
                 <p className="mt-1 text-sm text-[var(--color-muted)]">صورة المدرس واسم المنصة والعنوان والشعار</p>
               </Link>
               <Link
                 href="/dashboard/reviews"
-                className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition hover:border-[var(--color-primary)]/30"
+                className="flex min-h-[200px] flex-col justify-center rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center transition hover:border-[var(--color-primary)]/30"
               >
                 <h3 className="font-semibold text-[var(--color-foreground)]">تعليقات الطلاب</h3>
                 <p className="mt-1 text-sm text-[var(--color-muted)]">إدارة تعليقات الطلاب المعروضة في الصفحة الرئيسية (إضافة / تعديل / حذف)</p>

@@ -22,8 +22,8 @@ function UserMenu() {
   if (status !== "authenticated" || !session?.user) return null;
 
   const roleLabel: Record<UserRole, string> = {
-    ADMIN: "مدير",
-    ASSISTANT_ADMIN: "مساعد مدير",
+    ADMIN: "أدمن",
+    ASSISTANT_ADMIN: "مساعد الأدمن",
     STUDENT: "طالب",
   };
 

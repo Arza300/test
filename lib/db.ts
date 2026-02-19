@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { neon } from "@neondatabase/serverless";
-import type { User, UserRole, Course, Category, Review, HomepageSetting, Enrollment, ActivationCode, HomeworkSubmission, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider } from "./types";
+import type { User, UserRole, Course, Category, Review, HomepageSetting, Enrollment, ActivationCode, HomeworkSubmission, Lesson, Quiz, Question, QuestionOption, LiveStream, LiveStreamProvider, Conversation, Message } from "./types";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL غير معرّف");
@@ -1214,4 +1214,109 @@ export async function countUsersByRole(role: UserRole): Promise<number> {
 export async function countCourses(): Promise<number> {
   const rows = await sql`SELECT COUNT(*)::int as c FROM "Course"`;
   return Number((rows[0] as { c: number }).c ?? 0);
+}
+
+// ----- Conversation & Message (التواصل الخاص مع الطلبة) -----
+export async function getOrCreateConversation(staffUserId: string, studentUserId: string): Promise<Conversation> {
+  const existing = await sql`
+    SELECT * FROM "Conversation" WHERE staff_user_id = ${staffUserId} AND student_user_id = ${studentUserId} LIMIT 1
+  `;
+  const row = existing[0] as Record<string, unknown> | undefined;
+  if (row) return rowToCamel(row) as Conversation;
+  const id = generateId();
+  await sql`
+    INSERT INTO "Conversation" (id, staff_user_id, student_user_id, created_at, updated_at)
+    VALUES (${id}, ${staffUserId}, ${studentUserId}, NOW(), NOW())
+  `;
+  const rows = await sql`SELECT * FROM "Conversation" WHERE id = ${id} LIMIT 1`;
+  return rowToCamel(rows[0] as Record<string, unknown>) as Conversation;
+}
+
+export async function getConversationById(conversationId: string): Promise<Conversation | null> {
+  const rows = await sql`SELECT * FROM "Conversation" WHERE id = ${conversationId} LIMIT 1`;
+  const r = rows[0] as Record<string, unknown> | undefined;
+  return r ? (rowToCamel(r) as Conversation) : null;
+}
+
+/** محادثات الموظف مع الطلبة (للأدمن/مساعد) */
+export async function getConversationsByStaffId(staffUserId: string): Promise<(Conversation & { studentName?: string })[]> {
+  const rows = await sql`
+    SELECT c.*, u.name as student_name
+    FROM "Conversation" c
+    JOIN "User" u ON u.id = c.student_user_id
+    WHERE c.staff_user_id = ${staffUserId}
+    ORDER BY c.updated_at DESC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => {
+    const { student_name, ...rest } = r;
+    const conv = rowToCamel(rest) as Conversation;
+    return { ...conv, studentName: student_name as string };
+  });
+}
+
+/** محادثات الطالب (الرسائل الواردة من الموظفين) */
+export async function getConversationsByStudentId(studentUserId: string): Promise<(Conversation & { staffName?: string; staffRole?: string })[]> {
+  const rows = await sql`
+    SELECT c.*, u.name as staff_name, u.role as staff_role
+    FROM "Conversation" c
+    JOIN "User" u ON u.id = c.staff_user_id
+    WHERE c.student_user_id = ${studentUserId}
+    ORDER BY c.updated_at DESC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => {
+    const { staff_name, staff_role, ...rest } = r;
+    const conv = rowToCamel(rest) as Conversation;
+    return { ...conv, staffName: staff_name as string, staffRole: staff_role as string };
+  });
+}
+
+/** قائمة الموظفين الذين يمكن للطالب مراسلتهم (أدمن + مساعد أدمن) */
+export async function getStaffForStudentMessaging(): Promise<{ id: string; role: string }[]> {
+  const rows = await sql`
+    SELECT id, role FROM "User"
+    WHERE role IN ('ADMIN', 'ASSISTANT_ADMIN')
+    ORDER BY role ASC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => ({ id: r.id as string, role: r.role as string }));
+}
+
+export async function canUserAccessConversation(userId: string, role: UserRole, conversation: Conversation): Promise<boolean> {
+  if (role === "ADMIN" || role === "ASSISTANT_ADMIN") return conversation.staffUserId === userId;
+  if (role === "STUDENT") return conversation.studentUserId === userId;
+  return false;
+}
+
+export async function getMessageById(messageId: string): Promise<Message | null> {
+  const rows = await sql`SELECT * FROM "Message" WHERE id = ${messageId} LIMIT 1`;
+  const r = rows[0] as Record<string, unknown> | undefined;
+  return r ? (rowToCamel(r) as Message) : null;
+}
+
+export async function getMessagesByConversationId(conversationId: string): Promise<Message[]> {
+  const rows = await sql`
+    SELECT * FROM "Message" WHERE conversation_id = ${conversationId} ORDER BY created_at ASC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => rowToCamel(r) as Message);
+}
+
+export async function deleteMessage(messageId: string): Promise<void> {
+  await sql`DELETE FROM "Message" WHERE id = ${messageId}`;
+}
+
+export async function createMessage(data: {
+  conversation_id: string;
+  sender_id: string;
+  message_type: "text" | "image" | "file";
+  content?: string | null;
+  file_url?: string | null;
+  file_name?: string | null;
+}): Promise<Message> {
+  const id = generateId();
+  await sql`
+    INSERT INTO "Message" (id, conversation_id, sender_id, message_type, content, file_url, file_name, created_at)
+    VALUES (${id}, ${data.conversation_id}, ${data.sender_id}, ${data.message_type}, ${data.content ?? null}, ${data.file_url ?? null}, ${data.file_name ?? null}, NOW())
+  `;
+  await sql`UPDATE "Conversation" SET updated_at = NOW() WHERE id = ${data.conversation_id}`;
+  const rows = await sql`SELECT * FROM "Message" WHERE id = ${id} LIMIT 1`;
+  return rowToCamel(rows[0] as Record<string, unknown>) as Message;
 }
