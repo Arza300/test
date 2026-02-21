@@ -203,7 +203,10 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
         .filter((q) => q.title.trim())
         .map((q) => ({
           title: q.title.trim(),
-          timeLimitMinutes: q.timeLimitMinutes.trim() ? parseInt(q.timeLimitMinutes, 10) : undefined,
+          timeLimitMinutes: (() => {
+          const n = parseInt(q.timeLimitMinutes, 10);
+          return Number.isFinite(n) && n >= 1 ? n : undefined;
+        })(),
           questions: q.questions
             .filter((qt) => qt.questionText.trim())
             .map((qt) => ({

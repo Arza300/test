@@ -695,10 +695,25 @@ export async function getQuizById(quizId: string): Promise<{
 
 export async function createQuiz(data: { course_id: string; title: string; order: number; time_limit_minutes?: number | null }): Promise<Quiz> {
   const id = generateId();
-  await sql`
-    INSERT INTO "Quiz" (id, course_id, title, "order", time_limit_minutes)
-    VALUES (${id}, ${data.course_id}, ${data.title}, ${data.order}, ${data.time_limit_minutes ?? null})
-  `;
+  const runInsert = async () => {
+    await sql`
+      INSERT INTO "Quiz" (id, course_id, title, "order", time_limit_minutes)
+      VALUES (${id}, ${data.course_id}, ${data.title}, ${data.order}, ${data.time_limit_minutes ?? null})
+    `;
+  };
+  try {
+    await runInsert();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const code = typeof (err as { code?: string })?.code === "string" ? (err as { code: string }).code : "";
+    const isMissingColumn = code === "42703" || /time_limit_minutes|does not exist|column.*not exist/i.test(msg);
+    if (isMissingColumn) {
+      await sql`ALTER TABLE "Quiz" ADD COLUMN IF NOT EXISTS time_limit_minutes INT`;
+      await runInsert();
+    } else {
+      throw err;
+    }
+  }
   const rows = await sql`SELECT * FROM "Quiz" WHERE id = ${id} LIMIT 1`;
   const q = rows[0] as Quiz;
   if (!q) throw new Error("فشل إنشاء الاختبار");

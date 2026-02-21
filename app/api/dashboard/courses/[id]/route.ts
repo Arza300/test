@@ -111,11 +111,14 @@ export async function PUT(
   const quizzes = body.quizzes ?? [];
   for (let qi = 0; qi < quizzes.length; qi++) {
     const q = quizzes[qi];
+    const mins = q.timeLimitMinutes;
+    const timeLimitMinutes =
+      typeof mins === "number" && Number.isFinite(mins) && mins >= 1 ? mins : null;
     const quiz = await createQuiz({
       course_id: id,
       title: q.title?.trim() || `اختبار ${qi + 1}`,
       order: qi + 1,
-      time_limit_minutes: q.timeLimitMinutes ?? null,
+      time_limit_minutes: timeLimitMinutes,
     });
     const questions = q.questions ?? [];
     for (let qti = 0; qti < questions.length; qti++) {

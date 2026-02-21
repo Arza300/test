@@ -144,11 +144,14 @@ export async function POST(request: NextRequest) {
     const q = quizzes[qi];
     const order = contentOrder.findIndex((e) => e.type === "quiz" && e.index === qi);
     const orderVal = order >= 0 ? order : lessons.length + qi;
+    const mins = q.timeLimitMinutes;
+    const timeLimitMinutes =
+      typeof mins === "number" && Number.isFinite(mins) && mins >= 1 ? mins : null;
     const quiz = await createQuiz({
       course_id: course.id,
       title: q.title?.trim() || `اختبار ${qi + 1}`,
       order: orderVal,
-      time_limit_minutes: q.timeLimitMinutes ?? null,
+      time_limit_minutes: timeLimitMinutes,
     });
     const questions = q.questions ?? [];
     for (let qti = 0; qti < questions.length; qti++) {

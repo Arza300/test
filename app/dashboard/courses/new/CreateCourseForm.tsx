@@ -173,7 +173,10 @@ export function CreateCourseForm() {
       .filter((q) => q.questions.some((qt) => qt.questionText.trim()) && q.questions.filter((qt) => qt.questionText.trim()).length > 0)
       .map((q) => ({
         title: q.title.trim(),
-        timeLimitMinutes: q.timeLimitMinutes.trim() ? parseInt(q.timeLimitMinutes, 10) : undefined,
+        timeLimitMinutes: (() => {
+          const n = parseInt(q.timeLimitMinutes, 10);
+          return Number.isFinite(n) && n >= 1 ? n : undefined;
+        })(),
         questions: q.questions
           .filter((qt) => qt.questionText.trim())
           .map((qt) => ({
