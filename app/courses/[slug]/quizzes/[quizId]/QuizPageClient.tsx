@@ -9,6 +9,7 @@ export type QuizApiPayload = {
   title: string;
   courseId: string;
   order: number;
+  timeLimitMinutes: number | null;
   course: { id: string; slug: string | null; title: string; titleAr: string | null };
   questions: Array<{
     id: string;
@@ -106,6 +107,9 @@ export function QuizPageClient({ quizId }: { quizId: string }) {
         {quiz.questions.length} سؤال
         {(q.maxQuizAttempts != null && q.attemptsUsed != null) && (
           <span className="mr-2"> — استخدمت {q.attemptsUsed} من {q.maxQuizAttempts} محاولة</span>
+        )}
+        {quiz.timeLimitMinutes != null && quiz.timeLimitMinutes > 0 && (
+          <span className="mr-2"> — مدة الاختبار: {quiz.timeLimitMinutes} دقيقة</span>
         )}
       </p>
       <QuizTake quiz={quiz} />

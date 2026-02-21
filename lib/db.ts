@@ -693,11 +693,11 @@ export async function getQuizById(quizId: string): Promise<{
   };
 }
 
-export async function createQuiz(data: { course_id: string; title: string; order: number }): Promise<Quiz> {
+export async function createQuiz(data: { course_id: string; title: string; order: number; time_limit_minutes?: number | null }): Promise<Quiz> {
   const id = generateId();
   await sql`
-    INSERT INTO "Quiz" (id, course_id, title, "order")
-    VALUES (${id}, ${data.course_id}, ${data.title}, ${data.order})
+    INSERT INTO "Quiz" (id, course_id, title, "order", time_limit_minutes)
+    VALUES (${id}, ${data.course_id}, ${data.title}, ${data.order}, ${data.time_limit_minutes ?? null})
   `;
   const rows = await sql`SELECT * FROM "Quiz" WHERE id = ${id} LIMIT 1`;
   const q = rows[0] as Quiz;

@@ -74,12 +74,13 @@ CREATE INDEX IF NOT EXISTS "Lesson_course_id_idx" ON "Lesson"(course_id);
 
 -- 5) الاختبارات
 CREATE TABLE IF NOT EXISTS "Quiz" (
-  id         TEXT PRIMARY KEY,
-  course_id  TEXT NOT NULL REFERENCES "Course"(id) ON DELETE CASCADE,
-  title      TEXT NOT NULL,
-  "order"    INT NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id                  TEXT PRIMARY KEY,
+  course_id           TEXT NOT NULL REFERENCES "Course"(id) ON DELETE CASCADE,
+  title               TEXT NOT NULL,
+  "order"             INT NOT NULL DEFAULT 0,
+  time_limit_minutes   INT,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS "Quiz_course_id_idx" ON "Quiz"(course_id);
@@ -171,6 +172,9 @@ ALTER TABLE "User"
   ADD COLUMN IF NOT EXISTS student_number      TEXT,
   ADD COLUMN IF NOT EXISTS guardian_number     TEXT,
   ADD COLUMN IF NOT EXISTS current_session_id  TEXT;
+
+-- إضافة وقت الاختبار بالدقائق للاختبارات (لو الجدول قديم)
+ALTER TABLE "Quiz" ADD COLUMN IF NOT EXISTS time_limit_minutes INT;
 
 -- إضافة عمود القسم للكورسات لو الجدول قديم وبدون العمود
 DO $$

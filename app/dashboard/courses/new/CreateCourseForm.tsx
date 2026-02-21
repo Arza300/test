@@ -7,7 +7,7 @@ type CategoryOption = { id: string; name: string; nameAr?: string | null };
 type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: string; acceptsHomework: boolean };
 type QuestionOptionRow = { text: string; isCorrect: boolean };
 type QuestionRow = { type: "MULTIPLE_CHOICE" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
-type QuizRow = { title: string; questions: QuestionRow[] };
+type QuizRow = { title: string; timeLimitMinutes: string; questions: QuestionRow[] };
 type ContentOrderEntry = { type: "lesson"; index: number } | { type: "quiz"; index: number };
 
 export function CreateCourseForm() {
@@ -33,7 +33,7 @@ export function CreateCourseForm() {
       .then((data) => Array.isArray(data) && setCategories(data))
       .catch(() => {});
   }, []);
-  const [quizzes, setQuizzes] = useState<QuizRow[]>([{ title: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
+  const [quizzes, setQuizzes] = useState<QuizRow[]>([{ title: "", timeLimitMinutes: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
   const [contentOrder, setContentOrder] = useState<ContentOrderEntry[]>([{ type: "lesson", index: 0 }, { type: "quiz", index: 0 }]);
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
@@ -60,7 +60,7 @@ export function CreateCourseForm() {
   }
 
   function addQuiz() {
-    setQuizzes((q) => [...q, { title: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
+    setQuizzes((q) => [...q, { title: "", timeLimitMinutes: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
     setContentOrder((c) => [...c, { type: "quiz", index: c.filter((x) => x.type === "quiz").length }]);
   }
   function removeQuiz(qi: number) {
@@ -73,6 +73,9 @@ export function CreateCourseForm() {
   }
   function updateQuizTitle(qi: number, title: string) {
     setQuizzes((q) => q.map((x, i) => (i === qi ? { ...x, title } : x)));
+  }
+  function updateQuizTimeLimit(qi: number, value: string) {
+    setQuizzes((q) => q.map((x, i) => (i === qi ? { ...x, timeLimitMinutes: value } : x)));
   }
   function addQuestion(qi: number) {
     setQuizzes((q) =>
@@ -170,6 +173,7 @@ export function CreateCourseForm() {
       .filter((q) => q.questions.some((qt) => qt.questionText.trim()) && q.questions.filter((qt) => qt.questionText.trim()).length > 0)
       .map((q) => ({
         title: q.title.trim(),
+        timeLimitMinutes: q.timeLimitMinutes.trim() ? parseInt(q.timeLimitMinutes, 10) : undefined,
         questions: q.questions
           .filter((qt) => qt.questionText.trim())
           .map((qt) => ({
@@ -508,6 +512,18 @@ export function CreateCourseForm() {
               <button type="button" onClick={() => removeQuiz(qi)} className="mr-2 text-sm text-red-600 hover:underline">
                 حذف الاختبار
               </button>
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-[var(--color-foreground)]">تحديد وقت الاختبار بالدقائق (اختياري)</label>
+              <input
+                type="number"
+                min="1"
+                placeholder="فارغ = وقت مفتوح غير محدود"
+                value={quiz.timeLimitMinutes}
+                onChange={(e) => updateQuizTimeLimit(qi, e.target.value)}
+                className="mt-1 w-full max-w-xs rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              />
+              <p className="mt-1 text-xs text-[var(--color-muted)]">اتركه فارغاً لاختبار بوقت مفتوح. عند تحديد دقائق، يُصحَّح الاختبار تلقائياً عند انتهاء الوقت ويُعرض للطالب إشعار.</p>
             </div>
             {quiz.questions.map((q, qti) => (
               <div key={qti} className="mb-4 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3">

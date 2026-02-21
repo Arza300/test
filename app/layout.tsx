@@ -58,7 +58,7 @@ export default async function RootLayout({
             __html: `(function(){var t=localStorage.getItem("theme");document.documentElement.classList.add(t==="light"?"light":"dark");})();`,
           }}
         />
-      </head>
+        </head>
       <body className={`${outfit.variable} font-sans antialiased min-h-screen flex flex-col`}>
         <NextTopLoader
           color="#0d9488"

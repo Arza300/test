@@ -47,6 +47,7 @@ export async function GET(
       title: result.quiz.title,
       courseId: result.quiz.courseId ?? result.quiz.course_id,
       order: result.quiz.order,
+      timeLimitMinutes: result.quiz.timeLimitMinutes ?? result.quiz.time_limit_minutes ?? null,
       course: {
         id: result.course.id,
         slug: result.course.slug,

@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { QuizApiPayload } from "./QuizPageClient";
 
 export function QuizTake({ quiz }: { quiz: QuizApiPayload }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const timeLimitMinutes = quiz.timeLimitMinutes ?? null;
+  const totalSeconds = timeLimitMinutes != null && timeLimitMinutes > 0 ? timeLimitMinutes * 60 : 0;
+  const [remainingSeconds, setRemainingSeconds] = useState(totalSeconds);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
 
   function setAnswer(questionId: string, value: string) {
     setAnswers((a) => ({ ...a, [questionId]: value }));
@@ -18,20 +25,11 @@ export function QuizTake({ quiz }: { quiz: QuizApiPayload }) {
     return true;
   });
 
-  let score = 0;
-  if (submitted) {
-    quiz.questions.forEach((q) => {
-      if (q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE") {
-        const opt = q.options.find((o) => o.id === answers[q.id]);
-        if (opt?.isCorrect) score++;
-      }
-    });
-  }
   const totalScored = quiz.questions.filter(
     (q) => q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE"
   ).length;
 
-  async function handleSubmit() {
+  function calculateScore() {
     let s = 0;
     quiz.questions.forEach((q) => {
       if (q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE") {
@@ -39,29 +37,114 @@ export function QuizTake({ quiz }: { quiz: QuizApiPayload }) {
         if (opt?.isCorrect) s++;
       }
     });
-    setSubmitting(true);
-    try {
-      const res = await fetch(`/api/quizzes/${encodeURIComponent(quiz.id)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ score: s, totalQuestions: totalScored }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error ?? "فشل تسجيل النتيجة");
-        setSubmitting(false);
-        return;
-      }
-      setSubmitted(true);
-    } catch {
-      alert("فشل الاتصال بالخادم");
-    } finally {
-      setSubmitting(false);
-    }
+    return s;
   }
+
+  function calculateScoreFromAnswers(ans: Record<string, string>) {
+    let s = 0;
+    quiz.questions.forEach((q) => {
+      if (q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE") {
+        const opt = q.options.find((o) => o.id === ans[q.id]);
+        if (opt?.isCorrect) s++;
+      }
+    });
+    return s;
+  }
+
+  const submitAnswers = useCallback(
+    async (reason?: "timeup") => {
+      const s = reason === "timeup" ? calculateScoreFromAnswers(answersRef.current) : calculateScore();
+      setSubmitting(true);
+      try {
+        const res = await fetch(`/api/quizzes/${encodeURIComponent(quiz.id)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ score: s, totalQuestions: totalScored }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error ?? "فشل تسجيل النتيجة");
+          setSubmitting(false);
+          return;
+        }
+        setSubmitted(true);
+        if (reason === "timeup") {
+          setToastMessage("انتهى وقت الامتحان");
+        }
+      } catch {
+        alert("فشل الاتصال بالخادم");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [quiz.id, quiz.questions, totalScored]
+  );
+
+  async function handleSubmit() {
+    if (!allAnswered && remainingSeconds > 0) return;
+    await submitAnswers();
+  }
+
+  // مؤقت: عد تنازلي من وقت الاختبار
+  useEffect(() => {
+    if (submitted || totalSeconds <= 0) return;
+    setRemainingSeconds(totalSeconds);
+    intervalRef.current = setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev <= 1) {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          submitAnswers("timeup");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [submitted, totalSeconds]);
+
+  // إخفاء الإشعار بعد 4 ثوانٍ
+  useEffect(() => {
+    if (!toastMessage) return;
+    const t = setTimeout(() => setToastMessage(null), 4000);
+    return () => clearTimeout(t);
+  }, [toastMessage]);
+
+  let score = 0;
+  if (submitted) {
+    score = calculateScore();
+  }
+
+  const mm = Math.floor(remainingSeconds / 60);
+  const ss = remainingSeconds % 60;
+  const timeDisplay = `${mm}:${ss.toString().padStart(2, "0")}`;
 
   return (
     <div className="mt-8 space-y-8">
+      {toastMessage && (
+        <div
+          className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-[var(--radius-btn)] border border-amber-500/50 bg-amber-500/15 px-4 py-2 text-sm font-medium text-amber-800 dark:text-amber-200 shadow-lg"
+          role="alert"
+        >
+          {toastMessage}
+        </div>
+      )}
+
+      {!submitted && totalSeconds > 0 && (
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
+          <p className="text-sm font-medium text-[var(--color-foreground)]">
+            الوقت المتبقي: <span className="font-mono text-[var(--color-primary)]">{timeDisplay}</span>
+          </p>
+        </div>
+      )}
+
       {quiz.questions.map((q, i) => (
         <div
           key={q.id}
@@ -114,7 +197,7 @@ export function QuizTake({ quiz }: { quiz: QuizApiPayload }) {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!allAnswered || submitting}
+          disabled={(!allAnswered && remainingSeconds > 0) || submitting}
           className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-6 py-3 font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
         >
           {submitting ? "جاري التسجيل..." : "إنهاء وإظهار النتيجة"}

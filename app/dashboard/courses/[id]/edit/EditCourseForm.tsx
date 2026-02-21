@@ -7,11 +7,11 @@ type CategoryOption = { id: string; name: string; nameAr?: string | null };
 type LessonRow = { title: string; videoUrl: string; content: string; pdfUrl: string; acceptsHomework: boolean };
 type QuestionOptionRow = { text: string; isCorrect: boolean };
 type QuestionRow = { type: "MULTIPLE_CHOICE" | "TRUE_FALSE"; questionText: string; options: QuestionOptionRow[] };
-type QuizRow = { title: string; questions: QuestionRow[] };
+type QuizRow = { title: string; timeLimitMinutes: string; questions: QuestionRow[] };
 
 /** بيانات السؤال القادمة من الـ API قد تحتوي على نوع ESSAY (دورات قديمة) */
 type InitialQuestionRow = { type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE"; questionText: string; options?: QuestionOptionRow[] };
-type InitialQuizRow = { title: string; questions: InitialQuestionRow[] };
+type InitialQuizRow = { title: string; timeLimitMinutes?: number | null; questions: InitialQuestionRow[] };
 
 type InitialData = {
   id: string;
@@ -28,7 +28,7 @@ type InitialData = {
 };
 
 const defaultLesson: LessonRow = { title: "", videoUrl: "", content: "", pdfUrl: "", acceptsHomework: false };
-const defaultQuiz: QuizRow = { title: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] };
+const defaultQuiz: QuizRow = { title: "", timeLimitMinutes: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] };
 
 export function EditCourseForm({ courseId, initialData }: { courseId: string; initialData: InitialData }) {
   const router = useRouter();
@@ -69,6 +69,7 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
     initialData.quizzes.length > 0
       ? initialData.quizzes.map((q) => ({
           title: q.title,
+          timeLimitMinutes: q.timeLimitMinutes != null ? String(q.timeLimitMinutes) : "",
           questions: q.questions.length > 0
             ? q.questions.map((qt) => {
                 const type = qt.type === "ESSAY" ? "MULTIPLE_CHOICE" as const : qt.type;
@@ -101,6 +102,9 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
   }
   function updateQuizTitle(qi: number, title: string) {
     setQuizzes((q) => q.map((x, i) => (i === qi ? { ...x, title } : x)));
+  }
+  function updateQuizTimeLimit(qi: number, value: string) {
+    setQuizzes((q) => q.map((x, i) => (i === qi ? { ...x, timeLimitMinutes: value } : x)));
   }
   function addQuestion(qi: number) {
     setQuizzes((q) =>
@@ -199,6 +203,7 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
         .filter((q) => q.title.trim())
         .map((q) => ({
           title: q.title.trim(),
+          timeLimitMinutes: q.timeLimitMinutes.trim() ? parseInt(q.timeLimitMinutes, 10) : undefined,
           questions: q.questions
             .filter((qt) => qt.questionText.trim())
             .map((qt) => ({
@@ -410,6 +415,18 @@ export function EditCourseForm({ courseId, initialData }: { courseId: string; in
               {quizzes.length > 1 && (
                 <button type="button" onClick={() => removeQuiz(qi)} className="mr-2 text-sm text-red-600 hover:underline">حذف الاختبار</button>
               )}
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-[var(--color-foreground)]">تحديد وقت الاختبار بالدقائق (اختياري)</label>
+              <input
+                type="number"
+                min="1"
+                placeholder="فارغ = وقت مفتوح غير محدود"
+                value={quiz.timeLimitMinutes}
+                onChange={(e) => updateQuizTimeLimit(qi, e.target.value)}
+                className="mt-1 w-full max-w-xs rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+              />
+              <p className="mt-1 text-xs text-[var(--color-muted)]">اتركه فارغاً لاختبار بوقت مفتوح. عند تحديد دقائق، يُصحَّح الاختبار تلقائياً عند انتهاء الوقت ويُعرض للطالب إشعار.</p>
             </div>
             {quiz.questions.map((q, qti) => (
               <div key={qti} className="mb-4 rounded border border-[var(--color-border)] bg-[var(--color-surface)] p-3">

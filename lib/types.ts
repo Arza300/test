@@ -121,6 +121,7 @@ export interface Quiz {
   title: string;
   course_id: string;
   order: number;
+  time_limit_minutes?: number | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -218,6 +219,7 @@ export interface QuizApp {
   title: string;
   courseId: string;
   order: number;
+  timeLimitMinutes?: number | null;
   questions?: (QuestionApp & { options: QuestionOptionApp[] })[];
 }
 

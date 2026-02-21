@@ -19,7 +19,7 @@ import {
 type LessonInput = { title: string; titleAr?: string; videoUrl?: string; content?: string; pdfUrl?: string; acceptsHomework?: boolean };
 type QuestionOptionInput = { text: string; isCorrect: boolean };
 type QuestionInput = { type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE"; questionText: string; options?: QuestionOptionInput[] };
-type QuizInput = { title: string; questions: QuestionInput[] };
+type QuizInput = { title: string; timeLimitMinutes?: number | null; questions: QuestionInput[] };
 
 /** تحديث دورة - للأدمن ومساعد الأدمن */
 export async function PUT(
@@ -115,6 +115,7 @@ export async function PUT(
       course_id: id,
       title: q.title?.trim() || `اختبار ${qi + 1}`,
       order: qi + 1,
+      time_limit_minutes: q.timeLimitMinutes ?? null,
     });
     const questions = q.questions ?? [];
     for (let qti = 0; qti < questions.length; qti++) {
@@ -180,6 +181,7 @@ export async function GET(
     })),
     quizzes: data.quizzes.map((q) => ({
       title: q.title,
+      timeLimitMinutes: (q as { timeLimitMinutes?: number | null }).timeLimitMinutes ?? null,
       questions: (q.questions ?? []).map((qt) => ({
         type: qt.type,
         questionText: qt.questionText ?? qt.question_text,

@@ -29,7 +29,7 @@ export async function GET() {
 type LessonInput = { title: string; titleAr?: string; videoUrl?: string; content?: string; pdfUrl?: string };
 type QuestionOptionInput = { text: string; isCorrect: boolean };
 type QuestionInput = { type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE"; questionText: string; options?: QuestionOptionInput[] };
-type QuizInput = { title: string; questions: QuestionInput[] };
+type QuizInput = { title: string; timeLimitMinutes?: number | null; questions: QuestionInput[] };
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
       course_id: course.id,
       title: q.title?.trim() || `اختبار ${qi + 1}`,
       order: orderVal,
+      time_limit_minutes: q.timeLimitMinutes ?? null,
     });
     const questions = q.questions ?? [];
     for (let qti = 0; qti < questions.length; qti++) {
