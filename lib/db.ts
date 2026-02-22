@@ -143,6 +143,96 @@ export async function updateUser(
   if (data.guardian_number !== undefined) await sql`UPDATE "User" SET guardian_number = ${data.guardian_number}, updated_at = NOW() WHERE id = ${id}`;
 }
 
+// ----- PasswordChangeRequest (طلبات تغيير كلمة المرور) -----
+export async function createPasswordChangeRequest(
+  userId: string,
+  newPasswordHash: string,
+  requestedIdentifier?: string | null,
+  requestedOldPassword?: string | null,
+  requestedNewPasswordPlain?: string | null
+): Promise<string> {
+  const id = generateId();
+  await sql`
+    INSERT INTO "PasswordChangeRequest" (id, user_id, new_password_hash, requested_identifier, requested_old_password, requested_new_password_plain, status)
+    VALUES (${id}, ${userId}, ${newPasswordHash}, ${requestedIdentifier ?? null}, ${requestedOldPassword ?? null}, ${requestedNewPasswordPlain ?? null}, 'pending')
+  `;
+  return id;
+}
+
+export async function getPasswordChangeRequests(): Promise<
+  Array<{
+    id: string;
+    userId: string;
+    newPasswordHash: string;
+    requestedIdentifier: string | null;
+    requestedOldPassword: string | null;
+    requestedNewPasswordPlain: string | null;
+    status: string;
+    createdAt: Date;
+    processedAt: Date | null;
+    processedById: string | null;
+    userEmail: string;
+    userName: string;
+  }>
+> {
+  const rows = await sql`
+    SELECT r.id, r.user_id, r.new_password_hash, r.requested_identifier, r.requested_old_password, r.requested_new_password_plain, r.status, r.created_at, r.processed_at, r.processed_by_id,
+           u.email as user_email, u.name as user_name
+    FROM "PasswordChangeRequest" r
+    JOIN "User" u ON u.id = r.user_id
+    ORDER BY r.created_at DESC
+  `;
+  return (rows as Record<string, unknown>[]).map((r) => ({
+    id: r.id as string,
+    userId: r.user_id as string,
+    newPasswordHash: r.new_password_hash as string,
+    requestedIdentifier: (r.requested_identifier as string) ?? null,
+    requestedOldPassword: (r.requested_old_password as string) ?? null,
+    requestedNewPasswordPlain: (r.requested_new_password_plain as string) ?? null,
+    status: r.status as string,
+    createdAt: r.created_at as Date,
+    processedAt: (r.processed_at as Date) ?? null,
+    processedById: (r.processed_by_id as string) ?? null,
+    userEmail: (r.user_email as string) ?? "",
+    userName: (r.user_name as string) ?? "",
+  }));
+}
+
+export async function getPasswordChangeRequestById(requestId: string): Promise<{
+  id: string;
+  userId: string;
+  newPasswordHash: string;
+  status: string;
+} | null> {
+  const rows = await sql`SELECT id, user_id, new_password_hash, status FROM "PasswordChangeRequest" WHERE id = ${requestId} LIMIT 1`;
+  const r = rows[0] as Record<string, unknown> | undefined;
+  if (!r) return null;
+  return {
+    id: r.id as string,
+    userId: r.user_id as string,
+    newPasswordHash: r.new_password_hash as string,
+    status: r.status as string,
+  };
+}
+
+export async function completePasswordChangeRequest(requestId: string, processedByUserId: string): Promise<boolean> {
+  const req = await getPasswordChangeRequestById(requestId);
+  if (!req || req.status !== "pending") return false;
+  await sql`UPDATE "User" SET password_hash = ${req.newPasswordHash}, updated_at = NOW() WHERE id = ${req.userId}`;
+  await sql`
+    UPDATE "PasswordChangeRequest"
+    SET status = 'completed', processed_at = NOW(), processed_by_id = ${processedByUserId}
+    WHERE id = ${requestId}
+  `;
+  return true;
+}
+
+export async function deletePasswordChangeRequest(requestId: string): Promise<boolean> {
+  if (!requestId?.trim()) return false;
+  await sql`DELETE FROM "PasswordChangeRequest" WHERE id = ${requestId.trim()}`;
+  return true;
+}
+
 // ----- Category -----
 export async function getCategories(): Promise<Category[]> {
   const rows = await sql`SELECT * FROM "Category" ORDER BY "order" ASC`;

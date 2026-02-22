@@ -65,6 +65,11 @@ export function DashboardNav({
         إحصائيات الطلاب
       </NavLink>
       {(isAdmin || isAssistant) && (
+        <NavLink href="/dashboard/password-change-requests">
+          طلبات تغيير بيانات الحسابات
+        </NavLink>
+      )}
+      {(isAdmin || isAssistant) && (
         <NavLink href="/dashboard/codes">
           إنشاء الأكواد
         </NavLink>

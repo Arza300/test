@@ -165,6 +165,11 @@ function LoginForm() {
               required
               className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
             />
+            <p className="mt-1.5 text-xs text-[var(--color-muted)]">
+              <Link href="/login/forgot-password" className="text-[var(--color-primary)] hover:underline">
+                نسيان كلمة المرور؟
+              </Link>
+            </p>
           </div>
           <button
             type="submit"
