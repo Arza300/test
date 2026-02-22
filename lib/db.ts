@@ -179,6 +179,13 @@ export async function getCategoryByName(name: string): Promise<Category | null> 
   return (rowToCamel(rows[0] as Record<string, unknown>) as Category) ?? null;
 }
 
+/** حذف قسم — الدورات المرتبطة به تصبح بدون قسم (category_id = null) */
+export async function deleteCategory(id: string): Promise<boolean> {
+  if (!id?.trim()) return false;
+  await sql`DELETE FROM "Category" WHERE id = ${id.trim()}`;
+  return true;
+}
+
 // ----- Review (تعليقات الطلاب) -----
 export async function getReviews(): Promise<Review[]> {
   const rows = await sql`SELECT * FROM "Review" ORDER BY "order" ASC, created_at DESC`;

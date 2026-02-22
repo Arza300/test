@@ -27,12 +27,35 @@ export function CreateCourseForm() {
   });
   const [lessons, setLessons] = useState<LessonRow[]>([{ title: "", videoUrl: "", content: "", pdfUrl: "", acceptsHomework: false }]);
 
-  useEffect(() => {
+  const loadCategories = () => {
     fetch("/api/categories")
       .then((r) => r.json())
       .then((data) => Array.isArray(data) && setCategories(data))
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadCategories();
   }, []);
+
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  async function handleDeleteCategory(catId: string) {
+    if (!confirm("حذف هذا القسم؟ الدورات المرتبطة به ستُعرض كـ «بدون قسم».")) return;
+    setDeletingCategoryId(catId);
+    try {
+      const res = await fetch(`/api/categories/${encodeURIComponent(catId)}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error ?? "فشل حذف القسم");
+        return;
+      }
+      if (form.categoryId === catId) setForm((f) => ({ ...f, categoryId: "" }));
+      loadCategories();
+    } finally {
+      setDeletingCategoryId(null);
+    }
+  }
+
   const [quizzes, setQuizzes] = useState<QuizRow[]>([{ title: "", timeLimitMinutes: "", questions: [{ type: "MULTIPLE_CHOICE", questionText: "", options: [{ text: "", isCorrect: false }] }] }]);
   const [contentOrder, setContentOrder] = useState<ContentOrderEntry[]>([{ type: "lesson", index: 0 }, { type: "quiz", index: 0 }]);
   const [imageUploading, setImageUploading] = useState(false);
@@ -343,6 +366,26 @@ export function CreateCourseForm() {
                 className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
               />
             </div>
+            {categories.length > 0 && (
+              <div className="mt-3">
+                <p className="mb-2 text-xs font-medium text-[var(--color-muted)]">حذف قسم مُنشأ مسبقاً</p>
+                <ul className="space-y-1.5">
+                  {categories.map((cat) => (
+                    <li key={cat.id} className="flex items-center justify-between gap-2 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm">
+                      <span className="text-[var(--color-foreground)]">{cat.nameAr ?? cat.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(cat.id)}
+                        disabled={deletingCategoryId === cat.id}
+                        className="rounded border border-red-500/50 bg-red-500/10 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/20 disabled:opacity-50"
+                      >
+                        {deletingCategoryId === cat.id ? "جاري الحذف..." : "حذف"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-foreground)]">السعر (ج.م)</label>
