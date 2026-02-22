@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 type CodeRow = {
@@ -29,6 +29,7 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filterCourseId, setFilterCourseId] = useState<string>("");
+  const [searchCode, setSearchCode] = useState("");
   const [generating, setGenerating] = useState(false);
   const [createCourseId, setCreateCourseId] = useState("");
   const [createCount, setCreateCount] = useState(5);
@@ -45,9 +46,15 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
       return next;
     });
   }
+  const filteredCodes = useMemo(() => {
+    const q = searchCode.trim().toLowerCase();
+    if (!q) return codes;
+    return codes.filter((c) => (c.code ?? "").toLowerCase().includes(q));
+  }, [codes, searchCode]);
+
   function toggleSelectAll() {
-    if (selectedIds.size === codes.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(codes.map((c) => c.id)));
+    if (selectedIds.size === filteredCodes.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredCodes.map((c) => c.id)));
   }
 
   function load() {
@@ -98,7 +105,7 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
   }
 
   function copyAllUnused() {
-    const unused = codes.filter((c) => !c.usedAt);
+    const unused = filteredCodes.filter((c) => !c.usedAt);
     const text = unused.map((c) => c.code).join("\n");
     if (!text) {
       setError("لا توجد أكواد غير مستخدمة للنسخ");
@@ -115,7 +122,7 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
   }
 
   function copyAll() {
-    const text = codes.map((c) => c.code).join("\n");
+    const text = filteredCodes.map((c) => c.code).join("\n");
     if (!text) {
       setError("لا توجد أكواد للنسخ");
       return;
@@ -176,7 +183,7 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
       .finally(() => setDeletingIds((prev) => { const s = new Set(prev); ids.forEach((id) => s.delete(id)); return s; }));
   }
 
-  const unusedCodes = codes.filter((c) => !c.usedAt);
+  const unusedCodes = filteredCodes.filter((c) => !c.usedAt);
   const selectedForBulkDelete = selectedIds.size > 0 ? Array.from(selectedIds) : [];
 
   if (loading) {
@@ -241,8 +248,15 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)]/50 px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
             <h3 className="text-lg font-semibold text-[var(--color-foreground)]">
-              قائمة الأكواد ({codes.length})
+              قائمة الأكواد ({filteredCodes.length}{searchCode.trim() ? ` من ${codes.length}` : ""})
             </h3>
+            <input
+              type="search"
+              value={searchCode}
+              onChange={(e) => setSearchCode(e.target.value)}
+              placeholder="بحث عن الكود..."
+              className="min-w-[160px] max-w-[220px] rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-sm placeholder:text-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            />
             <select
               value={filterCourseId}
               onChange={(e) => setFilterCourseId(e.target.value)}
@@ -280,6 +294,8 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
         </div>
         {codes.length === 0 ? (
           <p className="p-8 text-center text-[var(--color-muted)]">لا توجد أكواد. أنشئ أكواداً من النموذج أعلاه.</p>
+        ) : filteredCodes.length === 0 ? (
+          <p className="p-8 text-center text-[var(--color-muted)]">لا توجد أكواد تطابق البحث.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -288,7 +304,7 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
                   <th className="p-2 text-right">
                     <input
                       type="checkbox"
-                      checked={codes.length > 0 && selectedIds.size === codes.length}
+                      checked={filteredCodes.length > 0 && selectedIds.size === filteredCodes.length}
                       onChange={toggleSelectAll}
                       className="rounded border-[var(--color-border)]"
                     />
@@ -302,7 +318,7 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
                 </tr>
               </thead>
               <tbody>
-                {codes.map((row) => (
+                {filteredCodes.map((row) => (
                   <tr key={row.id} className="border-b border-[var(--color-border)]">
                     <td className="p-2">
                       <input

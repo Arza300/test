@@ -86,14 +86,25 @@ function CourseTableRow({
 
 export function CoursesManageList({ courses }: { courses: CourseRow[] }) {
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const filteredCourses = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return courses;
+    return courses.filter((c) => {
+      const title = (c.titleAr ?? c.title ?? "").toLowerCase();
+      const titleEn = (c.title ?? "").toLowerCase();
+      return title.includes(q) || titleEn.includes(q);
+    });
+  }, [courses, searchQuery]);
 
   const byCategory = useMemo(() => {
     const order: string[] = [];
     const map = new Map<string, { title: string; courses: CourseRow[] }>();
     const noCatKey = "__none__";
-    for (const c of courses) {
+    for (const c of filteredCourses) {
       const key = c.category ? c.category.id : noCatKey;
       if (!map.has(key)) {
         order.push(key);
@@ -109,7 +120,7 @@ export function CoursesManageList({ courses }: { courses: CourseRow[] }) {
       title: map.get(key)!.title,
       courses: map.get(key)!.courses,
     }));
-  }, [courses]);
+  }, [filteredCourses]);
 
   async function handleDelete(id: string) {
     if (confirmDelete !== id) {
@@ -142,45 +153,71 @@ export function CoursesManageList({ courses }: { courses: CourseRow[] }) {
   }
 
   return (
-    <div className="space-y-8">
-      {byCategory.map(({ key, title, courses: sectionCourses }) => (
-        <div
-          key={key}
-          className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]"
-        >
-          <div className="border-b border-[var(--color-border)] bg-[var(--color-background)]/50 px-4 py-3">
-            <h3 className="text-base font-semibold text-[var(--color-foreground)]">
-              {title}
-            </h3>
-            <p className="mt-0.5 text-sm text-[var(--color-muted)]">
-              {sectionCourses.length} دورة
-            </p>
-          </div>
-          <table className="w-full text-right">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]/30">
-                <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">الدورة</th>
-                <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">الحصص</th>
-                <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">المسجلون</th>
-                <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">السعر</th>
-                <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">الحالة</th>
-                <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sectionCourses.map((c) => (
-                <CourseTableRow
-                  key={c.id}
-                  c={c}
-                  deletingId={deletingId}
-                  confirmDelete={confirmDelete}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </tbody>
-          </table>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor="course-search" className="sr-only">
+          بحث عن اسم الكورس
+        </label>
+        <input
+          id="course-search"
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="بحث عن اسم الكورس..."
+          className="min-w-[220px] max-w-md flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm placeholder:text-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+        />
+        {searchQuery.trim() && (
+          <span className="text-sm text-[var(--color-muted)]">
+            {filteredCourses.length} من {courses.length}
+          </span>
+        )}
+      </div>
+      {filteredCourses.length === 0 ? (
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
+          <p className="text-[var(--color-muted)]">لا توجد دورات تطابق البحث.</p>
         </div>
-      ))}
+      ) : (
+        <div className="space-y-8">
+          {byCategory.map(({ key, title, courses: sectionCourses }) => (
+            <div
+              key={key}
+              className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)]"
+            >
+              <div className="border-b border-[var(--color-border)] bg-[var(--color-background)]/50 px-4 py-3">
+                <h3 className="text-base font-semibold text-[var(--color-foreground)]">
+                  {title}
+                </h3>
+                <p className="mt-0.5 text-sm text-[var(--color-muted)]">
+                  {sectionCourses.length} دورة
+                </p>
+              </div>
+              <table className="w-full text-right">
+                <thead>
+                  <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]/30">
+                    <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">الدورة</th>
+                    <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">الحصص</th>
+                    <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">المسجلون</th>
+                    <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">السعر</th>
+                    <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">الحالة</th>
+                    <th className="p-3 text-sm font-semibold text-[var(--color-foreground)]">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sectionCourses.map((c) => (
+                    <CourseTableRow
+                      key={c.id}
+                      c={c}
+                      deletingId={deletingId}
+                      confirmDelete={confirmDelete}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
