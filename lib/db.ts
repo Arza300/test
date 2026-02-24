@@ -689,7 +689,7 @@ export async function getCourseWithContent(segment: string): Promise<{
   lessons: Record<string, unknown>[];
   quizzes: Array<Record<string, unknown> & { _count: { questions: number } }>;
 } | null> {
-  const isId = /^c[a-z0-9]{24}$/i.test(segment);
+  const isId = /^c[a-z0-9]{22}$/i.test(segment);
   let courseRow: Record<string, unknown> | null = null;
   if (isId) {
     const rows = await sql`
@@ -894,9 +894,20 @@ function generateCodeString(): string {
   return s;
 }
 
-export async function createActivationCodes(courseId: string, count: number): Promise<{ id: string; code: string }[]> {
+export async function createActivationCodes(
+  courseId: string,
+  count: number,
+  lessonIds?: string[] | null,
+  quizIds?: string[] | null
+): Promise<{ id: string; code: string }[]> {
   const created: { id: string; code: string }[] = [];
   const seen = new Set<string>();
+  const scopedLessonIds = Array.isArray(lessonIds)
+    ? Array.from(new Set(lessonIds.filter((x) => typeof x === "string" && x.trim()).map((x) => x.trim())))
+    : [];
+  const scopedQuizIds = Array.isArray(quizIds)
+    ? Array.from(new Set(quizIds.filter((x) => typeof x === "string" && x.trim()).map((x) => x.trim())))
+    : [];
   for (let i = 0; i < count; i++) {
     let code = generateCodeString();
     while (seen.has(code)) code = generateCodeString();
@@ -906,24 +917,51 @@ export async function createActivationCodes(courseId: string, count: number): Pr
       INSERT INTO "ActivationCode" (id, course_id, code, used_at, used_by_user_id)
       VALUES (${id}, ${courseId}, ${code}, NULL, NULL)
     `;
+    if (scopedLessonIds.length > 0) {
+      for (const lessonId of scopedLessonIds) {
+        await sql`
+          INSERT INTO "ActivationCodeLesson" (activation_code_id, lesson_id)
+          VALUES (${id}, ${lessonId})
+          ON CONFLICT (activation_code_id, lesson_id) DO NOTHING
+        `;
+      }
+    }
+    if (scopedQuizIds.length > 0) {
+      for (const quizId of scopedQuizIds) {
+        await sql`
+          INSERT INTO "ActivationCodeQuiz" (activation_code_id, quiz_id)
+          VALUES (${id}, ${quizId})
+          ON CONFLICT (activation_code_id, quiz_id) DO NOTHING
+        `;
+      }
+    }
     created.push({ id, code });
   }
   return created;
 }
 
-export type ActivationCodeWithCourse = ActivationCode & { course_title?: string; course_title_ar?: string };
+export type ActivationCodeWithCourse = ActivationCode & {
+  course_title?: string;
+  course_title_ar?: string;
+  lessonCount?: number;
+  quizCount?: number;
+};
 
 export async function listActivationCodes(courseId?: string | null): Promise<ActivationCodeWithCourse[]> {
   const rows = courseId
     ? await sql`
-        SELECT ac.*, c.title as course_title, c.title_ar as course_title_ar
+        SELECT ac.*, c.title as course_title, c.title_ar as course_title_ar,
+               (SELECT COUNT(*)::int FROM "ActivationCodeLesson" acl WHERE acl.activation_code_id = ac.id) as lesson_count,
+               (SELECT COUNT(*)::int FROM "ActivationCodeQuiz" acq WHERE acq.activation_code_id = ac.id) as quiz_count
         FROM "ActivationCode" ac
         JOIN "Course" c ON c.id = ac.course_id
         WHERE ac.course_id = ${courseId}
         ORDER BY ac.created_at DESC
       `
     : await sql`
-        SELECT ac.*, c.title as course_title, c.title_ar as course_title_ar
+        SELECT ac.*, c.title as course_title, c.title_ar as course_title_ar,
+               (SELECT COUNT(*)::int FROM "ActivationCodeLesson" acl WHERE acl.activation_code_id = ac.id) as lesson_count,
+               (SELECT COUNT(*)::int FROM "ActivationCodeQuiz" acq WHERE acq.activation_code_id = ac.id) as quiz_count
         FROM "ActivationCode" ac
         JOIN "Course" c ON c.id = ac.course_id
         ORDER BY ac.created_at DESC
@@ -931,7 +969,7 @@ export async function listActivationCodes(courseId?: string | null): Promise<Act
   return (rows as Record<string, unknown>[]).map((r) => rowToCamel(r) as ActivationCodeWithCourse);
 }
 
-export async function getActivationCodeByCode(code: string): Promise<(ActivationCode & { courseId: string }) | null> {
+export async function getActivationCodeByCode(code: string): Promise<(ActivationCode & { courseId: string; lessonIds: string[]; quizIds: string[] }) | null> {
   const trimmed = code.trim().toUpperCase();
   if (!trimmed) return null;
   const rows = await sql`
@@ -939,20 +977,117 @@ export async function getActivationCodeByCode(code: string): Promise<(Activation
   `;
   const r = rows[0] as Record<string, unknown> | undefined;
   if (!r) return null;
-  return rowToCamel(r) as ActivationCode & { courseId: string };
+  const base = rowToCamel(r) as ActivationCode & { courseId: string };
+  try {
+    const codeId = String((r as { id?: string }).id ?? "");
+    const lessonRows = await sql`SELECT lesson_id FROM "ActivationCodeLesson" WHERE activation_code_id = ${codeId}`;
+    const quizRows = await sql`SELECT quiz_id FROM "ActivationCodeQuiz" WHERE activation_code_id = ${codeId}`;
+    const lessonIds = (lessonRows as { lesson_id?: string }[]).map((x) => String(x.lesson_id ?? "")).filter(Boolean);
+    const quizIds = (quizRows as { quiz_id?: string }[]).map((x) => String(x.quiz_id ?? "")).filter(Boolean);
+    return { ...base, lessonIds, quizIds };
+  } catch {
+    return { ...base, lessonIds: [], quizIds: [] };
+  }
 }
 
-export async function useActivationCode(codeId: string, userId: string): Promise<{ courseId: string } | null> {
+export async function useActivationCode(codeId: string, userId: string): Promise<{ courseId: string; lessonIds: string[]; quizIds: string[] } | null> {
+  // تحديث آمن لمنع تفعيل نفس الكود مرتين
+  const updated = await sql`
+    UPDATE "ActivationCode"
+    SET used_at = NOW(), used_by_user_id = ${userId}
+    WHERE id = ${codeId} AND used_at IS NULL
+    RETURNING course_id
+  `;
+  const row = updated[0] as { course_id?: string } | undefined;
+  if (!row?.course_id) return null;
+
+  let lessonIds: string[] = [];
+  let quizIds: string[] = [];
+  try {
+    const lessonRows = await sql`SELECT lesson_id FROM "ActivationCodeLesson" WHERE activation_code_id = ${codeId}`;
+    lessonIds = (lessonRows as { lesson_id?: string }[]).map((x) => String(x.lesson_id ?? "")).filter(Boolean);
+    const quizRows = await sql`SELECT quiz_id FROM "ActivationCodeQuiz" WHERE activation_code_id = ${codeId}`;
+    quizIds = (quizRows as { quiz_id?: string }[]).map((x) => String(x.quiz_id ?? "")).filter(Boolean);
+  } catch {
+    lessonIds = [];
+    quizIds = [];
+  }
+
+  // إذا لم يتم تحديد حصص ولا اختبارات => تسجيل كامل في الدورة (السلوك القديم)
+  if (lessonIds.length === 0 && quizIds.length === 0) {
+    await createEnrollment(userId, row.course_id);
+  }
+  return { courseId: row.course_id, lessonIds, quizIds };
+}
+
+/** الحصص المسموح بها لطالب داخل كورس عبر أكواد حصص محددة */
+export async function getAllowedLessonIdsForUserCourse(userId: string, courseId: string): Promise<string[]> {
+  try {
+    const rows = await sql`
+      SELECT DISTINCT acl.lesson_id
+      FROM "ActivationCode" ac
+      JOIN "ActivationCodeLesson" acl ON acl.activation_code_id = ac.id
+      WHERE ac.used_by_user_id = ${userId} AND ac.course_id = ${courseId} AND ac.used_at IS NOT NULL
+    `;
+    return (rows as { lesson_id?: string }[]).map((r) => String(r.lesson_id ?? "")).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** الاختبارات المسموح بها لطالب داخل كورس عبر أكواد اختبارات محددة */
+export async function getAllowedQuizIdsForUserCourse(userId: string, courseId: string): Promise<string[]> {
+  try {
+    const rows = await sql`
+      SELECT DISTINCT acq.quiz_id
+      FROM "ActivationCode" ac
+      JOIN "ActivationCodeQuiz" acq ON acq.activation_code_id = ac.id
+      WHERE ac.used_by_user_id = ${userId} AND ac.course_id = ${courseId} AND ac.used_at IS NOT NULL
+    `;
+    return (rows as { quiz_id?: string }[]).map((r) => String(r.quiz_id ?? "")).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/** هل الطالب لديه وصول جزئي (حصص أو اختبارات محددة) للكورس عبر كود؟ */
+export async function hasPartialCourseAccess(userId: string, courseId: string): Promise<boolean> {
+  const [lessons, quizzes] = await Promise.all([
+    getAllowedLessonIdsForUserCourse(userId, courseId),
+    getAllowedQuizIdsForUserCourse(userId, courseId),
+  ]);
+  return lessons.length > 0 || quizzes.length > 0;
+}
+
+/** دورات الطالب: المسجّل فيها + الدورات المتاحة عبر أكواد (حصص/اختبارات محددة) */
+export async function getAccessibleCoursesForUser(userId: string): Promise<(Course & { category?: Category })[]> {
   const rows = await sql`
-    SELECT id, course_id FROM "ActivationCode" WHERE id = ${codeId} AND used_at IS NULL LIMIT 1
+    SELECT c.*, cat.id as cat_id, cat.name as cat_name, cat.name_ar as cat_name_ar, cat.slug as cat_slug
+    FROM "Course" c
+    LEFT JOIN "Category" cat ON c.category_id = cat.id
+    WHERE c.id IN (
+      SELECT course_id FROM "Enrollment" WHERE user_id = ${userId}
+      UNION
+      SELECT ac.course_id
+      FROM "ActivationCode" ac
+      JOIN "ActivationCodeLesson" acl ON acl.activation_code_id = ac.id
+      WHERE ac.used_by_user_id = ${userId} AND ac.used_at IS NOT NULL
+      UNION
+      SELECT ac.course_id
+      FROM "ActivationCode" ac
+      JOIN "ActivationCodeQuiz" acq ON acq.activation_code_id = ac.id
+      WHERE ac.used_by_user_id = ${userId} AND ac.used_at IS NOT NULL
+    )
+    ORDER BY c.created_at DESC
   `;
-  const row = rows[0] as { id: string; course_id: string } | undefined;
-  if (!row) return null;
-  await sql`
-    UPDATE "ActivationCode" SET used_at = NOW(), used_by_user_id = ${userId} WHERE id = ${codeId}
-  `;
-  await createEnrollment(userId, row.course_id);
-  return { courseId: row.course_id };
+  return (rows as Record<string, unknown>[]).map((r) => {
+    const category = r.cat_id
+      ? rowToCamel({ id: r.cat_id, name: r.cat_name, name_ar: r.cat_name_ar, slug: r.cat_slug })
+      : null;
+    const { cat_id, cat_name, cat_name_ar, cat_slug, ...rest } = r;
+    const base = rowToCamel(rest) ?? {};
+    return { ...base, category };
+  }) as unknown as (Course & { category?: Category })[];
 }
 
 export async function deleteActivationCode(id: string): Promise<void> {

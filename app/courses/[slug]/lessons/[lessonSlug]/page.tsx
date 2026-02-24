@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getCourseWithContent, getEnrollment } from "@/lib/db";
+import { getCourseWithContent, getEnrollment, getAllowedLessonIdsForUserCourse } from "@/lib/db";
 import { YouTubeOverlayPlayer } from "@/components/YouTubeOverlayPlayer";
 import { CourseOutlineSidebar } from "@/components/CourseOutlineSidebar";
 import { LessonHomeworkSection } from "./LessonHomeworkSection";
@@ -59,26 +59,41 @@ export default async function LessonPage({ params }: Props) {
   course.lessons = data.lessons;
   course.quizzes = data.quizzes ?? [];
 
-  let canAccess = false;
-  if (session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN") canAccess = true;
+  const isStaff = session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN";
+  let isEnrolled = false;
+  let allowedLessonIds: string[] = [];
   if (session?.user?.id) {
     const en = await getEnrollment(session.user.id, course.id);
-    if (en) canAccess = true;
+    isEnrolled = !!en;
+    if (!isEnrolled && !isStaff) {
+      allowedLessonIds = await getAllowedLessonIdsForUserCourse(session.user.id, course.id);
+    }
   }
-  if (!canAccess) notFound();
+  const canAccessCourse = isStaff || isEnrolled || allowedLessonIds.length > 0;
+  if (!canAccessCourse) notFound();
 
   const lesson = isLessonId(lessonDecoded)
     ? data.lessons.find((l: Record<string, unknown>) => l.id === lessonDecoded)
     : data.lessons.find((l: Record<string, unknown>) => l.slug === lessonDecoded);
   if (!lesson) notFound();
 
+  // لو الوصول جزئي: لا نسمح بفتح إلا الحصص المحددة
+  if (!isStaff && !isEnrolled && allowedLessonIds.length > 0) {
+    const lid = String((lesson as Record<string, unknown>).id ?? "");
+    if (!allowedLessonIds.includes(lid)) notFound();
+  }
+
   const lessonObj = lesson as Record<string, unknown>;
   const videoUrl = (lessonObj.videoUrl ?? lessonObj.video_url) as string;
   const courseTitle = (course.titleAr ?? course.title) as string;
   const lessonTitle = (lessonObj.titleAr ?? lessonObj.title) as string;
 
-  const lessons = (course.lessons ?? []) as Array<Record<string, unknown> & { id: string; title?: string; titleAr?: string | null }>;
-  const quizzes = (course.quizzes ?? []) as Array<Record<string, unknown> & { id: string; title?: string; _count?: { questions?: number } }>;
+  const lessonsAll = (course.lessons ?? []) as Array<Record<string, unknown> & { id: string; title?: string; titleAr?: string | null }>;
+  const lessons = (!isStaff && !isEnrolled && allowedLessonIds.length > 0)
+    ? lessonsAll.filter((l) => allowedLessonIds.includes(String(l.id)))
+    : lessonsAll;
+  const quizzesAll = (course.quizzes ?? []) as Array<Record<string, unknown> & { id: string; title?: string; _count?: { questions?: number } }>;
+  const quizzes = (!isStaff && !isEnrolled && allowedLessonIds.length > 0) ? [] : quizzesAll;
   const items: CourseItem[] = [
     ...lessons.map((l) => ({ type: "lesson" as const, id: l.id, slug: (l as Record<string, unknown>).slug as string | null, title: String(l.title ?? ""), titleAr: l.titleAr })),
     ...quizzes.map((q) => ({ type: "quiz" as const, id: q.id, title: String(q.title ?? ""), _count: q._count })),

@@ -12,6 +12,8 @@ type CodeRow = {
   usedByUserId: string | null;
   courseTitle?: string;
   courseTitleAr?: string;
+  lessonCount?: number | null;
+  quizCount?: number | null;
 };
 
 const NEW_DAYS = 7; // أكواد آخر 7 أيام = جديدة
@@ -33,6 +35,12 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
   const [generating, setGenerating] = useState(false);
   const [createCourseId, setCreateCourseId] = useState("");
   const [createCount, setCreateCount] = useState(5);
+  const [courseLessons, setCourseLessons] = useState<Array<{ id: string; title: string; titleAr: string | null; order: number }>>([]);
+  const [lessonsLoading, setLessonsLoading] = useState(false);
+  const [selectedLessonIds, setSelectedLessonIds] = useState<Set<string>>(new Set());
+  const [courseQuizzes, setCourseQuizzes] = useState<Array<{ id: string; title: string }>>([]);
+  const [quizzesLoading, setQuizzesLoading] = useState(false);
+  const [selectedQuizIds, setSelectedQuizIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [confirmDeleteIds, setConfirmDeleteIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -77,6 +85,65 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
     load();
   }, [filterCourseId]);
 
+  useEffect(() => {
+    const cid = createCourseId.trim();
+    if (!cid) {
+      setCourseLessons([]);
+      setSelectedLessonIds(new Set());
+      setCourseQuizzes([]);
+      setSelectedQuizIds(new Set());
+      return;
+    }
+    setLessonsLoading(true);
+    fetch(`/api/dashboard/courses/${encodeURIComponent(cid)}/lessons`)
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? "فشل جلب الحصص");
+        return data;
+      })
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        setCourseLessons(list);
+        // تنظيف أي اختيارات قديمة غير موجودة
+        setSelectedLessonIds((prev) => {
+          const allowed = new Set(list.map((l: { id: string }) => l.id));
+          const next = new Set<string>();
+          prev.forEach((id) => { if (allowed.has(id)) next.add(id); });
+          return next;
+        });
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "فشل جلب الحصص"))
+      .finally(() => setLessonsLoading(false));
+  }, [createCourseId]);
+
+  useEffect(() => {
+    const cid = createCourseId.trim();
+    if (!cid) {
+      setCourseQuizzes([]);
+      setSelectedQuizIds(new Set());
+      return;
+    }
+    setQuizzesLoading(true);
+    fetch(`/api/dashboard/courses/${encodeURIComponent(cid)}/quizzes`)
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error ?? "فشل جلب الاختبارات");
+        return data;
+      })
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        setCourseQuizzes(list);
+        setSelectedQuizIds((prev) => {
+          const allowed = new Set(list.map((q: { id: string }) => q.id));
+          const next = new Set<string>();
+          prev.forEach((id) => { if (allowed.has(id)) next.add(id); });
+          return next;
+        });
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "فشل جلب الاختبارات"))
+      .finally(() => setQuizzesLoading(false));
+  }, [createCourseId]);
+
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -90,11 +157,18 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
       const res = await fetch("/api/dashboard/codes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId: createCourseId.trim(), count }),
+        body: JSON.stringify({
+          courseId: createCourseId.trim(),
+          count,
+          lessonIds: selectedLessonIds.size > 0 ? Array.from(selectedLessonIds) : undefined,
+          quizIds: selectedQuizIds.size > 0 ? Array.from(selectedQuizIds) : undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "فشل إنشاء الأكواد");
       setCreateCount(5);
+      setSelectedLessonIds(new Set());
+      setSelectedQuizIds(new Set());
       router.refresh();
       load();
     } catch (e) {
@@ -223,6 +297,137 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
               ))}
             </select>
           </div>
+          <div className="min-w-[260px]">
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">
+              نطاق الكود (اختياري)
+            </label>
+            <div className="mt-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-2 text-sm">
+              {!createCourseId ? (
+                <span className="text-[var(--color-muted)]">اختر دورة أولاً لعرض المحتوى.</span>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-[var(--color-muted)]">
+                    اتركه بدون تحديد لفتح <span className="font-semibold">الدورة كاملة</span>. أو اختر حصصاً/اختبارات لفتح <span className="font-semibold">محتوى محدد</span> فقط.
+                  </p>
+
+                  {/* الحصص */}
+                  <div>
+                    <p className="mb-1 text-xs font-semibold text-[var(--color-foreground)]">الحصص</p>
+                    {lessonsLoading ? (
+                      <span className="text-[var(--color-muted)]">جاري تحميل الحصص...</span>
+                    ) : courseLessons.length === 0 ? (
+                      <span className="text-[var(--color-muted)]">لا توجد حصص في هذه الدورة.</span>
+                    ) : (
+                      <>
+                        <div className="max-h-32 space-y-1 overflow-auto pr-1">
+                          {courseLessons.map((l) => {
+                            const title = l.titleAr ?? l.title;
+                            const checked = selectedLessonIds.has(l.id);
+                            return (
+                              <label key={l.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-[var(--color-border)]/30">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    setSelectedLessonIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (e.target.checked) next.add(l.id);
+                                      else next.delete(l.id);
+                                      return next;
+                                    });
+                                  }}
+                                  className="rounded border-[var(--color-border)]"
+                                />
+                                <span className="truncate" title={title}>{title}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLessonIds(new Set(courseLessons.map((l) => l.id)))}
+                            className="rounded border border-[var(--color-border)] px-2 py-1 text-xs hover:bg-[var(--color-border)]/30"
+                          >
+                            تحديد كل الحصص
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLessonIds(new Set())}
+                            className="rounded border border-[var(--color-border)] px-2 py-1 text-xs hover:bg-[var(--color-border)]/30"
+                          >
+                            مسح التحديد
+                          </button>
+                          {selectedLessonIds.size > 0 && (
+                            <span className="text-xs text-[var(--color-muted)]">
+                              محدد {selectedLessonIds.size} حصة
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* الاختبارات */}
+                  <div>
+                    <p className="mb-1 text-xs font-semibold text-[var(--color-foreground)]">الاختبارات</p>
+                    {quizzesLoading ? (
+                      <span className="text-[var(--color-muted)]">جاري تحميل الاختبارات...</span>
+                    ) : courseQuizzes.length === 0 ? (
+                      <span className="text-[var(--color-muted)]">لا توجد اختبارات في هذه الدورة.</span>
+                    ) : (
+                      <>
+                        <div className="max-h-32 space-y-1 overflow-auto pr-1">
+                          {courseQuizzes.map((q) => {
+                            const checked = selectedQuizIds.has(q.id);
+                            return (
+                              <label key={q.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-[var(--color-border)]/30">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    setSelectedQuizIds((prev) => {
+                                      const next = new Set(prev);
+                                      if (e.target.checked) next.add(q.id);
+                                      else next.delete(q.id);
+                                      return next;
+                                    });
+                                  }}
+                                  className="rounded border-[var(--color-border)]"
+                                />
+                                <span className="truncate" title={q.title}>{q.title}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedQuizIds(new Set(courseQuizzes.map((q) => q.id)))}
+                            className="rounded border border-[var(--color-border)] px-2 py-1 text-xs hover:bg-[var(--color-border)]/30"
+                          >
+                            تحديد كل الاختبارات
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedQuizIds(new Set())}
+                            className="rounded border border-[var(--color-border)] px-2 py-1 text-xs hover:bg-[var(--color-border)]/30"
+                          >
+                            مسح التحديد
+                          </button>
+                          {selectedQuizIds.size > 0 && (
+                            <span className="text-xs text-[var(--color-muted)]">
+                              محدد {selectedQuizIds.size} اختبار
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-foreground)]">عدد الأكواد (1–500)</label>
             <input
@@ -311,6 +516,7 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
                   </th>
                   <th className="p-2 text-right font-medium text-[var(--color-foreground)]">الدورة</th>
                   <th className="p-2 text-right font-medium text-[var(--color-foreground)]">الكود</th>
+                  <th className="p-2 text-right font-medium text-[var(--color-foreground)]">النطاق</th>
                   <th className="p-2 text-right font-medium text-[var(--color-foreground)]">التاريخ</th>
                   <th className="p-2 text-right font-medium text-[var(--color-foreground)]">الحالة</th>
                   <th className="p-2 text-right font-medium text-[var(--color-foreground)]">قديم/جديد</th>
@@ -332,6 +538,16 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
                       {row.courseTitleAr ?? row.courseTitle ?? row.courseId}
                     </td>
                     <td className="p-2 font-mono text-[var(--color-foreground)]">{row.code}</td>
+                    <td className="p-2 text-[var(--color-muted)]">
+                      {(() => {
+                        const lc = row.lessonCount ?? 0;
+                        const qc = row.quizCount ?? 0;
+                        if (lc === 0 && qc === 0) return "الدورة كاملة";
+                        if (lc > 0 && qc > 0) return `حصص (${lc}) + اختبارات (${qc})`;
+                        if (lc > 0) return `حصص محددة (${lc})`;
+                        return `اختبارات محددة (${qc})`;
+                      })()}
+                    </td>
                     <td className="p-2 text-[var(--color-muted)]">
                       {row.createdAt ? new Date(row.createdAt).toLocaleDateString("ar-EG") : "—"}
                     </td>

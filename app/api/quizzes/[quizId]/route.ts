@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getQuizById, getEnrollment, countQuizAttemptsByUserAndCourse, createQuizAttempt } from "@/lib/db";
+import { getQuizById, getEnrollment, getAllowedQuizIdsForUserCourse, countQuizAttemptsByUserAndCourse, createQuizAttempt } from "@/lib/db";
 
 /**
  * جلب اختبار بالمعرّف — مع التحقق من حد المحاولات إن وُجد.
@@ -28,10 +28,25 @@ export async function GET(
     }
 
     const courseId = (result.quiz.courseId ?? result.quiz.course_id) as string;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "يجب تسجيل الدخول" }, { status: 401 });
+    }
+    const role = (session.user as { role?: string }).role;
+    const isStaff = role === "ADMIN" || role === "ASSISTANT_ADMIN";
+    if (!isStaff) {
+      const enrolled = await getEnrollment(session.user.id, courseId);
+      if (!enrolled) {
+        const allowedQuizIds = await getAllowedQuizIdsForUserCourse(session.user.id, courseId);
+        if (!allowedQuizIds.includes(quizId)) {
+          return NextResponse.json({ error: "غير مسجّل في هذه الدورة أو لا تملك صلاحية لهذا الاختبار" }, { status: 403 });
+        }
+      }
+    }
+
     const maxAttempts = result.course.max_quiz_attempts ?? result.course.maxQuizAttempts;
     let canAttempt = true;
     let attemptsUsed = 0;
-    const session = await getServerSession(authOptions);
     if (session?.user?.id && typeof maxAttempts === "number" && maxAttempts > 0) {
       const enrolled = await getEnrollment(session.user.id, courseId);
       if (enrolled) {

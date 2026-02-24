@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { getUserById, getEnrolledCoursesForUser, countUsersByRole, countCourses, getAllQuizAttemptsForAdmin, getTotalPlatformEarnings } from "@/lib/db";
+import { getUserById, getAccessibleCoursesForUser, countUsersByRole, countCourses, getAllQuizAttemptsForAdmin, getTotalPlatformEarnings } from "@/lib/db";
 import { MyCoursesSection } from "./MyCoursesSection";
 import { ActivateCodeSection } from "./ActivateCodeSection";
 
@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
   if (isStudent) {
     const user = await getUserById(session.user.id);
-    const enrolledCourses = user ? await getEnrolledCoursesForUser(session.user.id) : [];
+    const enrolledCourses = user ? await getAccessibleCoursesForUser(session.user.id) : [];
     const balance = user ? Number(user.balance) : 0;
 
     return (

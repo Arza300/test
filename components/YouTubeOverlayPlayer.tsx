@@ -68,6 +68,8 @@ export function YouTubeOverlayPlayer({ videoUrl, title }: Props) {
   const [qualityLevels, setQualityLevels] = useState<string[]>([]);
   const [currentQuality, setCurrentQuality] = useState<string>("");
   const [qualityOpen, setQualityOpen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const videoId = getYouTubeVideoId(videoUrl);
 
@@ -87,6 +89,17 @@ export function YouTubeOverlayPlayer({ videoUrl, title }: Props) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
+  }, []);
+
+  const scheduleHideControls = useCallback(() => {
+    if (controlsTimerRef.current) {
+      clearTimeout(controlsTimerRef.current);
+      controlsTimerRef.current = null;
+    }
+    // إخفاء شريط التحكم تلقائياً بعد ثانيتين أثناء التشغيل
+    controlsTimerRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, 2000);
   }, []);
 
   const startProgressPoll = useCallback(() => {
@@ -133,6 +146,8 @@ export function YouTubeOverlayPlayer({ videoUrl, title }: Props) {
             const state = ev.data;
             if (state === YT_PLAYING) {
               setIsPlaying(true);
+              setShowControls(true);
+              scheduleHideControls();
               startProgressPoll();
               setTimeout(() => {
                 const p = playerRef.current;
@@ -146,6 +161,11 @@ export function YouTubeOverlayPlayer({ videoUrl, title }: Props) {
               }, 500);
             } else {
               setIsPlaying(false);
+              setShowControls(true);
+              if (controlsTimerRef.current) {
+                clearTimeout(controlsTimerRef.current);
+                controlsTimerRef.current = null;
+              }
               stopProgressPoll();
               if (state === YT_PAUSED || state === YT_ENDED) {
                 const p = playerRef.current;
@@ -171,6 +191,10 @@ export function YouTubeOverlayPlayer({ videoUrl, title }: Props) {
     }
     return () => {
       stopProgressPoll();
+      if (controlsTimerRef.current) {
+        clearTimeout(controlsTimerRef.current);
+        controlsTimerRef.current = null;
+      }
       playerRef.current = null;
       setReady(false);
       setIsPlaying(false);
@@ -211,6 +235,22 @@ export function YouTubeOverlayPlayer({ videoUrl, title }: Props) {
   };
 
   const progressValue = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
+
+  const handleMouseMove = () => {
+    if (!isPlaying) {
+      setShowControls(true);
+      return;
+    }
+    setShowControls(true);
+    scheduleHideControls();
+  };
+
+  const handleMouseLeave = () => {
+    if (isPlaying) {
+      // لما يطلع الماوس برّه أثناء التشغيل نخفي الشريط
+      setShowControls(false);
+    }
+  };
 
   const handleVolumeChange = (newVol: number) => {
     const v = Math.max(0, Math.min(100, newVol));
@@ -266,8 +306,17 @@ export function YouTubeOverlayPlayer({ videoUrl, title }: Props) {
   if (!videoId) return null;
 
   return (
-    <div ref={wrapperRef} className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-black">
+    <div
+      ref={wrapperRef}
+      className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-black"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
+      {/* طبقة سوداء سفلية عند الإيقاف لإخفاء اقتراحات يوتيوب الخلفية */}
+      {!isPlaying && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-1/2 bg-black" />
+      )}
       {/* طبقة علوية للتحكم — لا تغطي شريط الأدوات */}
       <div className="absolute inset-0 z-10 flex flex-col justify-end">
         {/* منطقة النقر للتشغيل في المنتصف — العلامة تظهر فقط عند الإيقاف */}
@@ -289,7 +338,11 @@ export function YouTubeOverlayPlayer({ videoUrl, title }: Props) {
         </div>
 
         {/* شريط التحكم في الأسفل */}
-        <div className="relative z-20 flex flex-col gap-2 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-8">
+        <div
+          className={`relative z-20 flex flex-col gap-2 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-8 transition-opacity duration-200 ${
+            isPlaying && !showControls ? "pointer-events-none opacity-0" : "opacity-100"
+          }`}
+        >
           {/* الصوت والجودة */}
           <div className="flex items-center justify-end gap-4">
             {/* الصوت */}

@@ -37,9 +37,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "كود غير صالح أو مستخدم مسبقاً" }, { status: 404 });
   }
 
+  const isPartial = (result.lessonIds?.length ?? 0) > 0 || (result.quizIds?.length ?? 0) > 0;
   return NextResponse.json({
     success: true,
-    message: "تم تفعيل الكود والتسجيل في الدورة بنجاح",
+    message: isPartial
+      ? "تم تفعيل الكود وإتاحة حصص محددة داخل الدورة بنجاح"
+      : "تم تفعيل الكود والتسجيل في الدورة بنجاح",
     courseId: result.courseId,
+    scope: isPartial ? "partial" : "full",
   });
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { unstable_noStore } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getCourseWithContent, getEnrollment, getUserById, getLiveStreamsByCourseId, getHomepageSettings } from "@/lib/db";
+import { getCourseWithContent, getEnrollment, getAllowedLessonIdsForUserCourse, getAllowedQuizIdsForUserCourse, getUserById, getLiveStreamsByCourseId, getHomepageSettings } from "@/lib/db";
 import { EnrollButton } from "./EnrollButton";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -50,15 +50,23 @@ export default async function CoursePage({ params }: Props) {
   const session = await getServerSession(authOptions);
   let data: Awaited<ReturnType<typeof getCourseWithContent>> = null;
   let isEnrolled = false;
+  let allowedLessonIds: string[] = [];
+  let allowedQuizIds: string[] = [];
   let userBalance = 0;
   try {
     data = await getCourseWithContent(decoded);
     if (data?.course && session?.user?.id && session.user.role === "STUDENT") {
-      const [en, user] = await Promise.all([
+      const [en, user, lessons, quizzes] = await Promise.all([
         getEnrollment(session.user.id, data.course.id),
         getUserById(session.user.id),
+        getAllowedLessonIdsForUserCourse(session.user.id, data.course.id),
+        getAllowedQuizIdsForUserCourse(session.user.id, data.course.id),
       ]);
       isEnrolled = !!en;
+      if (!isEnrolled) {
+        allowedLessonIds = lessons;
+        allowedQuizIds = quizzes;
+      }
       userBalance = Number(user?.balance) || 0;
     }
   } catch {
@@ -74,7 +82,10 @@ export default async function CoursePage({ params }: Props) {
   const title = (course as { titleAr?: string; title: string }).titleAr ?? course.title;
   const categoryName = (course.category as { nameAr?: string; name?: string })?.nameAr ?? (course.category as { name?: string })?.name;
   const canEnroll = session?.user?.role === "STUDENT" && !isEnrolled;
-  const canAccessContent = isEnrolled || session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN";
+  const hasPartialAccess = allowedLessonIds.length > 0 || allowedQuizIds.length > 0;
+  const isStaff = session?.user?.role === "ADMIN" || session?.user?.role === "ASSISTANT_ADMIN";
+  const canAccessContent = isEnrolled || hasPartialAccess || isStaff;
+  const canAccessQuizzes = isEnrolled || isStaff;
   const coursePrice = Number((course as Record<string, unknown>).price) || 0;
 
   const liveStreams = canAccessContent ? await getLiveStreamsByCourseId(course.id) : [];
@@ -249,13 +260,22 @@ export default async function CoursePage({ params }: Props) {
               </p>
             )}
 
+            {hasPartialAccess && !isEnrolled && (
+              <div className="mt-6 rounded-[var(--radius-card)] border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                هذا الكورس متاح لك عبر كود يفتح محتوى محدد (حصص/اختبارات) داخل الدورة.
+              </div>
+            )}
+
             {course.lessons.length > 0 && (
               <div className="mt-10">
                 <h2 className="text-xl font-semibold text-[var(--color-foreground)]">
                   محتوى الدورة ({course.lessons.length} حصص)
                 </h2>
                 <ul className="mt-4 space-y-2">
-                  {course.lessons.map((lesson, i) => {
+                  {(hasPartialAccess && !isEnrolled && !isStaff
+                    ? course.lessons.filter((l) => allowedLessonIds.includes(String((l as Record<string, unknown>).id ?? l.id)))
+                    : course.lessons
+                  ).map((lesson, i) => {
                     const lessonClassName = `flex items-center gap-3 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-3 ${canAccessContent ? "transition hover:border-[var(--color-primary)]/30" : ""}`;
                     const content = (
                       <>
@@ -313,7 +333,7 @@ export default async function CoursePage({ params }: Props) {
                     const questionsCount = q._count?.questions ?? 0;
                     return (
                     <li key={String(q.id)}>
-                      {canAccessContent ? (
+                      {canAccessQuizzes ? (
                         <Link
                           href={`/courses/${encodeURIComponent(normalizeSlugForUrl(String((course as Record<string, unknown>).slug ?? "")) || String((course as Record<string, unknown>).id ?? course.id))}/quizzes/${String(q.id)}`}
                           className="flex items-center justify-between rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4 transition hover:border-[var(--color-primary)]/30"

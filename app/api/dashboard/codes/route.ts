@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   if (!session || (session.user.role !== "ADMIN" && session.user.role !== "ASSISTANT_ADMIN")) {
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
   }
-  let body: { courseId?: string; count?: number };
+  let body: { courseId?: string; count?: number; lessonIds?: string[]; quizIds?: string[] };
   try {
     body = await request.json();
   } catch {
@@ -38,18 +38,25 @@ export async function POST(request: NextRequest) {
   }
   const courseId = body.courseId?.trim();
   const count = Math.min(Math.max(Number(body.count) || 1, 1), 500);
+  const lessonIds = Array.isArray(body.lessonIds) ? body.lessonIds.filter((x) => typeof x === "string") : [];
+  const quizIds = Array.isArray(body.quizIds) ? body.quizIds.filter((x) => typeof x === "string") : [];
   if (!courseId) {
     return NextResponse.json({ error: "معرف الدورة مطلوب" }, { status: 400 });
   }
   try {
-    const created = await createActivationCodes(courseId, count);
+    const created = await createActivationCodes(
+      courseId,
+      count,
+      lessonIds.length > 0 ? lessonIds : null,
+      quizIds.length > 0 ? quizIds : null
+    );
     return NextResponse.json({ created, count: created.length });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Dashboard codes POST:", error);
-    if (msg.includes("ActivationCode") || msg.includes("does not exist") || msg.includes("relation")) {
+    if (msg.includes("ActivationCode") || msg.includes("ActivationCodeLesson") || msg.includes("does not exist") || msg.includes("relation")) {
       return NextResponse.json(
-        { error: "جدول أكواد التفعيل غير موجود. نفّذ scripts/add-activation-codes.sql من لوحة Neon ثم أعد المحاولة." },
+        { error: "جداول أكواد التفعيل غير موجودة/ناقصة. نفّذ scripts/add-activation-codes.sql من لوحة Neon ثم أعد المحاولة." },
         { status: 500 }
       );
     }
