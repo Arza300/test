@@ -16,15 +16,6 @@ type CodeRow = {
   quizCount?: number | null;
 };
 
-const NEW_DAYS = 7; // أكواد آخر 7 أيام = جديدة
-
-function isNew(createdAt: string): boolean {
-  const d = new Date(createdAt);
-  const now = new Date();
-  const diff = (now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24);
-  return diff <= NEW_DAYS;
-}
-
 export function CodesManage({ courseOptions }: { courseOptions: { id: string; title: string }[] }) {
   const router = useRouter();
   const [codes, setCodes] = useState<CodeRow[]>([]);
@@ -45,6 +36,25 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
   const [confirmDeleteIds, setConfirmDeleteIds] = useState<Set<string>>(new Set());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [copySuccess, setCopySuccess] = useState(false);
+
+  // آخر دفعة أكواد تم إنشاؤها (الأحدث زمناً) نعتبرها "جديدة" وكل ما قبلها "قديم"
+  const latestCreatedAtMs = useMemo(() => {
+    if (!codes.length) return null;
+    let max = 0;
+    for (const c of codes) {
+      const t = new Date(c.createdAt).getTime();
+      if (Number.isFinite(t) && t > max) max = t;
+    }
+    return max || null;
+  }, [codes]);
+
+  function isNewestBatch(createdAt: string): boolean {
+    if (!latestCreatedAtMs) return false;
+    const t = new Date(createdAt).getTime();
+    if (!Number.isFinite(t)) return false;
+    // نسمح بهامش ثانيتين حتى تُحسب نفس الدفعة معاً حتى لو كان هناك فروق بسيطة في الوقت بين الأكواد
+    return Math.abs(latestCreatedAtMs - t) <= 2000;
+  }
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -559,7 +569,7 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
                       )}
                     </td>
                     <td className="p-2">
-                      {isNew(row.createdAt) ? (
+                      {isNewestBatch(row.createdAt) ? (
                         <span className="rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-800 dark:bg-green-900/40 dark:text-green-300">جديد</span>
                       ) : (
                         <span className="rounded bg-[var(--color-muted)]/20 px-1.5 py-0.5 text-xs text-[var(--color-muted)]">قديم</span>

@@ -213,6 +213,9 @@ export function PasswordChangeRequestsList({
                 <th className="p-2 text-right font-medium text-[var(--color-foreground)]">كلمة المرور الجديدة المطلوبة</th>
                 <th className="p-2 text-right font-medium text-[var(--color-foreground)]">تاريخ الطلب</th>
                 <th className="p-2 text-right font-medium text-[var(--color-foreground)]">الحالة</th>
+                {isStaff && (
+                  <th className="p-2 text-right font-medium text-[var(--color-foreground)]">إجراء</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -227,6 +230,18 @@ export function PasswordChangeRequestsList({
                     {formatRequestDate(r.createdAt)}
                   </td>
                   <td className="p-2 text-[var(--color-success)]">تم التنفيذ</td>
+                  {isStaff && (
+                    <td className="p-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(r.id)}
+                        disabled={deletingId !== null}
+                        className="rounded-[var(--radius-btn)] border border-red-500/50 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-500/20 disabled:opacity-50"
+                      >
+                        {deletingId === r.id ? "جاري الحذف..." : "حذف"}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
