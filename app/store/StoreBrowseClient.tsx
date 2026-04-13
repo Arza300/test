@@ -67,6 +67,11 @@ export function StoreBrowseClient({
                 <h3 className="text-lg font-semibold text-[var(--color-foreground)]">{p.title}</h3>
                 <p className="mt-2 line-clamp-3 text-sm text-[var(--color-muted)]">{p.description}</p>
                 <div className="mt-4 flex items-center justify-between gap-3">
+                  {(() => {
+                    const canAccess = isSubscribed || ownedIds.includes(p.id);
+                    const canDownload = canAccess && !!p.pdfUrl;
+                    return (
+                      <>
                   {isSubscribed ? (
                     <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-500">
                       مجاني ضمن اشتراكك
@@ -78,8 +83,10 @@ export function StoreBrowseClient({
                   ) : (
                     <span className="text-sm font-semibold text-[var(--color-primary)]">{Number(p.price).toFixed(2)} ج.م</span>
                   )}
-                  {isSubscribed || ownedIds.includes(p.id) ? (
-                    <a href={p.pdfUrl} target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-hover)]">تحميل PDF</a>
+                  {canDownload ? (
+                    <a href={p.pdfUrl ?? undefined} target="_blank" rel="noopener noreferrer" className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--color-primary-hover)]">تحميل PDF</a>
+                  ) : canAccess ? (
+                    <span className="text-xs text-[var(--color-muted)]">الملف غير متاح حالياً</span>
                   ) : (
                     isLoggedIn ? (
                       <button
@@ -98,6 +105,9 @@ export function StoreBrowseClient({
                       </Link>
                     )
                   )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </article>
