@@ -36,6 +36,7 @@ model User {
   enrollments    Enrollment[]
   coursesCreated Course[]      @relation("CourseCreator")
   quizAttempts   QuizAttempt[]
+  categoriesCreated Category[] @relation("CategoryCreator")
 }
 
 model Category {
@@ -46,9 +47,11 @@ model Category {
   description String?
   imageUrl    String?  @map("image_url")
   order       Int      @default(0)
+  createdById String?  @map("created_by_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   courses     Course[]
+  createdBy   User?    @relation("CategoryCreator", fields: [createdById], references: [id], onDelete: SetNull)
 }
 
 model Course {

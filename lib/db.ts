@@ -452,9 +452,93 @@ export async function deletePasswordChangeRequest(requestId: string): Promise<bo
 }
 
 // ----- Category -----
+let categoryCreatedByColumnEnsured = false;
+
+/** يضيف عمود created_by_id لجدول الأقسام (أقسام المنصة = NULL، قسم المدرس = معرّف المدرس) */
+async function ensureCategoryCreatedByColumn(): Promise<void> {
+  if (categoryCreatedByColumnEnsured) return;
+  try {
+    await sql`ALTER TABLE "Category" ADD COLUMN IF NOT EXISTS created_by_id TEXT`;
+    categoryCreatedByColumnEnsured = true;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
 export async function getCategories(): Promise<Category[]> {
+  await ensureCategoryCreatedByColumn();
   const rows = await sql`SELECT * FROM "Category" ORDER BY "order" ASC`;
   return rowsToCamel(rows as Record<string, unknown>[]) as Category[];
+}
+
+/** أقسام تظهر في لوحة إنشاء/تعديل الدورة: المدرس يرى أقسامه فقط؛ الأدمن يرى أقسام المنصة وأقسام أي أدمن/مساعد */
+export async function getCategoriesForDashboard(userId: string, role: UserRole): Promise<Category[]> {
+  await ensureCategoryCreatedByColumn();
+  if (role === "TEACHER") {
+    const rows = await sql`
+      SELECT * FROM "Category"
+      WHERE created_by_id = ${userId}
+      ORDER BY "order" ASC
+    `;
+    return rowsToCamel(rows as Record<string, unknown>[]) as Category[];
+  }
+  if (role === "ADMIN" || role === "ASSISTANT_ADMIN") {
+    const rows = await sql`
+      SELECT c.* FROM "Category" c
+      WHERE c.created_by_id IS NULL
+         OR EXISTS (
+           SELECT 1 FROM "User" u
+           WHERE u.id = c.created_by_id
+             AND u.role IN ('ADMIN', 'ASSISTANT_ADMIN')
+         )
+      ORDER BY c."order" ASC
+    `;
+    return rowsToCamel(rows as Record<string, unknown>[]) as Category[];
+  }
+  return [];
+}
+
+export async function getCategoryById(id: string): Promise<Category | null> {
+  await ensureCategoryCreatedByColumn();
+  if (!id?.trim()) return null;
+  const rows = await sql`SELECT * FROM "Category" WHERE id = ${id.trim()} LIMIT 1`;
+  return (rowToCamel(rows[0] as Record<string, unknown>) as Category) ?? null;
+}
+
+/** هل يحق لهذا المستخدم اختيار هذا القسم أو حذفه من لوحة الدورات؟ */
+export async function categoryIsManageableOnDashboard(
+  categoryId: string,
+  userId: string,
+  role: UserRole
+): Promise<boolean> {
+  await ensureCategoryCreatedByColumn();
+  const id = categoryId.trim();
+  if (!id) return false;
+  if (role === "TEACHER") {
+    const rows = await sql`
+      SELECT 1 FROM "Category" c
+      WHERE c.id = ${id} AND c.created_by_id = ${userId}
+      LIMIT 1
+    `;
+    return rows.length > 0;
+  }
+  if (role === "ADMIN" || role === "ASSISTANT_ADMIN") {
+    const rows = await sql`
+      SELECT 1 FROM "Category" c
+      WHERE c.id = ${id}
+        AND (
+          c.created_by_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM "User" u
+            WHERE u.id = c.created_by_id
+              AND u.role IN ('ADMIN', 'ASSISTANT_ADMIN')
+          )
+        )
+      LIMIT 1
+    `;
+    return rows.length > 0;
+  }
+  return false;
 }
 
 export async function createCategory(data: {
@@ -464,18 +548,22 @@ export async function createCategory(data: {
   description?: string | null;
   image_url?: string | null;
   order?: number;
+  created_by_id?: string | null;
 }): Promise<Category> {
+  await ensureCategoryCreatedByColumn();
   const id = generateId();
+  const owner = data.created_by_id ?? null;
   await sql`
-    INSERT INTO "Category" (id, name, name_ar, slug, description, image_url, "order")
-    VALUES (${id}, ${data.name}, ${data.name_ar ?? null}, ${data.slug}, ${data.description ?? null}, ${data.image_url ?? null}, ${data.order ?? 0})
+    INSERT INTO "Category" (id, name, name_ar, slug, description, image_url, "order", created_by_id)
+    VALUES (${id}, ${data.name}, ${data.name_ar ?? null}, ${data.slug}, ${data.description ?? null}, ${data.image_url ?? null}, ${data.order ?? 0}, ${owner})
   `;
   const rows = await sql`SELECT * FROM "Category" WHERE id = ${id} LIMIT 1`;
   return rowToCamel(rows[0] as Record<string, unknown>) as Category;
 }
 
-/** البحث عن قسم بالاسم (name أو name_ar) — للمطابقة عند كتابة اسم قسم جديد */
+/** بحث عام بالاسم (بدون تقييد مالك) — للبذرة والأدوات القديمة */
 export async function getCategoryByName(name: string): Promise<Category | null> {
+  await ensureCategoryCreatedByColumn();
   const n = name.trim();
   if (!n) return null;
   const rows = await sql`
@@ -487,9 +575,53 @@ export async function getCategoryByName(name: string): Promise<Category | null> 
   return (rowToCamel(rows[0] as Record<string, unknown>) as Category) ?? null;
 }
 
+/** مطابقة اسم قسم ضمن أقسام المستخدم في لوحة الدورات فقط */
+export async function findCategoryByNameForDashboard(
+  name: string,
+  userId: string,
+  role: UserRole
+): Promise<Category | null> {
+  await ensureCategoryCreatedByColumn();
+  const n = name.trim();
+  if (!n) return null;
+  if (role === "TEACHER") {
+    const rows = await sql`
+      SELECT * FROM "Category"
+      WHERE created_by_id = ${userId}
+        AND (
+          LOWER(TRIM(name)) = LOWER(${n})
+          OR (name_ar IS NOT NULL AND LOWER(TRIM(name_ar)) = LOWER(${n}))
+        )
+      LIMIT 1
+    `;
+    return (rowToCamel(rows[0] as Record<string, unknown>) as Category) ?? null;
+  }
+  if (role === "ADMIN" || role === "ASSISTANT_ADMIN") {
+    const rows = await sql`
+      SELECT c.* FROM "Category" c
+      WHERE (
+          LOWER(TRIM(c.name)) = LOWER(${n})
+          OR (c.name_ar IS NOT NULL AND LOWER(TRIM(c.name_ar)) = LOWER(${n}))
+        )
+        AND (
+          c.created_by_id IS NULL
+          OR EXISTS (
+            SELECT 1 FROM "User" u
+            WHERE u.id = c.created_by_id
+              AND u.role IN ('ADMIN', 'ASSISTANT_ADMIN')
+          )
+        )
+      LIMIT 1
+    `;
+    return (rowToCamel(rows[0] as Record<string, unknown>) as Category) ?? null;
+  }
+  return null;
+}
+
 /** حذف قسم — الدورات المرتبطة به تصبح بدون قسم (category_id = null) */
 export async function deleteCategory(id: string): Promise<boolean> {
   if (!id?.trim()) return false;
+  await ensureCategoryCreatedByColumn();
   await sql`DELETE FROM "Category" WHERE id = ${id.trim()}`;
   return true;
 }

@@ -4,9 +4,36 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { getCourseForEdit } from "@/lib/db";
 import { canManageCourse } from "@/lib/permissions";
-import { EditCourseForm } from "./EditCourseForm";
+import { EditCourseForm, type ContentOrderEntry } from "./EditCourseForm";
 
 type Props = { params: Promise<{ id: string }> };
+
+/** ترتيب الحصص والاختبارات كما يُعرض للطالب (حسب حقل order في الجدول) */
+function initialContentOrderFromRows(
+  lessonRows: Record<string, unknown>[],
+  quizRows: Record<string, unknown>[]
+): ContentOrderEntry[] {
+  type Sortable = ContentOrderEntry & { sortKey: number };
+  const entries: Sortable[] = [];
+  for (let i = 0; i < lessonRows.length; i++) {
+    const row = lessonRows[i];
+    const o = row.order;
+    const sortKey = typeof o === "number" && Number.isFinite(o) ? o : i;
+    entries.push({ type: "lesson", index: i, sortKey });
+  }
+  for (let i = 0; i < quizRows.length; i++) {
+    const row = quizRows[i];
+    const o = row.order;
+    const sortKey = typeof o === "number" && Number.isFinite(o) ? o : lessonRows.length + i;
+    entries.push({ type: "quiz", index: i, sortKey });
+  }
+  entries.sort((a, b) => {
+    if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
+    if (a.type !== b.type) return a.type === "lesson" ? -1 : 1;
+    return a.index - b.index;
+  });
+  return entries.map(({ type, index }) => ({ type, index }));
+}
 
 export default async function EditCoursePage({ params }: Props) {
   const session = await getServerSession(authOptions);
@@ -72,6 +99,10 @@ export default async function EditCoursePage({ params }: Props) {
         })),
       };
     }),
+    contentOrder: initialContentOrderFromRows(
+      data.lessons as Record<string, unknown>[],
+      data.quizzes as Record<string, unknown>[]
+    ),
   };
 
   return (

@@ -1,7 +1,6 @@
 import { unstable_noStore } from "next/cache";
 import { getCoursesPublished, getTeacherIdsExcludedFromPublicCourseLists, getUserById } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { CourseCard } from "@/components/CourseCard";
 import { TeacherCoursesSearch, type TeacherCourseListItem } from "./TeacherCoursesSearch";
 
 /** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
@@ -82,15 +81,10 @@ export default async function CoursesPage({ searchParams }: Props) {
       </div>
 
       {filtered.length > 0 ? (
-        tid ? (
-          <TeacherCoursesSearch courses={filtered as TeacherCourseListItem[]} />
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((course) => (
-              <CourseCard key={course.id} course={course} />
-            ))}
-          </div>
-        )
+        <TeacherCoursesSearch
+          courses={filtered as TeacherCourseListItem[]}
+          groupByCategory={!!tid}
+        />
       ) : (
         <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 p-12 text-center">
           <p className="text-[var(--color-muted)]">

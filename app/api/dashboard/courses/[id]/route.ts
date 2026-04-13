@@ -13,14 +13,16 @@ import {
   createQuiz,
   createQuestion,
   createQuestionOption,
-  getCategoryByName,
+  findCategoryByNameForDashboard,
   createCategory,
+  categoryIsManageableOnDashboard,
 } from "@/lib/db";
 
 type LessonInput = { title: string; titleAr?: string; videoUrl?: string; content?: string; pdfUrl?: string; acceptsHomework?: boolean };
 type QuestionOptionInput = { text: string; isCorrect: boolean };
 type QuestionInput = { type: "MULTIPLE_CHOICE" | "ESSAY" | "TRUE_FALSE"; questionText: string; options?: QuestionOptionInput[] };
 type QuizInput = { title: string; timeLimitMinutes?: number | null; questions: QuestionInput[] };
+type ContentOrderEntry = { type: "lesson"; index: number } | { type: "quiz"; index: number };
 
 /** تحديث دورة - للأدمن ومساعد الأدمن */
 export async function PUT(
@@ -46,6 +48,7 @@ export async function PUT(
     acceptsHomework?: boolean;
     lessons?: LessonInput[];
     quizzes?: QuizInput[];
+    contentOrder?: ContentOrderEntry[];
   };
   try {
     body = await request.json();
@@ -69,16 +72,40 @@ export async function PUT(
     return NextResponse.json({ error: "العنوان والوصف مطلوبان" }, { status: 400 });
   }
 
+  const role = session.user.role;
+  const currentCategoryId =
+    (course as { categoryId?: string | null }).categoryId ??
+    (course as { category_id?: string | null }).category_id ??
+    null;
+
   let categoryId: string | null | undefined = body.categoryId;
   const catName = body.categoryName?.trim();
   if (catName) {
-    let cat = await getCategoryByName(catName);
+    let cat = await findCategoryByNameForDashboard(catName, session.user.id, role);
     if (!cat) {
       const slugCat = catName.toLowerCase().replace(/\s+/g, "-").replace(/[^\w\u0600-\u06FF-]+/g, "") || "cat";
       const uniqueSlug = slugCat + "-" + Date.now();
-      cat = await createCategory({ name: catName, name_ar: catName, slug: uniqueSlug });
+      cat = await createCategory({
+        name: catName,
+        name_ar: catName,
+        slug: uniqueSlug,
+        created_by_id: session.user.id,
+      });
     }
     categoryId = cat.id;
+  } else if (body.categoryId !== undefined) {
+    if (body.categoryId === null || body.categoryId === "") {
+      categoryId = null;
+    } else {
+      const incoming = String(body.categoryId).trim();
+      if (incoming !== currentCategoryId) {
+        const ok = await categoryIsManageableOnDashboard(incoming, session.user.id, role);
+        if (!ok) {
+          return NextResponse.json({ error: "القسم غير صالح أو غير مسموح" }, { status: 400 });
+        }
+      }
+      categoryId = incoming;
+    }
   }
 
   await updateCourse(id, {
@@ -96,9 +123,19 @@ export async function PUT(
 
   await deleteLessonsByCourseId(id);
   const lessons = body.lessons ?? [];
+  const quizzes = body.quizzes ?? [];
+  const contentOrder =
+    body.contentOrder ??
+    ([
+      ...lessons.map((_, i) => ({ type: "lesson" as const, index: i })),
+      ...quizzes.map((_, i) => ({ type: "quiz" as const, index: i })),
+    ] satisfies ContentOrderEntry[]);
+
   for (let i = 0; i < lessons.length; i++) {
     const le = lessons[i];
     const lessonSlug = `${slug}-${i + 1}`.replace(/\s+/g, "-");
+    const order = contentOrder.findIndex((e) => e.type === "lesson" && e.index === i);
+    const orderVal = order >= 0 ? order : i;
     await createLesson({
       course_id: id,
       title: le.title?.trim() || `حصة ${i + 1}`,
@@ -107,22 +144,23 @@ export async function PUT(
       content: le.content?.trim() || null,
       video_url: le.videoUrl?.trim() || null,
       pdf_url: le.pdfUrl?.trim() || null,
-      order: i + 1,
+      order: orderVal,
       accepts_homework: !!le.acceptsHomework,
     });
   }
 
   await deleteQuizzesByCourseId(id);
-  const quizzes = body.quizzes ?? [];
   for (let qi = 0; qi < quizzes.length; qi++) {
     const q = quizzes[qi];
     const mins = q.timeLimitMinutes;
     const timeLimitMinutes =
       typeof mins === "number" && Number.isFinite(mins) && mins >= 1 ? mins : null;
+    const order = contentOrder.findIndex((e) => e.type === "quiz" && e.index === qi);
+    const orderVal = order >= 0 ? order : lessons.length + qi;
     const quiz = await createQuiz({
       course_id: id,
       title: q.title?.trim() || `اختبار ${qi + 1}`,
-      order: qi + 1,
+      order: orderVal,
       time_limit_minutes: timeLimitMinutes,
     });
     const questions = q.questions ?? [];

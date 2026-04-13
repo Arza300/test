@@ -60,19 +60,26 @@ function groupCoursesByCategory(courses: TeacherCourseListItem[]) {
   });
 }
 
-function matchesQuery(course: TeacherCourseListItem, rawQuery: string) {
+/** مطابقة نص البحث مع اسم الدورة أو الوصف القصير أو القسم (اسم / معرّف slug) */
+export function courseMatchesSearchQuery(course: TeacherCourseListItem, rawQuery: string) {
   const q = normalizeSearch(rawQuery);
   if (!q) return true;
   const titleAr = (course.titleAr ?? course.title_ar ?? "").toLowerCase();
   const title = (course.title ?? "").toLowerCase();
+  const short = (course.shortDesc ?? course.short_desc ?? "").toLowerCase();
+  const slug = (course.slug ?? "").toLowerCase();
   const cat = course.category;
   const catAr = (cat?.nameAr ?? cat?.name_ar ?? "").toLowerCase();
   const catName = (cat?.name ?? "").toLowerCase();
+  const catSlug = (cat?.slug ?? "").toLowerCase();
   return (
     titleAr.includes(q) ||
     title.includes(q) ||
+    short.includes(q) ||
+    slug.includes(q) ||
     catAr.includes(q) ||
-    catName.includes(q)
+    catName.includes(q) ||
+    catSlug.includes(q)
   );
 }
 
@@ -97,28 +104,37 @@ function toCourseCardProps(c: TeacherCourseListItem) {
   };
 }
 
-export function TeacherCoursesSearch({ courses }: { courses: TeacherCourseListItem[] }) {
+export function TeacherCoursesSearch({
+  courses,
+  /** عند false: شبكة واحدة (مثل «جميع الدورات») مع نفس شريط البحث */
+  groupByCategory = true,
+}: {
+  courses: TeacherCourseListItem[];
+  groupByCategory?: boolean;
+}) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(
-    () => courses.filter((c) => matchesQuery(c, query)),
+    () => courses.filter((c) => courseMatchesSearchQuery(c, query)),
     [courses, query],
   );
 
   const groups = useMemo(() => groupCoursesByCategory(filtered), [filtered]);
 
+  const inputId = groupByCategory ? "teacher-courses-search" : "all-courses-search";
+
   return (
     <>
       <div className="mb-8">
-        <label htmlFor="teacher-courses-search" className="sr-only">
-          بحث في دورات المدرس
+        <label htmlFor={inputId} className="sr-only">
+          {groupByCategory ? "بحث في دورات المدرس" : "بحث في الدورات"}
         </label>
         <input
-          id="teacher-courses-search"
+          id={inputId}
           type="search"
           dir="rtl"
           autoComplete="off"
-          placeholder="ابحث باسم الدورة أو اسم القسم…"
+          placeholder="ابحث باسم الدورة أو القسم…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full max-w-xl rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-foreground)] shadow-[var(--shadow-card)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/25"
@@ -133,7 +149,7 @@ export function TeacherCoursesSearch({ courses }: { courses: TeacherCourseListIt
               : "لا توجد دورات لعرضها."}
           </p>
         </div>
-      ) : (
+      ) : groupByCategory ? (
         <div className="space-y-12">
           {groups.map((group) => (
             <section key={group.slugKey}>
@@ -146,6 +162,12 @@ export function TeacherCoursesSearch({ courses }: { courses: TeacherCourseListIt
                 ))}
               </div>
             </section>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((course) => (
+            <CourseCard key={course.id} course={toCourseCardProps(course)} />
           ))}
         </div>
       )}

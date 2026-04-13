@@ -1,21 +1,30 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { deleteCategory } from "@/lib/db";
+import { categoryIsManageableOnDashboard, deleteCategory } from "@/lib/db";
 
-/** حذف قسم — للأدمن ومساعد الأدمن. الدورات المرتبطة به تصبح بدون قسم */
+/** حذف قسم — الأدمن/المساعد: أقسام المنصة وأقسام الأدمن فقط؛ المدرس: أقسامه فقط. الدورات المرتبطة تصبح بدون قسم */
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || (session.user.role !== "ADMIN" && session.user.role !== "ASSISTANT_ADMIN")) {
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
+  }
+  const role = session.user.role;
+  if (role !== "ADMIN" && role !== "ASSISTANT_ADMIN" && role !== "TEACHER") {
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
   }
 
   const { id } = await params;
   if (!id?.trim()) {
     return NextResponse.json({ error: "معرّف القسم مطلوب" }, { status: 400 });
+  }
+
+  const allowed = await categoryIsManageableOnDashboard(id, session.user.id, role);
+  if (!allowed) {
+    return NextResponse.json({ error: "لا يمكن حذف هذا القسم" }, { status: 403 });
   }
 
   try {

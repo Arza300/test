@@ -31,6 +31,8 @@ export interface Category {
   description: string | null;
   image_url: string | null;
   order: number;
+  /** من أنشأ القسم (بعد rowToCamel من قاعدة البيانات) */
+  createdById?: string | null;
   created_at: Date;
   updated_at: Date;
 }

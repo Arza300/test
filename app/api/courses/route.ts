@@ -9,8 +9,9 @@ import {
   createQuiz,
   createQuestion,
   createQuestionOption,
-  getCategoryByName,
+  findCategoryByNameForDashboard,
   createCategory,
+  categoryIsManageableOnDashboard,
 } from "@/lib/db";
 
 export async function GET() {
@@ -72,16 +73,27 @@ export async function POST(request: NextRequest) {
 
   let categoryId: string | null = null;
   const catName = body.categoryName?.trim();
+  const role = session.user.role;
   if (catName) {
-    let cat = await getCategoryByName(catName);
+    let cat = await findCategoryByNameForDashboard(catName, session.user.id, role);
     if (!cat) {
       const slugCat = catName.toLowerCase().replace(/\s+/g, "-").replace(/[^\w\u0600-\u06FF-]+/g, "") || "cat";
       const uniqueSlug = slugCat + "-" + Date.now();
-      cat = await createCategory({ name: catName, name_ar: catName, slug: uniqueSlug });
+      cat = await createCategory({
+        name: catName,
+        name_ar: catName,
+        slug: uniqueSlug,
+        created_by_id: session.user.id,
+      });
     }
     categoryId = cat.id;
-  } else if (body.categoryId) {
-    categoryId = body.categoryId;
+  } else if (body.categoryId?.trim()) {
+    const cid = body.categoryId.trim();
+    const ok = await categoryIsManageableOnDashboard(cid, session.user.id, role);
+    if (!ok) {
+      return NextResponse.json({ error: "القسم غير صالح أو غير مسموح" }, { status: 400 });
+    }
+    categoryId = cid;
   }
 
   let course;
