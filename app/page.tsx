@@ -254,6 +254,10 @@ export default async function HomePage() {
         <HomeTeachersSection enabled initialTeachers={teachersForHome} />
       ) : null}
 
+      {homepageSettings.teachersEnabled && homepageSettings.subscriptionsEnabled ? (
+        <div className="h-12 sm:h-16 md:h-24" aria-hidden />
+      ) : null}
+
       {homepageSettings.subscriptionsEnabled ? (
         <HomeSubscriptionsSection
           enabled

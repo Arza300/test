@@ -6,6 +6,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SessionProvider } from "@/components/SessionProvider";
+import { StoreSplashProvider } from "@/components/StoreSplashProvider";
 import { InspectGuard } from "@/components/InspectGuard";
 import { ForceLogoutGuard } from "@/components/ForceLogoutGuard";
 import { authOptions } from "@/lib/auth";
@@ -101,6 +102,7 @@ export default async function RootLayout({
           shadow="0 0 10px rgba(13,148,136,0.4)"
         />
         <SessionProvider>
+          <StoreSplashProvider>
           <InspectGuard />
           <ForceLogoutGuard />
           <Header
@@ -109,6 +111,7 @@ export default async function RootLayout({
           />
           <main className="flex-1">{children}</main>
           <Footer footerTitle={footerTitle} footerTagline={footerTagline} footerCopyright={footerCopyright} />
+          </StoreSplashProvider>
         </SessionProvider>
       </body>
     </html>

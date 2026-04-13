@@ -8,6 +8,7 @@ import {
   userHasActivePlatformSubscription,
 } from "@/lib/db";
 import { StoreBrowseClient } from "./StoreBrowseClient";
+import { StorePageReadyBeacon } from "./StorePageReadyBeacon";
 
 export default async function StorePage() {
   const settings = await getHomepageSettings().catch(() => null);
@@ -28,20 +29,26 @@ export default async function StorePage() {
 
   if (!settings?.storeEnabled) {
     return (
-      <section className="px-4 py-16 sm:px-6">
-        <div className="mx-auto max-w-4xl rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
-          <h1 className="text-2xl font-bold text-[var(--color-foreground)]">متجر المنصة غير متاح الآن</h1>
-        </div>
-      </section>
+      <>
+        <StorePageReadyBeacon />
+        <section className="px-4 py-16 sm:px-6">
+          <div className="mx-auto max-w-4xl rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
+            <h1 className="text-2xl font-bold text-[var(--color-foreground)]">متجر المنصة غير متاح الآن</h1>
+          </div>
+        </section>
+      </>
     );
   }
 
   return (
-    <StoreBrowseClient
-      products={products}
-      isSubscribed={isSubscribed}
-      isLoggedIn={!!session}
-      purchasedProductIds={purchasedProductIds}
-    />
+    <>
+      <StorePageReadyBeacon />
+      <StoreBrowseClient
+        products={products}
+        isSubscribed={isSubscribed}
+        isLoggedIn={!!session}
+        purchasedProductIds={purchasedProductIds}
+      />
+    </>
   );
 }
