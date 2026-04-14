@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import LoginBackground from "@/app/login/LoginBackground";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -45,8 +46,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-md flex-col justify-center px-4 py-12">
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] sm:p-8">
+    <div className="relative mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-none items-center justify-center overflow-hidden bg-black px-4 py-12">
+      <LoginBackground />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-black/55" />
+      <div className="relative z-10 w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] sm:p-8">
         <h1 className="text-2xl font-bold text-[var(--color-foreground)]">
           إنشاء حساب
         </h1>

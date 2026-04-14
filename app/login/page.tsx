@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CONCURRENT_SESSION_ERROR } from "@/lib/auth-constants";
+import LoginBackground from "./LoginBackground";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -75,8 +76,11 @@ function LoginForm() {
 
   if (concurrentSession) {
     return (
-      <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-md flex-col justify-center px-4 py-12">
-        <div className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-6 dark:border-amber-800 dark:bg-amber-900/20 sm:p-8">
+      <div className="relative mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-none flex-col overflow-hidden bg-black">
+        <LoginBackground />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-black/55" />
+        <div className="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
+          <div className="w-full max-w-md rounded-[var(--radius-card)] border border-amber-200 bg-amber-50/50 p-6 dark:border-amber-800 dark:bg-amber-900/20 sm:p-8">
           <h1 className="text-xl font-bold text-amber-800 dark:text-amber-200">
             الحساب مفتوح على جهاز آخر
           </h1>
@@ -107,14 +111,18 @@ function LoginForm() {
           >
             إلغاء والعودة لتسجيل الدخول
           </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-md flex-col justify-center px-4 py-12">
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] sm:p-8">
+    <div className="relative mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-none flex-col overflow-hidden bg-black">
+      <LoginBackground />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-black/55" />
+      <div className="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)] sm:p-8">
         <h1 className="text-2xl font-bold text-[var(--color-foreground)]">
           تسجيل الدخول
         </h1>
@@ -188,6 +196,7 @@ function LoginForm() {
             إنشاء حساب
           </Link>
         </p>
+        </div>
       </div>
     </div>
   );
@@ -196,11 +205,15 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-md flex-col justify-center px-4 py-12">
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8">
-          <div className="h-8 w-48 animate-pulse rounded bg-[var(--color-border)]" />
-          <div className="mt-4 h-4 w-full animate-pulse rounded bg-[var(--color-border)]" />
-          <div className="mt-4 h-4 w-full animate-pulse rounded bg-[var(--color-border)]" />
+      <div className="relative mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-none flex-col overflow-hidden bg-black">
+        <LoginBackground />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-black/55" />
+        <div className="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
+          <div className="w-full max-w-md rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8">
+            <div className="h-8 w-48 animate-pulse rounded bg-[var(--color-border)]" />
+            <div className="mt-4 h-4 w-full animate-pulse rounded bg-[var(--color-border)]" />
+            <div className="mt-4 h-4 w-full animate-pulse rounded bg-[var(--color-border)]" />
+          </div>
         </div>
       </div>
     }>
