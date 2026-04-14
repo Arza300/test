@@ -200,11 +200,13 @@ export default async function HomePage() {
             </div>
             <div className="flex-shrink-0 order-1 lg:order-2 lg:ml-6">
               <div className="relative">
-                <img
-                  src={homepageSettings.teacherImageUrl || "/instructor.png"}
-                  alt={homepageSettings.heroTitle || "عصام محي"}
-                  className="h-60 w-60 rounded-2xl border-2 border-white/20 object-cover shadow-2xl sm:h-72 sm:w-72 lg:h-80 lg:w-80"
-                />
+                <div className="hero-image-frame h-60 w-60 p-[2px] sm:h-72 sm:w-72 lg:h-80 lg:w-80">
+                  <img
+                    src={homepageSettings.teacherImageUrl || "/instructor.png"}
+                    alt={homepageSettings.heroTitle || "عصام محي"}
+                    className="hero-image-frame-inner h-full w-full object-cover shadow-2xl"
+                  />
+                </div>
                 <img
                   src={homepageSettings.heroFloatImage1 || "/images/ruler.png"}
                   alt=""
