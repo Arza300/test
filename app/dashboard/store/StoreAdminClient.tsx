@@ -49,6 +49,14 @@ export function StoreAdminClient({
   const [imageUploading, setImageUploading] = useState(false);
   const [imageError, setImageError] = useState("");
   const [searchStudent, setSearchStudent] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editPdfUrl, setEditPdfUrl] = useState("");
+  const [editImageUploading, setEditImageUploading] = useState(false);
+  const [editImageError, setEditImageError] = useState("");
 
   const reload = useCallback(async () => {
     const res = await fetch("/api/dashboard/store-products", { credentials: "include" });
@@ -137,6 +145,82 @@ export function StoreAdminClient({
     } finally {
       setImageUploading(false);
     }
+  }
+
+  function startEdit(row: StoreProduct) {
+    setError("");
+    setSuccess("");
+    setEditingId(row.id);
+    setEditTitle(row.title);
+    setEditDescription(row.description ?? "");
+    setEditPrice(String(Number(row.price)));
+    setEditImageUrl(row.imageUrl ?? "");
+    setEditPdfUrl(row.pdfUrl ?? "");
+    setEditImageError("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditTitle("");
+    setEditDescription("");
+    setEditPrice("");
+    setEditImageUrl("");
+    setEditPdfUrl("");
+    setEditImageError("");
+  }
+
+  async function onEditImageFile(file: File | undefined) {
+    if (!file) return;
+    setEditImageError("");
+    setEditImageUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const res = await fetch("/api/upload/image", { method: "POST", body: fd, credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) setEditImageUrl(data.url);
+      else setEditImageError(data.error ?? "فشل رفع الصورة");
+    } catch {
+      setEditImageError("فشل الاتصال بالخادم");
+    } finally {
+      setEditImageUploading(false);
+    }
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    setError("");
+    setSuccess("");
+    const p = Number(editPrice);
+    if (!editTitle.trim() || !Number.isFinite(p) || p < 0) {
+      setError("أدخل اسم المنتج وسعرًا صحيحًا");
+      return;
+    }
+    if (!editPdfUrl.trim()) {
+      setError("رابط ملف PDF إجباري");
+      return;
+    }
+    setLoading(true);
+    const res = await fetch(`/api/dashboard/store-products/${encodeURIComponent(editingId)}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        price: p,
+        imageUrl: editImageUrl.trim() || null,
+        pdfUrl: editPdfUrl.trim() || null,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setLoading(false);
+    if (!res.ok) return setError(data.error ?? "فشل تعديل المنتج");
+    setSuccess("تم تحديث المنتج");
+    cancelEdit();
+    await reload();
+    router.refresh();
   }
 
   async function toggleActive(row: StoreProduct, next: boolean) {
@@ -264,6 +348,56 @@ export function StoreAdminClient({
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
         <h3 className="text-lg font-semibold text-[var(--color-foreground)]">منتجات المتجر</h3>
+        {editingId ? (
+          <form onSubmit={(e) => void saveEdit(e)} className="mt-4 space-y-3 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <h4 className="text-sm font-semibold text-[var(--color-foreground)]">تعديل المنتج</h4>
+            <div>
+              {editImageUrl ? (
+                <div className="mb-2 flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={editImageUrl} alt="" className="h-16 w-16 rounded object-cover border border-[var(--color-border)]" />
+                  <button type="button" onClick={() => setEditImageUrl("")} className="text-xs text-red-500 underline">إزالة الصورة</button>
+                </div>
+              ) : null}
+              <label className="inline-flex cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-sm font-medium hover:bg-[var(--color-border)]/50">
+                {editImageUploading ? "جاري رفع الصورة..." : "رفع صورة جديدة"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={editImageUploading}
+                  onChange={(e) => {
+                    void onEditImageFile(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {editImageError ? <p className="mt-1 text-xs text-red-500">{editImageError}</p> : null}
+            </div>
+            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="اسم المنتج" className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2" />
+            <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="وصف المنتج" rows={3} className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2" />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={editPrice}
+              onChange={(e) => setEditPrice(e.target.value)}
+              placeholder="سعر المنتج بالجنيه"
+              className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
+            />
+            <input
+              required
+              value={editPdfUrl}
+              onChange={(e) => setEditPdfUrl(e.target.value)}
+              placeholder="رابط ملف PDF"
+              className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
+            />
+            <div className="flex items-center gap-3">
+              <button disabled={loading} className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm text-white disabled:opacity-50">{loading ? "جاري..." : "حفظ التعديل"}</button>
+              <button type="button" disabled={loading} onClick={cancelEdit} className="rounded-[var(--radius-btn)] border border-[var(--color-border)] px-4 py-2 text-sm">إلغاء</button>
+            </div>
+          </form>
+        ) : null}
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => (
             <div key={p.id} className="rounded-[var(--radius-btn)] border border-[var(--color-border)] p-4">
@@ -271,6 +405,7 @@ export function StoreAdminClient({
               <p className="mt-1 text-sm text-[var(--color-muted)] line-clamp-2">{p.description}</p>
               <p className="mt-2 text-sm">{Number(p.price).toFixed(2)} ج.م</p>
               <div className="mt-3 flex gap-3 text-sm">
+                <button onClick={() => startEdit(p)} className="underline text-amber-500">تعديل</button>
                 <button onClick={() => void toggleActive(p, !p.isActive)} className="underline text-[var(--color-primary)]">{p.isActive ? "إخفاء" : "تفعيل"}</button>
                 <button onClick={() => void removeRow(p)} className="underline text-red-500">حذف</button>
               </div>
