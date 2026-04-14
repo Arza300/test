@@ -20,6 +20,8 @@ export async function GET() {
       student_number: u.student_number ?? null,
       teacher_subject: (u as { teacher_subject?: string | null }).teacher_subject ?? null,
       teacher_avatar_url: (u as { teacher_avatar_url?: string | null }).teacher_avatar_url ?? null,
+      teacher_homepage_order:
+        (u as { teacher_homepage_order?: number | null }).teacher_homepage_order ?? null,
     })),
   });
 }

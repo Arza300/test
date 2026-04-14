@@ -165,6 +165,8 @@ export async function ensureTeacherAccountDbSchema(): Promise<void> {
     /* تجاهل */
   }
 
+  await ensureTeacherHomepageOrderColumn().catch(() => {});
+
   try {
     const meta = await sql`
       SELECT t.typname::text AS typname
@@ -207,6 +209,14 @@ export async function ensureTeacherAccountDbSchema(): Promise<void> {
     }
   } catch {
     /* عمود role من نوع enum بالفعل أو القيد محدّث يدوياً */
+  }
+}
+
+export async function ensureTeacherHomepageOrderColumn(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS teacher_homepage_order INTEGER`;
+  } catch {
+    /* تجاهل */
   }
 }
 
@@ -810,35 +820,94 @@ export async function listTeachersPublic(categoryId?: string | null): Promise<
 /** دورة منشورة تظهر ضمن بطاقة المدرس العامة */
 export type TeacherHomepageCourse = { id: string; slug: string; title: string };
 
+export type TeacherHomepageRow = {
+  id: string;
+  name: string;
+  teacherSubject: string | null;
+  teacherAvatarUrl: string | null;
+  createdAt: string;
+  /** 1–4 إن حُدّد من لوحة التحكم؛ وإلا null */
+  homepageOrder: number | null;
+  courses: TeacherHomepageCourse[];
+};
+
+export const HOME_TEACHER_PREVIEW_MAX = 4;
+
+/** ترتيب بطاقات الرئيسية: المحددون بالترتيب 1–4 ثم الباقون أبجدياً، حتى `max` */
+export function selectTeachersForHomepagePreview<T extends { id: string; name: string; homepageOrder: number | null }>(
+  teachers: T[],
+  max: number = HOME_TEACHER_PREVIEW_MAX,
+): T[] {
+  if (teachers.length === 0) return [];
+  const slot = (o: number | null) =>
+    o != null && Number.isFinite(o) && o >= 1 && o <= max ? Math.floor(o) : null;
+  const featured = [...teachers]
+    .filter((t) => slot(t.homepageOrder) != null)
+    .sort(
+      (a, b) =>
+        slot(a.homepageOrder)! - slot(b.homepageOrder)! || String(a.id).localeCompare(String(b.id)),
+    );
+  const seen = new Set(featured.map((t) => t.id));
+  const rest = [...teachers]
+    .filter((t) => !seen.has(t.id))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
+  return [...featured, ...rest].slice(0, max);
+}
+
+/** حفظ المدرسين الظاهرين أولاً في قسم الرئيسية (0–4 معرفات بالترتيب) */
+export async function setTeacherHomepageFeaturedSlots(orderedIds: string[]): Promise<void> {
+  await ensureTeacherHomepageOrderColumn();
+  const cleaned = orderedIds.map((x) => String(x ?? "").trim()).filter(Boolean);
+  const unique: string[] = [];
+  for (const id of cleaned) {
+    if (unique.includes(id)) throw new Error("لا يمكن تكرار نفس المدرس");
+    unique.push(id);
+  }
+  if (unique.length > HOME_TEACHER_PREVIEW_MAX) {
+    throw new Error(`لا يزيد عن ${HOME_TEACHER_PREVIEW_MAX} مدرسين في الرئيسية`);
+  }
+  for (const id of unique) {
+    const u = await getUserById(id);
+    if (!u || u.role !== "TEACHER") throw new Error("معرّف مدرس غير صالح");
+  }
+  await sql`UPDATE "User" SET teacher_homepage_order = NULL, updated_at = NOW() WHERE role = 'TEACHER'`;
+  for (let i = 0; i < unique.length; i++) {
+    const ord = i + 1;
+    await sql`
+      UPDATE "User" SET teacher_homepage_order = ${ord}, updated_at = NOW()
+      WHERE id = ${unique[i]} AND role = 'TEACHER'
+    `;
+  }
+}
+
 /** كل حسابات المدرسين — للصفحة الرئيسية (حتى من دون كورس منشور) + دوراته المنشورة داخل البطاقة */
-export async function listTeachersForHomepage(): Promise<
-  Array<{
-    id: string;
-    name: string;
-    teacherSubject: string | null;
-    teacherAvatarUrl: string | null;
-    createdAt: string;
-    courses: TeacherHomepageCourse[];
-  }>
-> {
+export async function listTeachersForHomepage(): Promise<TeacherHomepageRow[]> {
   try {
+    await ensureTeacherHomepageOrderColumn().catch(() => {});
     const rows = await sql`
-      SELECT id, name, teacher_subject, teacher_avatar_url, created_at
+      SELECT id, name, teacher_subject, teacher_avatar_url, created_at, teacher_homepage_order
       FROM "User"
       WHERE role = 'TEACHER'
       ORDER BY name ASC
     `;
-    const teachers = (rows as Record<string, unknown>[]).map((r) => ({
-      id: String(r.id),
-      name: String(r.name ?? ""),
-      teacherSubject: (r.teacher_subject as string | null) ?? null,
-      teacherAvatarUrl: (r.teacher_avatar_url as string | null) ?? null,
-      createdAt:
-        r.created_at instanceof Date
-          ? r.created_at.toISOString()
-          : String((r.created_at as string) ?? new Date().toISOString()),
-      courses: [] as TeacherHomepageCourse[],
-    }));
+    const teachers = (rows as Record<string, unknown>[]).map((r) => {
+      const ho = r.teacher_homepage_order;
+      const n = typeof ho === "number" ? ho : Number(ho);
+      const homepageOrder =
+        Number.isFinite(n) && n >= 1 && n <= HOME_TEACHER_PREVIEW_MAX ? Math.floor(n) : null;
+      return {
+        id: String(r.id),
+        name: String(r.name ?? ""),
+        teacherSubject: (r.teacher_subject as string | null) ?? null,
+        teacherAvatarUrl: (r.teacher_avatar_url as string | null) ?? null,
+        createdAt:
+          r.created_at instanceof Date
+            ? r.created_at.toISOString()
+            : String((r.created_at as string) ?? new Date().toISOString()),
+        homepageOrder,
+        courses: [] as TeacherHomepageCourse[],
+      };
+    });
     if (teachers.length === 0) return [];
 
     const courseRows = await sql`

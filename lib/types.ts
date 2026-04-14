@@ -16,6 +16,8 @@ export interface User {
   /** عنوان المادة / التخصص — يظهر في «اختر المدرسين» */
   teacher_subject?: string | null;
   teacher_avatar_url?: string | null;
+  /** 1–4 لترتيب البطاقة في الرئيسية؛ null = تلقائي بعد المحددين */
+  teacher_homepage_order?: number | null;
   /** كود حقوق الطبع والنشر — للطلاب فقط، فريد، يظهر على مشغّل الحصص */
   copyright_code?: string | null;
   current_session_id?: string | null;

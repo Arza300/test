@@ -31,6 +31,8 @@ model User {
   copyrightCode  String?       @unique @map("copyright_code") @db.VarChar(10) // كود حقوق الطبع للطالب (مثل A0125)
   teacherSubject String?       @map("teacher_subject")
   teacherAvatarUrl String?     @map("teacher_avatar_url")
+  /// 1–4 = ترتيب البطاقة في الرئيسية؛ null = يُكمّل تلقائياً بعد المحددين (حتى 4)
+  teacherHomepageOrder Int?    @map("teacher_homepage_order")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   enrollments    Enrollment[]

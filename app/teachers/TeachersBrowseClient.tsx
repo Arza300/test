@@ -16,24 +16,26 @@ function normalizeSearch(s: string) {
 }
 
 export function TeachersBrowseClient({ initialTeachers }: { initialTeachers: TeacherPublic[] }) {
-  const [expanded, setExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const sortedByName = useMemo(
+    () =>
+      [...initialTeachers].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", "ar"),
+      ),
+    [initialTeachers],
+  );
 
   const filtered = useMemo(() => {
     const q = normalizeSearch(searchQuery);
-    if (!q) return initialTeachers;
-    return initialTeachers.filter((t) => {
+    if (!q) return sortedByName;
+    return sortedByName.filter((t) => {
       const name = (t.name ?? "").toLowerCase();
       const sub = (t.teacherSubject ?? "").toLowerCase();
       const inCourse = (t.courses ?? []).some((c) => (c.title ?? "").toLowerCase().includes(q));
       return name.includes(q) || sub.includes(q) || inCourse;
     });
-  }, [initialTeachers, searchQuery]);
-
-  const visibleTeachers = useMemo(() => {
-    const n = expanded ? filtered.length : Math.min(6, filtered.length);
-    return filtered.slice(0, n);
-  }, [filtered, expanded]);
+  }, [sortedByName, searchQuery]);
 
   return (
     <div className="min-h-[60vh] py-12">
@@ -72,10 +74,7 @@ export function TeachersBrowseClient({ initialTeachers }: { initialTeachers: Tea
             autoComplete="off"
             placeholder="ابحث باسم المدرس أو المادة…"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setExpanded(false);
-            }}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[var(--color-foreground)] shadow-[var(--shadow-card)] placeholder:text-[var(--color-muted)] focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/25"
           />
         </div>
@@ -91,7 +90,7 @@ export function TeachersBrowseClient({ initialTeachers }: { initialTeachers: Tea
         ) : (
           <>
             <div className="mt-10 grid justify-items-center gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleTeachers.map((t) => (
+              {filtered.map((t) => (
                 <TeacherPublicCard
                   key={t.id}
                   teacherId={t.id}
@@ -103,17 +102,6 @@ export function TeachersBrowseClient({ initialTeachers }: { initialTeachers: Tea
                 />
               ))}
             </div>
-            {filtered.length > 6 ? (
-              <div className="mt-10 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setExpanded((e) => !e)}
-                  className="rounded-lg bg-red-600 px-8 py-3 text-sm font-semibold text-white shadow transition hover:bg-red-700"
-                >
-                  {expanded ? "عرض أقل" : "عرض المزيد من المدرسين"}
-                </button>
-              </div>
-            ) : null}
           </>
         )}
       </div>

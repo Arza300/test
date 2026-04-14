@@ -2,8 +2,14 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { getTeachersFeatureEnabled, getUsersByRole } from "@/lib/db";
+import { ensureTeacherHomepageOrderColumn, getTeachersFeatureEnabled, getUsersByRole } from "@/lib/db";
 import { TeachersAdminClient } from "./TeachersAdminClient";
+
+function normalizeTeacherHomepageOrder(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n) || n < 1 || n > 4) return null;
+  return Math.floor(n);
+}
 
 export default async function TeachersAdminPage() {
   const session = await getServerSession(authOptions);
@@ -12,7 +18,11 @@ export default async function TeachersAdminPage() {
   }
 
   const enabled = await getTeachersFeatureEnabled();
-  const raw = enabled ? await getUsersByRole("TEACHER") : [];
+  let raw: Awaited<ReturnType<typeof getUsersByRole>> = [];
+  if (enabled) {
+    await ensureTeacherHomepageOrderColumn().catch(() => {});
+    raw = await getUsersByRole("TEACHER");
+  }
   const initialTeachers = raw.map((u) => ({
     id: u.id,
     name: u.name,
@@ -20,6 +30,9 @@ export default async function TeachersAdminPage() {
     subject: u.teacher_subject ?? null,
     avatarUrl: u.teacher_avatar_url ?? null,
     phone: u.student_number ?? null,
+    homepageOrder: normalizeTeacherHomepageOrder(
+      (u as { teacher_homepage_order?: unknown }).teacher_homepage_order,
+    ),
   }));
 
   return (

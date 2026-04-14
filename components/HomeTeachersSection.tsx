@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
 import { TeacherPublicCard, type TeacherCardCourse } from "@/components/TeacherPublicCard";
 
 export type HomeTeacher = {
@@ -21,22 +20,8 @@ export function HomeTeachersSection({
   enabled: boolean;
   initialTeachers: HomeTeacher[];
 }) {
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    setExpanded(false);
-  }, [initialTeachers]);
-
-  const sorted = useMemo(() => {
-    const list = [...initialTeachers];
-    list.sort((a, b) => (a.name || "").localeCompare(b.name || "", "ar"));
-    return list;
-  }, [initialTeachers]);
-
-  const visible = useMemo(() => {
-    const n = expanded ? sorted.length : Math.min(6, sorted.length);
-    return sorted.slice(0, n);
-  }, [sorted, expanded]);
+  /** الترتيب يُحدَّد من السيرفر (محددون من لوحة التحكم ثم أبجدي حتى 4). */
+  const visible = initialTeachers;
 
   if (!enabled) return null;
 
@@ -73,7 +58,7 @@ export function HomeTeachersSection({
           </p>
         </div>
 
-        {sorted.length === 0 ? (
+        {visible.length === 0 ? (
           <p className="mt-14 text-center text-slate-600 dark:text-slate-400">
             لا يوجد مدرسون حتى الآن. أنشئ حسابات من لوحة التحكم ← تعدد المدرسين.
           </p>
@@ -92,17 +77,6 @@ export function HomeTeachersSection({
                 />
               ))}
             </div>
-            {sorted.length > 6 ? (
-              <div className="mt-10 flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setExpanded((e) => !e)}
-                  className="rounded-md bg-[#dc2626] px-10 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#b91c1c]"
-                >
-                  {expanded ? "عرض أقل" : "عرض المزيد من المدرسين"}
-                </button>
-              </div>
-            ) : null}
             <div className="mt-8 text-center">
               <Link
                 href="/teachers"

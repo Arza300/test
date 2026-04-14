@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { StoreNetflixSplashOverlay } from "@/components/StoreNetflixSplashOverlay";
 
 type StoreSplashContextValue = {
@@ -34,12 +34,15 @@ export function useStoreSplashOptional() {
 
 export function StoreSplashProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [exiting, setExiting] = useState(false);
   const splashActiveRef = useRef(false);
   const animDoneRef = useRef(false);
   const storeReadyRef = useRef(false);
   const exitingRef = useRef(false);
+  /** وصلنا لمسار المتجر مرةً أثناء هذه الجلسة (لتمييز «رجوع» عن تأخر تحديث المسار عند الفتح) */
+  const reachedStoreDuringSplashRef = useRef(false);
 
   const tryBeginFadeOut = useCallback(() => {
     if (!splashActiveRef.current || exitingRef.current) return;
@@ -54,6 +57,7 @@ export function StoreSplashProvider({ children }: { children: React.ReactNode })
     animDoneRef.current = false;
     storeReadyRef.current = false;
     exitingRef.current = false;
+    reachedStoreDuringSplashRef.current = false;
     setExiting(false);
     setOpen(true);
     router.push("/store");
@@ -76,9 +80,49 @@ export function StoreSplashProvider({ children }: { children: React.ReactNode })
     exitingRef.current = false;
     animDoneRef.current = false;
     storeReadyRef.current = false;
+    reachedStoreDuringSplashRef.current = false;
     setExiting(false);
     setOpen(false);
   }, []);
+
+  const forceCloseSplash = useCallback(() => {
+    splashActiveRef.current = false;
+    exitingRef.current = false;
+    animDoneRef.current = false;
+    storeReadyRef.current = false;
+    reachedStoreDuringSplashRef.current = false;
+    setExiting(false);
+    setOpen(false);
+  }, []);
+
+  /** رجوع/أمام المتصفح: إن لم نعد على /store أغلق الغطاء فوراً (حتى لو لم يُبلّغ المتجر عن الجاهزية) */
+  useEffect(() => {
+    const onPopState = () => {
+      queueMicrotask(() => {
+        if (!splashActiveRef.current) return;
+        const path =
+          typeof window !== "undefined" ? window.location.pathname : "";
+        if (!path.startsWith("/store")) {
+          forceCloseSplash();
+        }
+      });
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [forceCloseSplash]);
+
+  /** تنقل داخل التطبيق بعيداً عن المتجر أثناء بقاء الغطاء (مثلاً رابط) */
+  useEffect(() => {
+    if (!splashActiveRef.current) return;
+    const p = pathname ?? "";
+    if (p.startsWith("/store")) {
+      reachedStoreDuringSplashRef.current = true;
+      return;
+    }
+    if (reachedStoreDuringSplashRef.current) {
+      forceCloseSplash();
+    }
+  }, [pathname, open, forceCloseSplash]);
 
   useEffect(() => {
     if (!open) return;
@@ -88,6 +132,7 @@ export function StoreSplashProvider({ children }: { children: React.ReactNode })
       exitingRef.current = false;
       animDoneRef.current = false;
       storeReadyRef.current = false;
+      reachedStoreDuringSplashRef.current = false;
       setExiting(false);
       setOpen(false);
     }, 15_000);

@@ -8,6 +8,7 @@ import {
   getReviews,
   getHomepageSettings,
   listTeachersForHomepage,
+  selectTeachersForHomepagePreview,
   listActiveSubscriptionPlansPublic,
   listStoreProductsPublic,
   userHasActivePlatformSubscription,
@@ -96,6 +97,11 @@ export default async function HomePage() {
   } catch {
     // جدول التعليقات قد يكون غير موجود بعد — نعرض الصفحة بدون تعليقات
   }
+
+  const teachersHomePreview =
+    teachersForHome.length > 0
+      ? selectTeachersForHomepagePreview(teachersForHome, 4).map(({ homepageOrder: _order, ...row }) => row)
+      : [];
 
   /** تجميع الدورات حسب القسم: كل قسم له قائمة دورات، ودورات بدون قسم في قائمة منفصلة */
   const categoryIdToCourses = new Map<string, CourseWithCategory[]>();
@@ -253,7 +259,7 @@ export default async function HomePage() {
       <div id="home-next-section" className="scroll-mt-20" />
 
       {homepageSettings.teachersEnabled ? (
-        <HomeTeachersSection enabled initialTeachers={teachersForHome} />
+        <HomeTeachersSection enabled initialTeachers={teachersHomePreview} />
       ) : null}
 
       {homepageSettings.teachersEnabled && homepageSettings.subscriptionsEnabled ? (

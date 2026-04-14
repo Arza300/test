@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export type TeacherRow = {
@@ -10,6 +10,7 @@ export type TeacherRow = {
   subject: string | null;
   avatarUrl: string | null;
   phone: string | null;
+  homepageOrder: number | null;
 };
 
 type ApiTeacher = {
@@ -19,7 +20,24 @@ type ApiTeacher = {
   student_number?: string | null;
   teacher_subject?: string | null;
   teacher_avatar_url?: string | null;
+  teacher_homepage_order?: number | null;
 };
+
+function normalizeHomepageOrder(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n) || n < 1 || n > 4) return null;
+  return Math.floor(n);
+}
+
+function slotsFromTeachers(list: TeacherRow[]): [string, string, string, string] {
+  const s: [string, string, string, string] = ["", "", "", ""];
+  for (const t of list) {
+    if (t.homepageOrder != null && t.homepageOrder >= 1 && t.homepageOrder <= 4) {
+      s[t.homepageOrder - 1] = t.id;
+    }
+  }
+  return s;
+}
 
 function mapApiToRows(list: ApiTeacher[]): TeacherRow[] {
   return list.map((t) => ({
@@ -29,6 +47,7 @@ function mapApiToRows(list: ApiTeacher[]): TeacherRow[] {
     subject: t.teacher_subject ?? null,
     avatarUrl: t.teacher_avatar_url ?? null,
     phone: t.student_number ?? null,
+    homepageOrder: normalizeHomepageOrder(t.teacher_homepage_order),
   }));
 }
 
@@ -67,6 +86,15 @@ export function TeachersAdminClient({
   const [editLoading, setEditLoading] = useState(false);
   const [editImageUploading, setEditImageUploading] = useState(false);
   const [editImageError, setEditImageError] = useState("");
+
+  const [featuredSlots, setFeaturedSlots] = useState<[string, string, string, string]>(() =>
+    slotsFromTeachers(initialTeachers),
+  );
+  const [featuredSaveLoading, setFeaturedSaveLoading] = useState(false);
+
+  useEffect(() => {
+    setFeaturedSlots(slotsFromTeachers(teachers));
+  }, [teachers]);
 
   const reloadTeachers = useCallback(async () => {
     const listRes = await fetch("/api/dashboard/teachers", { credentials: "include" });
@@ -234,6 +262,41 @@ export function TeachersAdminClient({
     }
   }
 
+  function onFeaturedSlotChange(index: number, newId: string) {
+    setFeaturedSlots((prev) => {
+      const next: [string, string, string, string] = [...prev] as [string, string, string, string];
+      if (newId) {
+        for (let j = 0; j < 4; j++) {
+          if (j !== index && next[j] === newId) next[j] = "";
+        }
+      }
+      next[index] = newId;
+      return next;
+    });
+  }
+
+  async function saveFeaturedHomepageOrder() {
+    setError("");
+    setSuccess("");
+    setFeaturedSaveLoading(true);
+    const orderedTeacherIds = featuredSlots.map((id) => id.trim()).filter(Boolean);
+    const res = await fetch("/api/dashboard/teachers/homepage-featured", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedTeacherIds }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setFeaturedSaveLoading(false);
+    if (!res.ok) {
+      setError(typeof data.error === "string" ? data.error : "فشل الحفظ");
+      return;
+    }
+    setSuccess("تم حفظ مدرسي الصفحة الرئيسية والترتيب");
+    await reloadTeachers();
+    router.refresh();
+  }
+
   return (
     <div className="space-y-8">
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-[var(--shadow-card)]">
@@ -383,6 +446,54 @@ export function TeachersAdminClient({
 
           <div>
             <h2 className="mb-3 text-lg font-semibold text-[var(--color-foreground)]">المدرسون الحاليون</h2>
+
+            {teachers.length > 0 ? (
+              <div
+                className="mb-6 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]"
+                dir="rtl"
+              >
+                <h3 className="text-base font-semibold text-[var(--color-foreground)]">
+                  من يظهر في الصفحة الرئيسية؟
+                </h3>
+                <p className="mt-2 text-sm text-[var(--color-muted)]">
+                  حدّد حتى أربعة مدرسين وترتيب بطاقات قسم «اختر المدرسين». الموضع 1 يظهر أولاً (يمين الواجهة العربية).
+                  إن تركت كل الخانات فارغة وحفظت، تُعرض أول أربعة أبجدياً. إن اخترت أقل من أربعة، يُكمّل تلقائياً
+                  ببقية المدرسين أبجدياً حتى أربع بطاقات.
+                </p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i}>
+                      <label className="block text-sm font-medium text-[var(--color-foreground)]">
+                        البطاقة {i + 1} في الرئيسية
+                      </label>
+                      <select
+                        value={featuredSlots[i]}
+                        onChange={(e) => onFeaturedSlotChange(i, e.target.value)}
+                        className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)]"
+                      >
+                        <option value="">— بدون اختيار —</option>
+                        {teachers.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    disabled={featuredSaveLoading}
+                    onClick={() => void saveFeaturedHomepageOrder()}
+                    className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-50"
+                  >
+                    {featuredSaveLoading ? "جاري الحفظ…" : "حفظ الظهور في الرئيسية"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <div className="overflow-x-auto rounded-[var(--radius-card)] border border-[var(--color-border)]">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
