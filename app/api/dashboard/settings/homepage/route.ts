@@ -26,6 +26,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "غير مصرح" }, { status: 403 });
   }
   let body: {
+    heroTemplate?: string | null;
     teacherImageUrl?: string | null;
     heroTitle?: string | null;
     heroSlogan?: string | null;
@@ -41,6 +42,13 @@ export async function PUT(request: NextRequest) {
     heroFloatImage1?: string | null;
     heroFloatImage2?: string | null;
     heroFloatImage3?: string | null;
+    heroSliderImage1?: string | null;
+    heroSliderImage2?: string | null;
+    heroSliderImage3?: string | null;
+    heroSliderImage4?: string | null;
+    heroSliderImage5?: string | null;
+    heroSliderIntervalSeconds?: number | null;
+    heroSliderIntervalMs?: number | null;
     footerTitle?: string | null;
     footerTagline?: string | null;
     footerCopyright?: string | null;
@@ -63,6 +71,48 @@ export async function PUT(request: NextRequest) {
       : body.headerLogoUrl && String(body.headerLogoUrl).trim()
         ? String(body.headerLogoUrl).trim().slice(0, 4000)
         : null;
+
+  let hero_template: string | null | undefined;
+  if (body.heroTemplate !== undefined) {
+    const val = body.heroTemplate == null ? "" : String(body.heroTemplate).trim();
+    if (!val) {
+      hero_template = null;
+    } else if (val === "classic" || val === "image_slider" || val === "coming_soon") {
+      hero_template = val;
+    } else {
+      return NextResponse.json({ error: "قيمة قالب الواجهة الرئيسية غير صالحة" }, { status: 400 });
+    }
+  }
+
+  function normalizeSliderImage(input: unknown): string | null {
+    const s = input != null ? String(input).trim() : "";
+    return s ? s.slice(0, 4000) : null;
+  }
+
+  let hero_slider_interval_ms: number | null | undefined;
+  if (body.heroSliderIntervalSeconds !== undefined || body.heroSliderIntervalMs !== undefined) {
+    if (body.heroSliderIntervalSeconds === null || body.heroSliderIntervalMs === null) {
+      hero_slider_interval_ms = null;
+    } else if (body.heroSliderIntervalSeconds !== undefined) {
+      const secondsNum = Number(body.heroSliderIntervalSeconds);
+      if (!Number.isFinite(secondsNum) || secondsNum < 2 || secondsNum > 20) {
+        return NextResponse.json(
+          { error: "مدة التبديل التلقائي يجب أن تكون بين 2 و 20 ثانية" },
+          { status: 400 },
+        );
+      }
+      hero_slider_interval_ms = Math.round(secondsNum * 1000);
+    } else {
+      const num = Number(body.heroSliderIntervalMs);
+      if (!Number.isFinite(num) || num < 1500 || num > 20000) {
+        return NextResponse.json(
+          { error: "مدة التبديل التلقائي يجب أن تكون بين 1500 و 20000 مللي ثانية" },
+          { status: 400 },
+        );
+      }
+      hero_slider_interval_ms = Math.round(num);
+    }
+  }
 
   let primary_color: string | null | undefined;
   if (body.primaryColor !== undefined) {
@@ -110,6 +160,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     await updateHomepageSettings({
+      hero_template,
       teacher_image_url: body.teacherImageUrl !== undefined ? body.teacherImageUrl : undefined,
       hero_title: body.heroTitle !== undefined ? body.heroTitle : undefined,
       hero_slogan: body.heroSlogan !== undefined ? body.heroSlogan : undefined,
@@ -125,6 +176,17 @@ export async function PUT(request: NextRequest) {
       hero_float_image_1: body.heroFloatImage1 !== undefined ? body.heroFloatImage1 : undefined,
       hero_float_image_2: body.heroFloatImage2 !== undefined ? body.heroFloatImage2 : undefined,
       hero_float_image_3: body.heroFloatImage3 !== undefined ? body.heroFloatImage3 : undefined,
+      hero_slider_image_1:
+        body.heroSliderImage1 !== undefined ? normalizeSliderImage(body.heroSliderImage1) : undefined,
+      hero_slider_image_2:
+        body.heroSliderImage2 !== undefined ? normalizeSliderImage(body.heroSliderImage2) : undefined,
+      hero_slider_image_3:
+        body.heroSliderImage3 !== undefined ? normalizeSliderImage(body.heroSliderImage3) : undefined,
+      hero_slider_image_4:
+        body.heroSliderImage4 !== undefined ? normalizeSliderImage(body.heroSliderImage4) : undefined,
+      hero_slider_image_5:
+        body.heroSliderImage5 !== undefined ? normalizeSliderImage(body.heroSliderImage5) : undefined,
+      hero_slider_interval_ms,
       footer_title: body.footerTitle !== undefined ? body.footerTitle : undefined,
       footer_tagline: body.footerTagline !== undefined ? body.footerTagline : undefined,
       footer_copyright: body.footerCopyright !== undefined ? body.footerCopyright : undefined,

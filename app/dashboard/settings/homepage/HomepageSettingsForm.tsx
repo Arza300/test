@@ -22,6 +22,8 @@ const HERO_BG_PRESET_META: { id: HeroBgPreset; label: string }[] = [
   { id: "wine", label: "خمري" },
 ];
 
+type HeroTemplate = "classic" | "image_slider" | "coming_soon";
+
 function initialHeroBgCustom(settings: HomepageSetting): {
   useCustom: boolean;
   from: string;
@@ -42,6 +44,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
   const [success, setSuccess] = useState("");
   const initialHeroBg = initialHeroBgCustom(initialSettings);
   const [form, setForm] = useState({
+    heroTemplate: ((initialSettings.heroTemplate as HeroTemplate) || "classic") as HeroTemplate,
     teacherImageUrl: initialSettings.teacherImageUrl ?? "",
     heroTitle: initialSettings.heroTitle ?? "",
     heroSlogan: initialSettings.heroSlogan ?? "",
@@ -58,6 +61,14 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     heroFloatImage1: initialSettings.heroFloatImage1 ?? "",
     heroFloatImage2: initialSettings.heroFloatImage2 ?? "",
     heroFloatImage3: initialSettings.heroFloatImage3 ?? "",
+    heroSliderImage1: initialSettings.heroSliderImage1 ?? "",
+    heroSliderImage2: initialSettings.heroSliderImage2 ?? "",
+    heroSliderImage3: initialSettings.heroSliderImage3 ?? "",
+    heroSliderImage4: initialSettings.heroSliderImage4 ?? "",
+    heroSliderImage5: initialSettings.heroSliderImage5 ?? "",
+    heroSliderIntervalSeconds: String(
+      Math.min(20, Math.max(2, Math.round((initialSettings.heroSliderIntervalMs ?? 5000) / 1000))),
+    ),
     footerTitle: initialSettings.footerTitle ?? "",
     footerTagline: initialSettings.footerTagline ?? "",
     footerCopyright: initialSettings.footerCopyright ?? "",
@@ -73,6 +84,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState("");
   const [floatImageUploading, setFloatImageUploading] = useState<1 | 2 | 3 | null>(null);
+  const [sliderImageUploading, setSliderImageUploading] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
 
   useEffect(() => {
     if (!success) return;
@@ -112,10 +124,21 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
       if (form.primaryColor.trim() && !primaryNorm) {
         throw new Error("لون المنصة الأساسي يجب أن يكون بصيغة #RRGGBB (مثال: #0ea5e9)");
       }
+      const intervalSecondsRaw = Number(form.heroSliderIntervalSeconds.trim());
+      if (!Number.isFinite(intervalSecondsRaw) || intervalSecondsRaw < 2 || intervalSecondsRaw > 20) {
+        throw new Error("مدة تبديل صور السلايدر يجب أن تكون رقمًا بين 2 و 20 ثانية");
+      }
+      const heroTemplate: HeroTemplate =
+        form.heroTemplate === "classic" ||
+        form.heroTemplate === "image_slider" ||
+        form.heroTemplate === "coming_soon"
+          ? form.heroTemplate
+          : "classic";
       const res = await fetch("/api/dashboard/settings/homepage", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          heroTemplate,
           teacherImageUrl: form.teacherImageUrl.trim() || null,
           heroTitle: form.heroTitle.trim() || null,
           heroSlogan: form.heroSlogan.trim() || null,
@@ -131,6 +154,12 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           heroFloatImage1: form.heroFloatImage1.trim() || null,
           heroFloatImage2: form.heroFloatImage2.trim() || null,
           heroFloatImage3: form.heroFloatImage3.trim() || null,
+          heroSliderImage1: form.heroSliderImage1.trim() || null,
+          heroSliderImage2: form.heroSliderImage2.trim() || null,
+          heroSliderImage3: form.heroSliderImage3.trim() || null,
+          heroSliderImage4: form.heroSliderImage4.trim() || null,
+          heroSliderImage5: form.heroSliderImage5.trim() || null,
+          heroSliderIntervalSeconds: Math.round(intervalSecondsRaw),
           footerTitle: form.footerTitle.trim() || null,
           footerTagline: form.footerTagline.trim() || null,
           footerCopyright: form.footerCopyright.trim() || null,
@@ -179,6 +208,134 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           {success}
         </div>
       )}
+
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <h3 className="mb-2 text-lg font-semibold text-[var(--color-foreground)]">تغيير التصميم العام</h3>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">
+          اختر قالب عرض مقدمة الصفحة الرئيسية (الجزء الكبير في أول الصفحة).
+        </p>
+
+        <div className="space-y-2">
+          <label className="flex cursor-pointer items-start gap-2 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+            <input
+              type="radio"
+              name="heroTemplate"
+              className="mt-1 accent-[var(--color-primary)]"
+              checked={form.heroTemplate === "classic"}
+              onChange={() => setForm((f) => ({ ...f, heroTemplate: "classic" }))}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-[var(--color-foreground)]">القالب الأول (الحالي)</span>
+              <span className="text-xs text-[var(--color-muted)]">النجوم + صورة المدرس + النصوص الحالية</span>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-2 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+            <input
+              type="radio"
+              name="heroTemplate"
+              className="mt-1 accent-[var(--color-primary)]"
+              checked={form.heroTemplate === "image_slider"}
+              onChange={() => setForm((f) => ({ ...f, heroTemplate: "image_slider" }))}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-[var(--color-foreground)]">القالب الثاني (صورة كبيرة/سلايدر)</span>
+              <span className="text-xs text-[var(--color-muted)]">صورة كبيرة في البداية مع تبديل تلقائي + تنقّل يدوي</span>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-2 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-3">
+            <input
+              type="radio"
+              name="heroTemplate"
+              className="mt-1 accent-[var(--color-primary)]"
+              checked={form.heroTemplate === "coming_soon"}
+              onChange={() => setForm((f) => ({ ...f, heroTemplate: "coming_soon" }))}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-[var(--color-foreground)]">القالب الثالث (قريبًا)</span>
+              <span className="text-xs text-[var(--color-muted)]">خيار محجوز الآن، وسيتم تطويره لاحقًا</span>
+            </span>
+          </label>
+        </div>
+
+        {form.heroTemplate === "coming_soon" ? (
+          <p className="mt-3 rounded-[var(--radius-btn)] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+            قالب «قريبًا» غير مفعل في الواجهة الآن، وسيتم عرض القالب الحالي مؤقتًا.
+          </p>
+        ) : null}
+
+        {form.heroTemplate === "image_slider" ? (
+          <div className="mt-4 space-y-4 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <p className="text-sm text-[var(--color-muted)]">
+              أضف من 1 إلى 5 صور. عند إضافة أكثر من صورة، سيعمل التبديل التلقائي بينها.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-foreground)]">مدة التبديل التلقائي (ثواني)</label>
+              <input
+                type="number"
+                min={2}
+                max={20}
+                step={1}
+                value={form.heroSliderIntervalSeconds}
+                onChange={(e) => setForm((f) => ({ ...f, heroSliderIntervalSeconds: e.target.value }))}
+                className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+              />
+            </div>
+            {[1, 2, 3, 4, 5].map((idx) => {
+              const key = `heroSliderImage${idx}` as const;
+              const current = form[key];
+              return (
+                <div key={idx}>
+                  <label className="block text-sm font-medium text-[var(--color-foreground)]">صورة السلايدر {idx}</label>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {current ? (
+                      <img
+                        src={current}
+                        alt={`معاينة صورة السلايدر ${idx}`}
+                        className="h-12 w-16 rounded border border-[var(--color-border)] object-cover"
+                      />
+                    ) : null}
+                    <input
+                      type="text"
+                      value={current}
+                      onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                      placeholder="رابط الصورة أو ارفع من الزر"
+                      className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                    />
+                    <label className="shrink-0 cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-sm font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-primary)]/20 disabled:opacity-50">
+                      {sliderImageUploading === idx ? "جاري الرفع..." : `رفع ${idx}`}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        disabled={sliderImageUploading !== null}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setSliderImageUploading(idx as 1 | 2 | 3 | 4 | 5);
+                          try {
+                            const fd = new FormData();
+                            fd.set("file", f);
+                            const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+                            const data = await res.json().catch(() => ({}));
+                            if (res.ok && data.url) {
+                              setForm((prev) => ({ ...prev, [key]: data.url }));
+                            }
+                          } finally {
+                            setSliderImageUploading(null);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
         <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">صورة المدرس</h3>

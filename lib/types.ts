@@ -71,6 +71,8 @@ export type HeroBgPreset =
   | "wine";
 
 export interface HomepageSetting {
+  /** القالب العام لهيرو الصفحة الرئيسية */
+  heroTemplate?: "classic" | "image_slider" | "coming_soon" | string | null;
   teacherImageUrl: string | null;
   heroTitle: string | null;
   heroSlogan: string | null;
@@ -91,6 +93,14 @@ export interface HomepageSetting {
   heroFloatImage1: string | null;
   heroFloatImage2: string | null;
   heroFloatImage3: string | null;
+  /** صور قالب السلايدر (القالب الثاني) */
+  heroSliderImage1?: string | null;
+  heroSliderImage2?: string | null;
+  heroSliderImage3?: string | null;
+  heroSliderImage4?: string | null;
+  heroSliderImage5?: string | null;
+  /** مدة التبديل التلقائي بالمللي ثانية */
+  heroSliderIntervalMs?: number | null;
   /** عنوان الفوتر (مثلاً: منصتي التعليمية) */
   footerTitle: string | null;
   /** وصف قصير تحت العنوان (مثلاً: تعلم بأسلوب حديث...) */

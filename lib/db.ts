@@ -682,6 +682,7 @@ export async function deleteReview(id: string): Promise<void> {
 
 // ----- HomepageSetting (إعدادات الصفحة الرئيسية) -----
 const HOMEPAGE_DEFAULTS: HomepageSetting = {
+  heroTemplate: "classic",
   teacherImageUrl: "/instructor.png",
   heroTitle: "أستاذ / عصام محي",
   heroSlogan: "ادرسها... يمكن تفهم المعلومة صح!",
@@ -697,6 +698,12 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   heroFloatImage1: "/images/ruler.png",
   heroFloatImage2: "/images/notebook.png",
   heroFloatImage3: "/images/pencil.png",
+  heroSliderImage1: null,
+  heroSliderImage2: null,
+  heroSliderImage3: null,
+  heroSliderImage4: null,
+  heroSliderImage5: null,
+  heroSliderIntervalMs: 5000,
   footerTitle: "منصتي التعليمية",
   footerTagline: "تعلم بأسلوب حديث ومنهجية واضحة",
   footerCopyright: "منصتي التعليمية. جميع الحقوق محفوظة.",
@@ -771,6 +778,21 @@ async function ensureHomepageHeroCustomBgColumns(): Promise<void> {
   try {
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_bg_custom_from TEXT`;
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_bg_custom_to TEXT`;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
+/** قالب الهيرو وصور سلايدر الصورة الكبيرة */
+async function ensureHomepageHeroTemplateColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_template TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_image_1 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_image_2 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_image_3 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_image_4 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_image_5 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_interval_ms INTEGER`;
   } catch {
     /* DDL غير متاح */
   }
@@ -1021,6 +1043,7 @@ export async function getTeacherIdsExcludedFromPublicCourseLists(): Promise<Set<
 
 export async function getHomepageSettings(): Promise<HomepageSetting> {
   try {
+    await ensureHomepageHeroTemplateColumns();
     await ensureHomepageReviewsSectionCopyColumns();
     await ensureHomepageHeroCustomBgColumns();
     await ensureAddBalanceSettingsColumns();
@@ -1037,7 +1060,41 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
     const heroFloat1 = row.hero_float_image_1 != null && String(row.hero_float_image_1).trim() !== "" ? String(row.hero_float_image_1).trim() : null;
     const heroFloat2 = row.hero_float_image_2 != null && String(row.hero_float_image_2).trim() !== "" ? String(row.hero_float_image_2).trim() : null;
     const heroFloat3 = row.hero_float_image_3 != null && String(row.hero_float_image_3).trim() !== "" ? String(row.hero_float_image_3).trim() : null;
+    const sliderImage1 =
+      row.hero_slider_image_1 != null && String(row.hero_slider_image_1).trim() !== ""
+        ? String(row.hero_slider_image_1).trim().slice(0, 4000)
+        : null;
+    const sliderImage2 =
+      row.hero_slider_image_2 != null && String(row.hero_slider_image_2).trim() !== ""
+        ? String(row.hero_slider_image_2).trim().slice(0, 4000)
+        : null;
+    const sliderImage3 =
+      row.hero_slider_image_3 != null && String(row.hero_slider_image_3).trim() !== ""
+        ? String(row.hero_slider_image_3).trim().slice(0, 4000)
+        : null;
+    const sliderImage4 =
+      row.hero_slider_image_4 != null && String(row.hero_slider_image_4).trim() !== ""
+        ? String(row.hero_slider_image_4).trim().slice(0, 4000)
+        : null;
+    const sliderImage5 =
+      row.hero_slider_image_5 != null && String(row.hero_slider_image_5).trim() !== ""
+        ? String(row.hero_slider_image_5).trim().slice(0, 4000)
+        : null;
+    const sliderIntervalRaw =
+      row.hero_slider_interval_ms ??
+      (c as { heroSliderIntervalMs?: unknown }).heroSliderIntervalMs;
+    const sliderIntervalNum = Number(sliderIntervalRaw);
+    const heroSliderIntervalMs =
+      Number.isFinite(sliderIntervalNum) && sliderIntervalNum >= 1500 && sliderIntervalNum <= 20000
+        ? Math.round(sliderIntervalNum)
+        : (HOMEPAGE_DEFAULTS.heroSliderIntervalMs ?? 5000);
     return {
+      heroTemplate: (() => {
+        const raw = row.hero_template ?? (c as { heroTemplate?: unknown }).heroTemplate;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s === "classic" || s === "image_slider" || s === "coming_soon") return s;
+        return HOMEPAGE_DEFAULTS.heroTemplate ?? "classic";
+      })(),
       teacherImageUrl: (c.teacherImageUrl as string) ?? HOMEPAGE_DEFAULTS.teacherImageUrl,
       heroTitle: (c.heroTitle as string) ?? HOMEPAGE_DEFAULTS.heroTitle,
       heroSlogan: (c.heroSlogan as string) ?? HOMEPAGE_DEFAULTS.heroSlogan,
@@ -1075,6 +1132,12 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       heroFloatImage1: heroFloat1 ?? HOMEPAGE_DEFAULTS.heroFloatImage1,
       heroFloatImage2: heroFloat2 ?? HOMEPAGE_DEFAULTS.heroFloatImage2,
       heroFloatImage3: heroFloat3 ?? HOMEPAGE_DEFAULTS.heroFloatImage3,
+      heroSliderImage1: sliderImage1,
+      heroSliderImage2: sliderImage2,
+      heroSliderImage3: sliderImage3,
+      heroSliderImage4: sliderImage4,
+      heroSliderImage5: sliderImage5,
+      heroSliderIntervalMs,
       footerTitle: (c.footerTitle as string) ?? HOMEPAGE_DEFAULTS.footerTitle,
       footerTagline: (c.footerTagline as string) ?? HOMEPAGE_DEFAULTS.footerTagline,
       footerCopyright: (c.footerCopyright as string) ?? HOMEPAGE_DEFAULTS.footerCopyright,
@@ -1184,6 +1247,7 @@ function pickReviewsSectionString(
 }
 
 export async function updateHomepageSettings(data: {
+  hero_template?: string | null;
   teacher_image_url?: string | null;
   hero_title?: string | null;
   hero_slogan?: string | null;
@@ -1199,6 +1263,12 @@ export async function updateHomepageSettings(data: {
   hero_float_image_1?: string | null;
   hero_float_image_2?: string | null;
   hero_float_image_3?: string | null;
+  hero_slider_image_1?: string | null;
+  hero_slider_image_2?: string | null;
+  hero_slider_image_3?: string | null;
+  hero_slider_image_4?: string | null;
+  hero_slider_image_5?: string | null;
+  hero_slider_interval_ms?: number | null;
   footer_title?: string | null;
   footer_tagline?: string | null;
   footer_copyright?: string | null;
@@ -1223,12 +1293,16 @@ export async function updateHomepageSettings(data: {
   add_balance_whatsapp_button_text?: string | null;
   add_balance_waiting_note?: string | null;
 }): Promise<void> {
+  await ensureHomepageHeroTemplateColumns();
   await ensureHomepageReviewsSectionCopyColumns();
   await ensureHomepageHeroCustomBgColumns();
   await ensureAddBalanceSettingsColumns();
   await ensureHomepagePrimaryColorColumn();
   await ensureHomepageHeaderLogoColumn();
   await ensureHomepageCtaCopyColumns();
+  if (data.hero_template !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_template = ${data.hero_template}, updated_at = NOW() WHERE id = 'default'`;
+  }
   if (data.teacher_image_url !== undefined) {
     await sql`UPDATE "HomepageSetting" SET teacher_image_url = ${data.teacher_image_url}, updated_at = NOW() WHERE id = 'default'`;
   }
@@ -1273,6 +1347,24 @@ export async function updateHomepageSettings(data: {
   }
   if (data.hero_float_image_3 !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_float_image_3 = ${data.hero_float_image_3}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_image_1 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_image_1 = ${data.hero_slider_image_1}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_image_2 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_image_2 = ${data.hero_slider_image_2}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_image_3 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_image_3 = ${data.hero_slider_image_3}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_image_4 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_image_4 = ${data.hero_slider_image_4}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_image_5 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_image_5 = ${data.hero_slider_image_5}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_interval_ms !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_interval_ms = ${data.hero_slider_interval_ms}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.footer_title !== undefined) {
     await sql`UPDATE "HomepageSetting" SET footer_title = ${data.footer_title}, updated_at = NOW() WHERE id = 'default'`;
