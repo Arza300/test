@@ -16,6 +16,7 @@ export async function PATCH(
     title?: string;
     description?: string;
     price?: number;
+    costPrice?: number;
     imageUrl?: string | null;
     pdfUrl?: string | null;
     isActive?: boolean;
@@ -26,10 +27,19 @@ export async function PATCH(
     return NextResponse.json({ error: "طلب غير صالح" }, { status: 400 });
   }
   try {
+    let cost_price: number | undefined;
+    if (body.costPrice !== undefined) {
+      const c = Number(body.costPrice);
+      if (!Number.isFinite(c) || c < 0) {
+        return NextResponse.json({ error: "تكلفة الوحدة غير صالحة" }, { status: 400 });
+      }
+      cost_price = c;
+    }
     await updateStoreProduct(id, {
       title: body.title,
       description: body.description,
       price: body.price,
+      cost_price,
       image_url: body.imageUrl,
       pdf_url: body.pdfUrl,
       is_active: body.isActive,

@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
     title?: string;
     description?: string;
     price?: number;
+    costPrice?: number;
     imageUrl?: string | null;
     pdfUrl?: string | null;
     isActive?: boolean;
@@ -40,6 +41,11 @@ export async function POST(request: NextRequest) {
   if (!Number.isFinite(price) || price < 0) {
     return NextResponse.json({ error: "سعر غير صالح" }, { status: 400 });
   }
+  const costRaw = body.costPrice;
+  const costPrice = costRaw === undefined || costRaw === null ? 0 : Number(costRaw);
+  if (!Number.isFinite(costPrice) || costPrice < 0) {
+    return NextResponse.json({ error: "تكلفة الوحدة غير صالحة" }, { status: 400 });
+  }
   const pdfUrl = String(body.pdfUrl ?? "").trim();
   if (!pdfUrl) {
     return NextResponse.json({ error: "رابط ملف PDF إجباري" }, { status: 400 });
@@ -50,6 +56,7 @@ export async function POST(request: NextRequest) {
       title,
       description: String(body.description ?? ""),
       price,
+      cost_price: costPrice,
       image_url: body.imageUrl ?? null,
       pdf_url: pdfUrl,
       is_active: body.isActive !== false,

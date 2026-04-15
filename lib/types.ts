@@ -50,18 +50,43 @@ export interface Review {
   updatedAt: Date;
 }
 
-/** مفتاح لون خلفية الهيرو (وراء صورة المدرس) — قيم صالحة: navy | indigo | purple | teal | forest | slate */
-export type HeroBgPreset = "navy" | "indigo" | "purple" | "teal" | "forest" | "slate";
+/**
+ * مفتاح تدرج خلفية الهيرو الجاهز (وراء صورة المدرس).
+ * عند تعبئة heroBgCustomFrom و heroBgCustomTo بصيغة hex صالحة يُستخدم التدرج المخصّص بدلاً من المفتاح.
+ */
+export type HeroBgPreset =
+  | "navy"
+  | "indigo"
+  | "purple"
+  | "teal"
+  | "forest"
+  | "slate"
+  | "crimson"
+  | "rose"
+  | "sunset"
+  | "sky"
+  | "cyan"
+  | "stone"
+  | "midnight"
+  | "wine";
 
 export interface HomepageSetting {
   teacherImageUrl: string | null;
   heroTitle: string | null;
   heroSlogan: string | null;
   platformName: string | null;
+  /** لوجو الهيدر (URL) — يظهر بجانب اسم المنصة */
+  headerLogoUrl?: string | null;
+  /** لون المنصة الأساسي (#RRGGBB) — عند null يُستخدم الافتراضي من CSS */
+  primaryColor?: string | null;
   whatsappUrl: string | null;
   facebookUrl: string | null;
   pageTitle: string | null;
   heroBgPreset: HeroBgPreset | string | null;
+  /** لون أعلى التدرج المخصّص (#RRGGBB) — يُستخدم مع heroBgCustomTo عند صلاحيتهما */
+  heroBgCustomFrom?: string | null;
+  /** لون أسفل التدرج المخصّص (#RRGGBB) */
+  heroBgCustomTo?: string | null;
   /** روابط الصور الصغيرة العائمة حول صورة المدرس (1: يسار أعلى، 2: يمين أسفل، 3: أسفل يسار) */
   heroFloatImage1: string | null;
   heroFloatImage2: string | null;
@@ -82,6 +107,10 @@ export interface HomepageSetting {
   subscriptionsEnabled?: boolean;
   /** عند true يظهر قسم متجر المنصة في الصفحة الرئيسية */
   storeEnabled?: boolean;
+  /** عنوان قسم المتجر في الصفحة الرئيسية (عند null أو فارغ يُستخدم الافتراضي) */
+  storeSectionTitle?: string | null;
+  /** وصف قسم المتجر في الصفحة الرئيسية */
+  storeSectionDescription?: string | null;
   /** عنوان صفحة إضافة الرصيد للطالب */
   addBalanceTitle?: string | null;
   /** وصف أعلى صفحة إضافة الرصيد */
@@ -107,6 +136,8 @@ export interface StoreProduct {
   title: string;
   description: string;
   price: number;
+  /** تكلفة الوحدة للأدمن — للإحصائيات فقط، لا تُعرض للطلاب في المتجر العام */
+  costPrice: number;
   imageUrl: string | null;
   pdfUrl: string | null;
   isActive: boolean;

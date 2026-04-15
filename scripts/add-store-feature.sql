@@ -1,4 +1,6 @@
 ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS store_enabled BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS store_section_title TEXT;
+ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS store_section_description TEXT;
 
 CREATE TABLE IF NOT EXISTS "StoreProduct" (
   id TEXT PRIMARY KEY,
@@ -14,3 +16,5 @@ CREATE TABLE IF NOT EXISTS "StoreProduct" (
 );
 
 CREATE INDEX IF NOT EXISTS "StoreProduct_active_sort_idx" ON "StoreProduct"(is_active, sort_order, created_at DESC);
+
+ALTER TABLE "StoreProduct" ADD COLUMN IF NOT EXISTS cost_price DECIMAL(10, 2) NOT NULL DEFAULT 0;

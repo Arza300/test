@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { StoreProduct } from "@/lib/types";
 
@@ -20,15 +20,30 @@ type SalesStats = {
   buyersCount: number;
   soldProductsCount: number;
   revenue: number;
+  totalCost: number;
+  totalProfit: number;
+  profitMarginPercent: number | null;
+  byProduct: {
+    productId: string;
+    productTitle: string;
+    unitsSold: number;
+    revenue: number;
+    costTotal: number;
+    profit: number;
+  }[];
 };
 
 export function StoreAdminClient({
   initialEnabled,
+  initialHomeStoreTitle,
+  initialHomeStoreDescription,
   initialProducts,
   initialPurchases,
   initialStats,
 }: {
   initialEnabled: boolean;
+  initialHomeStoreTitle: string;
+  initialHomeStoreDescription: string;
   initialProducts: StoreProduct[];
   initialPurchases: AdminPurchaseRow[];
   initialStats: SalesStats;
@@ -44,6 +59,7 @@ export function StoreAdminClient({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [costPrice, setCostPrice] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [pdfUrl, setPdfUrl] = useState("");
   const [imageUploading, setImageUploading] = useState(false);
@@ -53,10 +69,19 @@ export function StoreAdminClient({
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editPrice, setEditPrice] = useState("");
+  const [editCostPrice, setEditCostPrice] = useState("");
   const [editImageUrl, setEditImageUrl] = useState("");
   const [editPdfUrl, setEditPdfUrl] = useState("");
   const [editImageUploading, setEditImageUploading] = useState(false);
   const [editImageError, setEditImageError] = useState("");
+  const [homeStoreTitle, setHomeStoreTitle] = useState(initialHomeStoreTitle);
+  const [homeStoreDescription, setHomeStoreDescription] = useState(initialHomeStoreDescription);
+  const [homeCopySaving, setHomeCopySaving] = useState(false);
+
+  useEffect(() => {
+    setHomeStoreTitle(initialHomeStoreTitle);
+    setHomeStoreDescription(initialHomeStoreDescription);
+  }, [initialHomeStoreTitle, initialHomeStoreDescription]);
 
   const reload = useCallback(async () => {
     const res = await fetch("/api/dashboard/store-products", { credentials: "include" });
@@ -90,13 +115,44 @@ export function StoreAdminClient({
     router.refresh();
   }
 
+  async function saveHomeStoreCopy(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    const t = homeStoreTitle.trim();
+    if (!t) {
+      setError("أدخل عنوانًا لقسم المتجر في الصفحة الرئيسية");
+      return;
+    }
+    setHomeCopySaving(true);
+    const res = await fetch("/api/dashboard/settings/store-home-section", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: t,
+        description: homeStoreDescription.trim(),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setHomeCopySaving(false);
+    if (!res.ok) return setError(data.error ?? "فشل حفظ النصوص");
+    setSuccess("تم حفظ عنوان ووصف قسم المتجر في الصفحة الرئيسية");
+    router.refresh();
+  }
+
   async function createProduct(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setSuccess("");
     const p = Number(price);
+    const cRaw = costPrice.trim() === "" ? 0 : Number(costPrice);
     if (!title.trim() || !Number.isFinite(p) || p < 0) {
       setError("أدخل اسم المنتج وسعرًا صحيحًا");
+      return;
+    }
+    if (!Number.isFinite(cRaw) || cRaw < 0) {
+      setError("أدخل تكلفة وحدة صحيحة أو اتركها فارغة (تُحسب كصفر)");
       return;
     }
     if (!pdfUrl.trim()) {
@@ -112,6 +168,7 @@ export function StoreAdminClient({
         title: title.trim(),
         description: description.trim(),
         price: p,
+        costPrice: cRaw,
         imageUrl: imageUrl.trim() || null,
         pdfUrl: pdfUrl.trim() || null,
       }),
@@ -123,6 +180,7 @@ export function StoreAdminClient({
     setTitle("");
     setDescription("");
     setPrice("");
+    setCostPrice("");
     setImageUrl("");
     setPdfUrl("");
     await reload();
@@ -154,6 +212,7 @@ export function StoreAdminClient({
     setEditTitle(row.title);
     setEditDescription(row.description ?? "");
     setEditPrice(String(Number(row.price)));
+    setEditCostPrice(String(Number(row.costPrice ?? 0)));
     setEditImageUrl(row.imageUrl ?? "");
     setEditPdfUrl(row.pdfUrl ?? "");
     setEditImageError("");
@@ -164,6 +223,7 @@ export function StoreAdminClient({
     setEditTitle("");
     setEditDescription("");
     setEditPrice("");
+    setEditCostPrice("");
     setEditImageUrl("");
     setEditPdfUrl("");
     setEditImageError("");
@@ -193,8 +253,13 @@ export function StoreAdminClient({
     setError("");
     setSuccess("");
     const p = Number(editPrice);
+    const ec = editCostPrice.trim() === "" ? 0 : Number(editCostPrice);
     if (!editTitle.trim() || !Number.isFinite(p) || p < 0) {
       setError("أدخل اسم المنتج وسعرًا صحيحًا");
+      return;
+    }
+    if (!Number.isFinite(ec) || ec < 0) {
+      setError("أدخل تكلفة وحدة صحيحة أو اتركها فارغة (تُحسب كصفر)");
       return;
     }
     if (!editPdfUrl.trim()) {
@@ -210,6 +275,7 @@ export function StoreAdminClient({
         title: editTitle.trim(),
         description: editDescription.trim(),
         price: p,
+        costPrice: ec,
         imageUrl: editImageUrl.trim() || null,
         pdfUrl: editPdfUrl.trim() || null,
       }),
@@ -267,8 +333,33 @@ export function StoreAdminClient({
     <div className="space-y-8">
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
         <h2 className="text-xl font-bold text-[var(--color-foreground)]">متجر المنصة</h2>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">إضافة ملازم وكتب PDF وبيعها للطلاب عبر صفحة رئيسية حديثة.</p>
-        <div className="mt-4 flex items-center gap-3">
+        <p className="mt-2 text-sm text-[var(--color-muted)]">
+          إضافة ملازم وكتب PDF وبيعها للطلاب. النصوص التالية تظهر في بطاقة المتجر على الصفحة الرئيسية عند تفعيل المتجر ووجود منتجات.
+        </p>
+        <form onSubmit={(e) => void saveHomeStoreCopy(e)} className="mt-5 space-y-3 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+          <p className="text-sm font-semibold text-[var(--color-foreground)]">الظهور في الصفحة الرئيسية</p>
+          <input
+            value={homeStoreTitle}
+            onChange={(e) => setHomeStoreTitle(e.target.value)}
+            placeholder="عنوان قسم المتجر"
+            className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+          />
+          <textarea
+            value={homeStoreDescription}
+            onChange={(e) => setHomeStoreDescription(e.target.value)}
+            placeholder="وصف قسم المتجر"
+            rows={4}
+            className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={homeCopySaving}
+            className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {homeCopySaving ? "جاري الحفظ..." : "حفظ العنوان والوصف للرئيسية"}
+          </button>
+        </form>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <button disabled={loading || enabled} onClick={() => void patchEnabled(true)} className="rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50">تفعيل الميزة</button>
           <button disabled={loading || !enabled} onClick={() => void patchEnabled(false)} className="rounded-[var(--radius-btn)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium">إيقاف الميزة</button>
           <span className="text-sm text-[var(--color-muted)]">الحالة: {enabled ? "مفعلة" : "متوقفة"}</span>
@@ -294,6 +385,61 @@ export function StoreAdminClient({
         <div className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <p className="text-xs text-[var(--color-muted)]">إجمالي إيراد المتجر</p>
           <p className="mt-1 text-2xl font-bold text-[var(--color-primary)]">{stats.revenue.toFixed(2)} ج.م</p>
+        </div>
+      </div>
+
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <h3 className="text-lg font-semibold text-[var(--color-foreground)]">أرباح منتجات المتجر</h3>
+        <p className="mt-2 text-sm text-[var(--color-muted)]">
+          يُحسب الربح من الفرق بين السعر المدفوع فعليًا وتكلفة الوحدة المسجّلة لكل منتج. اشتراكات الطلاب النشطة تُسجّل غالبًا بسعر مدفوع 0.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <p className="text-xs text-[var(--color-muted)]">إجمالي تكلفة الوحدات المباعة</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--color-foreground)]">{stats.totalCost.toFixed(2)} ج.م</p>
+          </div>
+          <div className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <p className="text-xs text-[var(--color-muted)]">إجمالي الربح التقديري</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-500">{stats.totalProfit.toFixed(2)} ج.م</p>
+          </div>
+          <div className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <p className="text-xs text-[var(--color-muted)]">هامش الربح على الإيراد</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--color-foreground)]">
+              {stats.profitMarginPercent === null ? "—" : `${stats.profitMarginPercent.toFixed(1)}%`}
+            </p>
+          </div>
+        </div>
+        <div className="mt-6 overflow-x-auto">
+          <table className="min-w-full text-right text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-[var(--color-muted)]">
+                <th className="px-3 py-2 font-medium">المنتج</th>
+                <th className="px-3 py-2 font-medium">القطع المباعة</th>
+                <th className="px-3 py-2 font-medium">إيراد</th>
+                <th className="px-3 py-2 font-medium">تكلفة</th>
+                <th className="px-3 py-2 font-medium">ربح</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.byProduct.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-[var(--color-muted)]">
+                    لا مبيعات بعد — أو لم تُسجَّل تكاليف للمنتجات.
+                  </td>
+                </tr>
+              ) : (
+                stats.byProduct.map((row) => (
+                  <tr key={row.productId} className="border-b border-[var(--color-border)]/60">
+                    <td className="px-3 py-2 font-medium text-[var(--color-foreground)]">{row.productTitle}</td>
+                    <td className="px-3 py-2">{row.unitsSold}</td>
+                    <td className="px-3 py-2">{row.revenue.toFixed(2)} ج.م</td>
+                    <td className="px-3 py-2 text-[var(--color-muted)]">{row.costTotal.toFixed(2)} ج.م</td>
+                    <td className="px-3 py-2 font-medium text-emerald-600">{row.profit.toFixed(2)} ج.م</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -335,6 +481,18 @@ export function StoreAdminClient({
             className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
           />
           <p className="mt-1 text-xs text-[var(--color-muted)]">يُقبل أرقام فقط، والسعر بالجنيه المصري.</p>
+        </div>
+        <div>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={costPrice}
+            onChange={(e) => setCostPrice(e.target.value)}
+            placeholder="تكلفة الوحدة (اختياري — للإحصائيات)"
+            className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+          />
+          <p className="mt-1 text-xs text-[var(--color-muted)]">تُستخدم في حساب الربح لكل عملية بيع (تكلفة الطباعة/التوزيع وغيرها).</p>
         </div>
         <input
           required
@@ -386,6 +544,15 @@ export function StoreAdminClient({
               className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
             />
             <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={editCostPrice}
+              onChange={(e) => setEditCostPrice(e.target.value)}
+              placeholder="تكلفة الوحدة (للإحصائيات)"
+              className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
+            />
+            <input
               required
               value={editPdfUrl}
               onChange={(e) => setEditPdfUrl(e.target.value)}
@@ -404,6 +571,7 @@ export function StoreAdminClient({
               <p className="font-semibold">{p.title}</p>
               <p className="mt-1 text-sm text-[var(--color-muted)] line-clamp-2">{p.description}</p>
               <p className="mt-2 text-sm">{Number(p.price).toFixed(2)} ج.م</p>
+              <p className="mt-1 text-xs text-[var(--color-muted)]">تكلفة الوحدة: {Number(p.costPrice ?? 0).toFixed(2)} ج.م</p>
               <div className="mt-3 flex gap-3 text-sm">
                 <button onClick={() => startEdit(p)} className="underline text-amber-500">تعديل</button>
                 <button onClick={() => void toggleActive(p, !p.isActive)} className="underline text-[var(--color-primary)]">{p.isActive ? "إخفاء" : "تفعيل"}</button>

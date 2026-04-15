@@ -15,6 +15,7 @@ import {
   userHasActivePlatformSubscription,
   getLatestPlatformSubscriptionExpiry,
 } from "@/lib/db";
+import { normalizeHeroHex } from "@/lib/hero-bg";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -45,12 +46,16 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   let platformName: string | null = null;
+  let headerLogoUrl: string | null = null;
+  let platformPrimaryColor: string | null = null;
   let footerTitle = DEFAULT_FOOTER_TITLE;
   let footerTagline = DEFAULT_FOOTER_TAGLINE;
   let footerCopyright = DEFAULT_FOOTER_COPYRIGHT;
   try {
     const settings = await getHomepageSettings();
     platformName = settings.platformName;
+    headerLogoUrl = settings.headerLogoUrl ?? null;
+    platformPrimaryColor = normalizeHeroHex(String(settings.primaryColor ?? "")) ?? null;
     if (settings.footerTitle?.trim()) footerTitle = settings.footerTitle.trim();
     if (settings.footerTagline?.trim()) footerTagline = settings.footerTagline.trim();
     if (settings.footerCopyright?.trim()) footerCopyright = settings.footerCopyright.trim();
@@ -91,10 +96,18 @@ export default async function RootLayout({
             __html: `(function(){var t=localStorage.getItem("theme");document.documentElement.classList.add(t==="light"?"light":"dark");})();`,
           }}
         />
+        {platformPrimaryColor ? (
+          <style
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{
+              __html: `:root{--platform-primary:${platformPrimaryColor};}`,
+            }}
+          />
+        ) : null}
         </head>
       <body className={`${outfit.variable} font-sans antialiased min-h-screen flex flex-col`}>
         <NextTopLoader
-          color="#0d9488"
+          color={platformPrimaryColor ?? "#0d9488"}
           height={3}
           showSpinner={false}
           easing="ease"
@@ -107,6 +120,7 @@ export default async function RootLayout({
           <ForceLogoutGuard />
           <Header
             platformName={platformName}
+            headerLogoUrl={headerLogoUrl}
             platformSubscriptionExpiryLabel={platformSubscriptionExpiryLabel}
           />
           <main className="flex-1">{children}</main>

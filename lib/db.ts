@@ -686,10 +686,14 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   heroTitle: "أستاذ / عصام محي",
   heroSlogan: "ادرسها... يمكن تفهم المعلومة صح!",
   platformName: "منصة أستاذ عصام محي",
+  headerLogoUrl: null,
+  primaryColor: null,
   whatsappUrl: "https://wa.me/966553612356",
   facebookUrl: "https://www.facebook.com/profile.php?id=61562686209159",
   pageTitle: "منصتي التعليمية | دورات وتعلم أونلاين",
   heroBgPreset: "navy",
+  heroBgCustomFrom: null,
+  heroBgCustomTo: null,
   heroFloatImage1: "/images/ruler.png",
   heroFloatImage2: "/images/notebook.png",
   heroFloatImage3: "/images/pencil.png",
@@ -701,6 +705,9 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   teachersEnabled: false,
   subscriptionsEnabled: false,
   storeEnabled: false,
+  storeSectionTitle: "متجر المنصة",
+  storeSectionDescription:
+    "مرحبًا بك في متجر المنصة الذي يضم ملازم وكتب في غاية الأهمية. اختر ما يناسبك من المواد الرقمية التعليمية واستفد من محتوى مُنظّم يدعم رحلتك الدراسية.",
   addBalanceTitle: "إضافة رصيد",
   addBalanceSubtitle: "اختر طريقة الدفع ثم اتبع التعليمات",
   addBalanceMethodTitle: "فودافون كاش",
@@ -724,6 +731,34 @@ async function ensureHomepageReviewsSectionCopyColumns(): Promise<void> {
   }
 }
 
+/** لون المنصة الأساسي (hex) */
+async function ensureHomepagePrimaryColorColumn(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS primary_color TEXT`;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
+/** لوجو الهيدر */
+async function ensureHomepageHeaderLogoColumn(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS header_logo_url TEXT`;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
+/** تدرج لوني مخصّص للهيرو (لونان hex) */
+async function ensureHomepageHeroCustomBgColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_bg_custom_from TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_bg_custom_to TEXT`;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
 /** يضمن وجود عمود teachers_enabled إن كان جدول HomepageSetting موجوداً ولم يُشغَّل سكربت SQL بعد */
 async function ensureHomepageTeachersEnabledColumn(): Promise<void> {
   try {
@@ -744,6 +779,16 @@ async function ensureHomepageSubscriptionsEnabledColumn(): Promise<void> {
 async function ensureHomepageStoreEnabledColumn(): Promise<void> {
   try {
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS store_enabled BOOLEAN NOT NULL DEFAULT false`;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
+/** عنوان ووصف قسم المتجر في الصفحة الرئيسية */
+async function ensureHomepageStoreSectionCopyColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS store_section_title TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS store_section_description TEXT`;
   } catch {
     /* DDL غير متاح */
   }
@@ -960,8 +1005,12 @@ export async function getTeacherIdsExcludedFromPublicCourseLists(): Promise<Set<
 export async function getHomepageSettings(): Promise<HomepageSetting> {
   try {
     await ensureHomepageReviewsSectionCopyColumns();
+    await ensureHomepageHeroCustomBgColumns();
     await ensureAddBalanceSettingsColumns();
     await ensureHomepageStoreEnabledColumn();
+    await ensureHomepageStoreSectionCopyColumns();
+    await ensureHomepagePrimaryColorColumn();
+    await ensureHomepageHeaderLogoColumn();
     const rows = await sql`SELECT * FROM "HomepageSetting" WHERE id = 'default' LIMIT 1`;
     const row = rows[0] as Record<string, unknown> | undefined;
     if (!row) return HOMEPAGE_DEFAULTS;
@@ -974,12 +1023,37 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       teacherImageUrl: (c.teacherImageUrl as string) ?? HOMEPAGE_DEFAULTS.teacherImageUrl,
       heroTitle: (c.heroTitle as string) ?? HOMEPAGE_DEFAULTS.heroTitle,
       heroSlogan: (c.heroSlogan as string) ?? HOMEPAGE_DEFAULTS.heroSlogan,
-      platformName: (c.platformName as string) ?? HOMEPAGE_DEFAULTS.platformName,
+      platformName:
+        row.platform_name != null && String(row.platform_name).trim() !== ""
+          ? String(row.platform_name).trim()
+          : null,
+      headerLogoUrl: (() => {
+        const raw =
+          row.header_logo_url ?? (c as { headerLogoUrl?: unknown }).headerLogoUrl;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 4000) : null;
+      })(),
+      primaryColor: (() => {
+        const raw = row.primary_color ?? (c as { primaryColor?: unknown }).primaryColor;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 16) : null;
+      })(),
       /* لا نستخدم الافتراضي عند الحذف — لو القيمة null أو فارغة نرجع null حتى يختفي الزر */
       whatsappUrl: c.whatsappUrl != null && String(c.whatsappUrl).trim() !== "" ? String(c.whatsappUrl).trim() : null,
       facebookUrl: c.facebookUrl != null && String(c.facebookUrl).trim() !== "" ? String(c.facebookUrl).trim() : null,
       pageTitle: (c.pageTitle as string) ?? HOMEPAGE_DEFAULTS.pageTitle,
       heroBgPreset: (c.heroBgPreset as string) ?? HOMEPAGE_DEFAULTS.heroBgPreset,
+      heroBgCustomFrom: (() => {
+        const raw =
+          row.hero_bg_custom_from ?? (c as { heroBgCustomFrom?: unknown }).heroBgCustomFrom;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 16) : null;
+      })(),
+      heroBgCustomTo: (() => {
+        const raw = row.hero_bg_custom_to ?? (c as { heroBgCustomTo?: unknown }).heroBgCustomTo;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 16) : null;
+      })(),
       heroFloatImage1: heroFloat1 ?? HOMEPAGE_DEFAULTS.heroFloatImage1,
       heroFloatImage2: heroFloat2 ?? HOMEPAGE_DEFAULTS.heroFloatImage2,
       heroFloatImage3: heroFloat3 ?? HOMEPAGE_DEFAULTS.heroFloatImage3,
@@ -1012,6 +1086,21 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
         (row as { store_enabled?: boolean }).store_enabled ??
           (c as { storeEnabled?: boolean }).storeEnabled,
       ),
+      storeSectionTitle: pickReviewsSectionString(
+        row,
+        c,
+        "store_section_title",
+        "storeSectionTitle",
+        HOMEPAGE_DEFAULTS.storeSectionTitle ?? "متجر المنصة",
+      ),
+      storeSectionDescription: (() => {
+        const raw =
+          row.store_section_description ??
+          (c as { storeSectionDescription?: unknown }).storeSectionDescription;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 2000);
+        return HOMEPAGE_DEFAULTS.storeSectionDescription ?? null;
+      })(),
       addBalanceTitle: (c.addBalanceTitle as string) ?? HOMEPAGE_DEFAULTS.addBalanceTitle,
       addBalanceSubtitle:
         (c.addBalanceSubtitle as string) ?? HOMEPAGE_DEFAULTS.addBalanceSubtitle,
@@ -1057,10 +1146,14 @@ export async function updateHomepageSettings(data: {
   hero_title?: string | null;
   hero_slogan?: string | null;
   platform_name?: string | null;
+  header_logo_url?: string | null;
+  primary_color?: string | null;
   whatsapp_url?: string | null;
   facebook_url?: string | null;
   page_title?: string | null;
   hero_bg_preset?: string | null;
+  hero_bg_custom_from?: string | null;
+  hero_bg_custom_to?: string | null;
   hero_float_image_1?: string | null;
   hero_float_image_2?: string | null;
   hero_float_image_3?: string | null;
@@ -1072,6 +1165,8 @@ export async function updateHomepageSettings(data: {
   teachers_enabled?: boolean;
   subscriptions_enabled?: boolean;
   store_enabled?: boolean;
+  store_section_title?: string | null;
+  store_section_description?: string | null;
   add_balance_title?: string | null;
   add_balance_subtitle?: string | null;
   add_balance_method_title?: string | null;
@@ -1083,7 +1178,10 @@ export async function updateHomepageSettings(data: {
   add_balance_waiting_note?: string | null;
 }): Promise<void> {
   await ensureHomepageReviewsSectionCopyColumns();
+  await ensureHomepageHeroCustomBgColumns();
   await ensureAddBalanceSettingsColumns();
+  await ensureHomepagePrimaryColorColumn();
+  await ensureHomepageHeaderLogoColumn();
   if (data.teacher_image_url !== undefined) {
     await sql`UPDATE "HomepageSetting" SET teacher_image_url = ${data.teacher_image_url}, updated_at = NOW() WHERE id = 'default'`;
   }
@@ -1096,6 +1194,12 @@ export async function updateHomepageSettings(data: {
   if (data.platform_name !== undefined) {
     await sql`UPDATE "HomepageSetting" SET platform_name = ${data.platform_name}, updated_at = NOW() WHERE id = 'default'`;
   }
+  if (data.header_logo_url !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET header_logo_url = ${data.header_logo_url}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.primary_color !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET primary_color = ${data.primary_color}, updated_at = NOW() WHERE id = 'default'`;
+  }
   if (data.whatsapp_url !== undefined) {
     await sql`UPDATE "HomepageSetting" SET whatsapp_url = ${data.whatsapp_url}, updated_at = NOW() WHERE id = 'default'`;
   }
@@ -1107,6 +1211,12 @@ export async function updateHomepageSettings(data: {
   }
   if (data.hero_bg_preset !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_bg_preset = ${data.hero_bg_preset}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_bg_custom_from !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_bg_custom_from = ${data.hero_bg_custom_from}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_bg_custom_to !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_bg_custom_to = ${data.hero_bg_custom_to}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.hero_float_image_1 !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_float_image_1 = ${data.hero_float_image_1}, updated_at = NOW() WHERE id = 'default'`;
@@ -1161,6 +1271,14 @@ export async function updateHomepageSettings(data: {
         store_enabled = EXCLUDED.store_enabled,
         updated_at = NOW()
     `;
+  }
+  if (data.store_section_title !== undefined) {
+    await ensureHomepageStoreSectionCopyColumns();
+    await sql`UPDATE "HomepageSetting" SET store_section_title = ${data.store_section_title}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.store_section_description !== undefined) {
+    await ensureHomepageStoreSectionCopyColumns();
+    await sql`UPDATE "HomepageSetting" SET store_section_description = ${data.store_section_description}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.add_balance_title !== undefined) {
     await sql`UPDATE "HomepageSetting" SET add_balance_title = ${data.add_balance_title}, updated_at = NOW() WHERE id = 'default'`;
@@ -1294,6 +1412,7 @@ async function ensureStoreProductsSchema(): Promise<void> {
       )
     `;
     await sql`CREATE INDEX IF NOT EXISTS "StoreProduct_active_sort_idx" ON "StoreProduct"(is_active, sort_order, created_at DESC)`;
+    await sql`ALTER TABLE "StoreProduct" ADD COLUMN IF NOT EXISTS cost_price DECIMAL(10, 2) NOT NULL DEFAULT 0`;
     storeProductsSchemaEnsured = true;
   } catch {
     /* DDL غير متاح */
@@ -1305,6 +1424,8 @@ export type StoreProductRow = {
   title: string;
   description: string;
   price: number;
+  /** تكلفة الوحدة (للأدمن) — تُستخدم في تقدير الربح لكل عملية بيع */
+  costPrice: number;
   imageUrl: string | null;
   pdfUrl: string | null;
   isActive: boolean;
@@ -1318,6 +1439,7 @@ function mapStoreProduct(r: Record<string, unknown>): StoreProductRow {
     title: String(r.title ?? ""),
     description: String(r.description ?? ""),
     price: Number(r.price ?? 0),
+    costPrice: Number(r.cost_price ?? 0),
     imageUrl: r.image_url ? String(r.image_url) : null,
     pdfUrl: r.pdf_url ? String(r.pdf_url) : null,
     isActive: Boolean(r.is_active),
@@ -1347,7 +1469,7 @@ export async function listStoreProductsPublic(): Promise<StoreProductRow[]> {
 export async function listStoreProductsAll(): Promise<StoreProductRow[]> {
   await ensureStoreProductsSchema();
   const rows = await sql`
-    SELECT id, title, description, price, image_url, pdf_url, is_active, sort_order, created_at
+    SELECT id, title, description, price, cost_price, image_url, pdf_url, is_active, sort_order, created_at
     FROM "StoreProduct"
     ORDER BY created_at DESC
   `;
@@ -1358,19 +1480,23 @@ export async function createStoreProduct(data: {
   title: string;
   description: string;
   price: number;
+  cost_price?: number;
   image_url?: string | null;
   pdf_url?: string | null;
   is_active?: boolean;
 }): Promise<{ id: string }> {
   await ensureStoreProductsSchema();
   const id = generateId();
+  const unitCost =
+    data.cost_price !== undefined && Number.isFinite(data.cost_price) ? Math.max(0, data.cost_price) : 0;
   await sql`
-    INSERT INTO "StoreProduct" (id, title, description, price, image_url, pdf_url, is_active, sort_order)
+    INSERT INTO "StoreProduct" (id, title, description, price, cost_price, image_url, pdf_url, is_active, sort_order)
     VALUES (
       ${id},
       ${data.title.trim()},
       ${data.description.trim() || ""},
       ${Math.max(0, data.price)},
+      ${unitCost},
       ${data.image_url?.trim() || null},
       ${data.pdf_url?.trim() || null},
       ${data.is_active !== false},
@@ -1386,6 +1512,7 @@ export async function updateStoreProduct(
     title?: string;
     description?: string;
     price?: number;
+    cost_price?: number;
     image_url?: string | null;
     pdf_url?: string | null;
     is_active?: boolean;
@@ -1397,6 +1524,9 @@ export async function updateStoreProduct(
   if (data.title !== undefined) await sql`UPDATE "StoreProduct" SET title = ${data.title.trim()}, updated_at = NOW() WHERE id = ${pid}`;
   if (data.description !== undefined) await sql`UPDATE "StoreProduct" SET description = ${data.description.trim()}, updated_at = NOW() WHERE id = ${pid}`;
   if (data.price !== undefined) await sql`UPDATE "StoreProduct" SET price = ${Math.max(0, data.price)}, updated_at = NOW() WHERE id = ${pid}`;
+  if (data.cost_price !== undefined) {
+    await sql`UPDATE "StoreProduct" SET cost_price = ${Math.max(0, data.cost_price)}, updated_at = NOW() WHERE id = ${pid}`;
+  }
   if (data.image_url !== undefined) await sql`UPDATE "StoreProduct" SET image_url = ${data.image_url?.trim() || null}, updated_at = NOW() WHERE id = ${pid}`;
   if (data.pdf_url !== undefined) await sql`UPDATE "StoreProduct" SET pdf_url = ${data.pdf_url?.trim() || null}, updated_at = NOW() WHERE id = ${pid}`;
   if (data.is_active !== undefined) await sql`UPDATE "StoreProduct" SET is_active = ${data.is_active}, updated_at = NOW() WHERE id = ${pid}`;
@@ -1452,11 +1582,27 @@ export type AdminStorePurchaseRow = {
   createdAt: string;
 };
 
+export type StoreProductProfitRow = {
+  productId: string;
+  productTitle: string;
+  unitsSold: number;
+  revenue: number;
+  costTotal: number;
+  profit: number;
+};
+
 export type StoreSalesStats = {
   purchasesCount: number;
   buyersCount: number;
   soldProductsCount: number;
   revenue: number;
+  /** مجموع (تكلفة الوحدة × عدد القطع المباعة) حسب آخر تكلفة مسجّلة للمنتج */
+  totalCost: number;
+  /** مجموع (السعر المدفوع − تكلفة الوحدة) لكل عملية شراء */
+  totalProfit: number;
+  /** نسبة الربح إلى الإيراد (%)، أو null عند عدم وجود إيراد */
+  profitMarginPercent: number | null;
+  byProduct: StoreProductProfitRow[];
 };
 
 export async function listStudentStorePurchases(userId: string): Promise<StudentStorePurchaseRow[]> {
@@ -1528,23 +1674,66 @@ export async function listStorePurchasesForAdmin(): Promise<AdminStorePurchaseRo
 export async function getStoreSalesStats(): Promise<StoreSalesStats> {
   try {
     await ensureStorePurchasesSchema();
-    const rows = await sql`
-      SELECT
-        COUNT(*)::int AS purchases_count,
-        COUNT(DISTINCT user_id)::int AS buyers_count,
-        COUNT(DISTINCT product_id)::int AS sold_products_count,
-        COALESCE(SUM(price_paid), 0)::numeric AS revenue
-      FROM "UserStorePurchase"
-    `;
-    const row = (rows[0] as Record<string, unknown> | undefined) ?? {};
+    await ensureStoreProductsSchema();
+    const [aggRows, byProductRows] = await Promise.all([
+      sql`
+        SELECT
+          COUNT(*)::int AS purchases_count,
+          COUNT(DISTINCT usp.user_id)::int AS buyers_count,
+          COUNT(DISTINCT usp.product_id)::int AS sold_products_count,
+          COALESCE(SUM(usp.price_paid), 0)::numeric AS revenue,
+          COALESCE(SUM(COALESCE(sp.cost_price, 0)), 0)::numeric AS total_cost,
+          COALESCE(SUM(usp.price_paid - COALESCE(sp.cost_price, 0)), 0)::numeric AS total_profit
+        FROM "UserStorePurchase" usp
+        INNER JOIN "StoreProduct" sp ON sp.id = usp.product_id
+      `,
+      sql`
+        SELECT
+          sp.id AS product_id,
+          sp.title AS product_title,
+          COUNT(*)::int AS units_sold,
+          COALESCE(SUM(usp.price_paid), 0)::numeric AS revenue,
+          COALESCE(SUM(COALESCE(sp.cost_price, 0)), 0)::numeric AS cost_total,
+          COALESCE(SUM(usp.price_paid - COALESCE(sp.cost_price, 0)), 0)::numeric AS profit
+        FROM "UserStorePurchase" usp
+        INNER JOIN "StoreProduct" sp ON sp.id = usp.product_id
+        GROUP BY sp.id, sp.title
+        ORDER BY profit DESC NULLS LAST, revenue DESC
+      `,
+    ]);
+    const row = (aggRows[0] as Record<string, unknown> | undefined) ?? {};
+    const revenue = Number(row.revenue ?? 0);
+    const totalProfit = Number(row.total_profit ?? 0);
+    const profitMarginPercent = revenue > 0 ? (totalProfit / revenue) * 100 : null;
+    const byProduct = (byProductRows as Record<string, unknown>[]).map((r) => ({
+      productId: String(r.product_id),
+      productTitle: String(r.product_title ?? ""),
+      unitsSold: Number(r.units_sold ?? 0),
+      revenue: Number(r.revenue ?? 0),
+      costTotal: Number(r.cost_total ?? 0),
+      profit: Number(r.profit ?? 0),
+    }));
     return {
       purchasesCount: Number(row.purchases_count ?? 0),
       buyersCount: Number(row.buyers_count ?? 0),
       soldProductsCount: Number(row.sold_products_count ?? 0),
-      revenue: Number(row.revenue ?? 0),
+      revenue,
+      totalCost: Number(row.total_cost ?? 0),
+      totalProfit,
+      profitMarginPercent,
+      byProduct,
     };
   } catch {
-    return { purchasesCount: 0, buyersCount: 0, soldProductsCount: 0, revenue: 0 };
+    return {
+      purchasesCount: 0,
+      buyersCount: 0,
+      soldProductsCount: 0,
+      revenue: 0,
+      totalCost: 0,
+      totalProfit: 0,
+      profitMarginPercent: null,
+      byProduct: [],
+    };
   }
 }
 

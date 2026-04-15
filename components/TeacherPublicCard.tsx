@@ -28,10 +28,13 @@ export function TeacherPublicCard({
   return (
     <article
       dir="rtl"
-      className="group flex w-full max-w-[16.5rem] flex-col overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-[#13494b] via-[#0d3234] to-[#061a1c] p-4 shadow-[0_14px_40px_-14px_rgba(0,0,0,0.55)] ring-1 ring-black/25 transition duration-300 hover:-translate-y-1 hover:border-[var(--color-primary)]/45 hover:shadow-[0_20px_44px_-14px_rgba(45,212,191,0.22)] sm:max-w-[17.25rem]"
+      className="group flex w-full max-w-[16.5rem] flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-gradient-to-b from-[var(--color-primary)]/10 via-[var(--color-surface)] to-[var(--color-surface)] p-4 shadow-[var(--shadow-card)] ring-1 ring-black/5 transition duration-300 hover:-translate-y-1 hover:border-[var(--color-primary)]/45 hover:shadow-[var(--shadow-hover)] sm:max-w-[17.25rem]"
     >
-      <Link href={profileHref} className="block shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d3234]">
-        <div className="relative mx-auto aspect-square w-full max-w-[12.5rem] shrink-0 overflow-hidden rounded-xl bg-black/25 ring-1 ring-white/15">
+      <Link
+        href={profileHref}
+        className="block shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)]"
+      >
+        <div className="relative mx-auto aspect-square w-full max-w-[12.5rem] shrink-0 overflow-hidden rounded-xl bg-[var(--color-background)]/40 ring-1 ring-black/10">
           {teacherAvatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -40,41 +43,41 @@ export function TeacherPublicCard({
               className="h-full w-full object-cover object-center transition duration-500 ease-out group-hover:scale-[1.03]"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-white/5">
-              <span className="text-5xl font-bold tracking-tight text-white/25 transition group-hover:text-white/35">
+            <div className="flex h-full w-full items-center justify-center bg-[var(--color-surface)]">
+              <span className="text-5xl font-bold tracking-tight text-[var(--color-muted)]/40 transition group-hover:text-[var(--color-muted)]/60">
                 {(name?.trim()[0] ?? "?").toUpperCase()}
               </span>
             </div>
           )}
         </div>
         <div className="mt-5 flex flex-col items-center pb-0.5 pt-1 text-center">
-          <TitleTag className="line-clamp-2 text-lg font-bold leading-snug text-white sm:text-xl">
+          <TitleTag className="line-clamp-2 text-lg font-bold leading-snug text-[var(--color-foreground)] sm:text-xl">
             {name}
           </TitleTag>
-          <p className="mt-2 line-clamp-2 max-w-[14rem] text-sm font-normal leading-relaxed text-white/80">
+          <p className="mt-2 line-clamp-2 max-w-[14rem] text-sm font-normal leading-relaxed text-[var(--color-muted)]">
             {subject}
           </p>
         </div>
       </Link>
 
-      <div className="mt-4 min-h-[3.25rem] flex-1 border-t border-white/10 pt-3">
+      <div className="mt-4 min-h-[3.25rem] flex-1 border-t border-[var(--color-border)] pt-3">
         {courses.length > 0 ? (
           <>
-            <p className="mb-2 text-center text-[0.7rem] font-semibold uppercase tracking-wide text-white/45">
+            <p className="mb-2 text-center text-[0.7rem] font-semibold uppercase tracking-wide text-[var(--color-muted)]/80">
               الدورات
             </p>
             <ul className="space-y-2 px-1 text-right">
               {previewCourses.map((c) => (
                 <li
                   key={c.id}
-                  className="text-sm leading-snug text-white/85 [text-wrap:pretty]"
+                  className="text-sm leading-snug text-[var(--color-foreground)] [text-wrap:pretty]"
                 >
                   <span className="line-clamp-2">{c.title}</span>
                 </li>
               ))}
             </ul>
             {moreCount > 0 ? (
-              <p className="mt-2 text-center text-[0.7rem] text-white/50">
+              <p className="mt-2 text-center text-[0.7rem] text-[var(--color-muted)]">
                 {moreCount === 1
                   ? "ودورة إضافية…"
                   : `و${moreCount} دورات إضافية…`}
@@ -88,7 +91,7 @@ export function TeacherPublicCard({
             </Link>
           </>
         ) : (
-          <p className="px-1 text-center text-xs leading-relaxed text-white/55">
+          <p className="px-1 text-center text-xs leading-relaxed text-[var(--color-muted)]">
             لا توجد دورات منشورة ضمن بطاقة هذا المدرس حتى الآن.
           </p>
         )}

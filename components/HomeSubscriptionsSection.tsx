@@ -47,13 +47,13 @@ export function HomeSubscriptionsSection({
               strokeLinecap="round"
             />
           </svg>
-          <p className="mt-3 max-w-xl text-sm text-slate-600 dark:text-slate-400">
+          <p className="mt-3 max-w-xl text-sm text-[var(--color-muted)]">
             اشترك لفترة محددة واستمتع بكل الكورسات المدفوعة المنشورة دون شراء كل كورس على حدة
           </p>
         </div>
 
         {plans.length === 0 ? (
-          <p className="mt-14 text-center text-slate-600 dark:text-slate-400">
+          <p className="mt-14 text-center text-[var(--color-muted)]">
             لا توجد باقات حالياً. أضف باقات من لوحة التحكم ← إنشاء اشتراكات المنصة.
           </p>
         ) : (

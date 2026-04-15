@@ -80,23 +80,36 @@ function UserMenu() {
 
 export function Header({
   platformName,
+  headerLogoUrl,
   platformSubscriptionExpiryLabel,
 }: {
   platformName?: string | null;
+  headerLogoUrl?: string | null;
   /** للطالب ذي اشتراك منصة نشط: نص تاريخ انتهاء الاشتراك (مُنسَّق من السيرفر) */
   platformSubscriptionExpiryLabel?: string | null;
 }) {
   const { data: session, status } = useSession();
+  const trimmedName = platformName?.trim() ?? "";
+  const displayName = trimmedName;
+  const linkTitle = trimmedName || "الصفحة الرئيسية";
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-surface)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--color-surface)]/80">
       <div className="mx-auto flex h-16 min-h-16 max-w-6xl items-center justify-between gap-3 px-3 sm:h-[72px] sm:px-6">
         <Link
           href="/"
-          className="min-w-0 max-w-[45%] truncate text-lg font-bold text-[var(--color-foreground)] transition hover:opacity-90 sm:max-w-[260px] sm:text-2xl md:max-w-none"
-          title={platformName?.trim() || "منصة أستاذ عصام محي"}
+          className="flex min-w-0 max-w-[45%] items-center gap-2 truncate text-lg font-bold text-[var(--color-foreground)] transition hover:opacity-90 sm:max-w-[320px] sm:text-2xl md:max-w-none"
+          title={linkTitle}
         >
-          {platformName?.trim() || "منصة أستاذ عصام محي"}
+          {headerLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={headerLogoUrl}
+              alt=""
+              className="h-12 w-12 shrink-0 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-background)] object-cover p-0.5 sm:h-14 sm:w-14"
+            />
+          ) : null}
+          {displayName ? <span className="min-w-0 truncate">{displayName}</span> : null}
         </Link>
         <nav className="flex flex-shrink-0 items-center gap-2 sm:gap-7">
           <ThemeToggle />

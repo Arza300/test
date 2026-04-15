@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getHomepageSettings, updateHomepageSettings } from "@/lib/db";
+import { normalizeHeroHex } from "@/lib/hero-bg";
 
 /** جلب إعدادات الصفحة الرئيسية — للأدمن */
 export async function GET() {
@@ -29,10 +30,14 @@ export async function PUT(request: NextRequest) {
     heroTitle?: string | null;
     heroSlogan?: string | null;
     platformName?: string | null;
+    headerLogoUrl?: string | null;
+    primaryColor?: string | null;
     whatsappUrl?: string | null;
     facebookUrl?: string | null;
     pageTitle?: string | null;
     heroBgPreset?: string | null;
+    heroBgCustomFrom?: string | null;
+    heroBgCustomTo?: string | null;
     heroFloatImage1?: string | null;
     heroFloatImage2?: string | null;
     heroFloatImage3?: string | null;
@@ -47,16 +52,72 @@ export async function PUT(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "طلب غير صالح" }, { status: 400 });
   }
+
+  const header_logo_url =
+    body.headerLogoUrl === undefined
+      ? undefined
+      : body.headerLogoUrl && String(body.headerLogoUrl).trim()
+        ? String(body.headerLogoUrl).trim().slice(0, 4000)
+        : null;
+
+  let primary_color: string | null | undefined;
+  if (body.primaryColor !== undefined) {
+    if (body.primaryColor === null) {
+      primary_color = null;
+    } else {
+      const n = normalizeHeroHex(String(body.primaryColor ?? ""));
+      if (!n) {
+        return NextResponse.json(
+          { error: "لون المنصة الأساسي يجب أن يكون بصيغة #RRGGBB (مثال: #0ea5e9)" },
+          { status: 400 },
+        );
+      }
+      primary_color = n;
+    }
+  }
+
+  let hero_bg_custom_from: string | null | undefined;
+  let hero_bg_custom_to: string | null | undefined;
+  const cf = body.heroBgCustomFrom;
+  const ct = body.heroBgCustomTo;
+  if (cf !== undefined || ct !== undefined) {
+    if (cf === undefined || ct === undefined) {
+      return NextResponse.json(
+        { error: "يُرسل لونا التدرج المخصّص معاً أو لا يُرسلان" },
+        { status: 400 },
+      );
+    }
+    if (cf === null && ct === null) {
+      hero_bg_custom_from = null;
+      hero_bg_custom_to = null;
+    } else {
+      const na = normalizeHeroHex(String(cf ?? ""));
+      const nb = normalizeHeroHex(String(ct ?? ""));
+      if (!na || !nb) {
+        return NextResponse.json(
+          { error: "التدرج المخصّص يتطلب لونين بصيغة #RRGGBB (مثال: #1a1a2e)" },
+          { status: 400 },
+        );
+      }
+      hero_bg_custom_from = na;
+      hero_bg_custom_to = nb;
+    }
+  }
+
   try {
     await updateHomepageSettings({
       teacher_image_url: body.teacherImageUrl !== undefined ? body.teacherImageUrl : undefined,
       hero_title: body.heroTitle !== undefined ? body.heroTitle : undefined,
       hero_slogan: body.heroSlogan !== undefined ? body.heroSlogan : undefined,
       platform_name: body.platformName !== undefined ? body.platformName : undefined,
+      header_logo_url,
+      primary_color,
       whatsapp_url: body.whatsappUrl !== undefined ? body.whatsappUrl : undefined,
       facebook_url: body.facebookUrl !== undefined ? body.facebookUrl : undefined,
       page_title: body.pageTitle !== undefined ? body.pageTitle : undefined,
       hero_bg_preset: body.heroBgPreset !== undefined ? body.heroBgPreset : undefined,
+      hero_bg_custom_from,
+      hero_bg_custom_to,
       hero_float_image_1: body.heroFloatImage1 !== undefined ? body.heroFloatImage1 : undefined,
       hero_float_image_2: body.heroFloatImage2 !== undefined ? body.heroFloatImage2 : undefined,
       hero_float_image_3: body.heroFloatImage3 !== undefined ? body.heroFloatImage3 : undefined,

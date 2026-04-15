@@ -13,8 +13,8 @@ html.light {
   --color-foreground: #1e293b;
   --color-surface: #ffffff;
   --color-border: #e2e8f0;
-  --color-primary: #0ea5e9;
-  --color-primary-hover: #0284c7;
+  --color-primary: var(--platform-primary, #0ea5e9);
+  --color-primary-hover: color-mix(in srgb, var(--color-primary) 85%, #000);
   --color-primary-light: #e0f2fe;
   --color-accent: #f59e0b;
   --color-muted: #64748b;
@@ -31,8 +31,8 @@ html.dark {
   --color-foreground: #fafaf9;
   --color-surface: #0a0a0a;
   --color-border: #1a1a1a;
-  --color-primary: #2dd4bf;
-  --color-primary-hover: #5eead4;
+  --color-primary: var(--platform-primary, #2dd4bf);
+  --color-primary-hover: color-mix(in srgb, var(--color-primary) 82%, #fff);
   --color-primary-light: #134e4a;
   --color-accent: #f59e0b;
   --color-muted: #a8a29e;
@@ -49,8 +49,8 @@ html:not(.light):not(.dark) {
   --color-foreground: #fafaf9;
   --color-surface: #0a0a0a;
   --color-border: #1a1a1a;
-  --color-primary: #2dd4bf;
-  --color-primary-hover: #5eead4;
+  --color-primary: var(--platform-primary, #2dd4bf);
+  --color-primary-hover: color-mix(in srgb, var(--color-primary) 82%, #fff);
   --color-primary-light: #134e4a;
   --color-accent: #f59e0b;
   --color-muted: #a8a29e;

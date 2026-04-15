@@ -5,8 +5,12 @@ import { useStoreSplash } from "@/components/StoreSplashProvider";
 
 export function HomeStoreSection({
   productsCount,
+  sectionTitle,
+  sectionDescription,
 }: {
   productsCount: number;
+  sectionTitle: string;
+  sectionDescription: string;
 }) {
   const { startStoreSplashTransition } = useStoreSplash();
 
@@ -22,10 +26,9 @@ export function HomeStoreSection({
         <div className="mx-auto max-w-6xl">
           <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
             <div className="bg-gradient-to-l from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-transparent p-8 sm:p-10">
-              <h2 className="text-3xl font-bold text-[var(--color-foreground)]">متجر المنصة</h2>
-              <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--color-muted)]">
-                مرحبًا بك في متجر المنصة الذي يضم ملازم وكتب في غاية الأهمية. اختر ما يناسبك
-                من المواد الرقمية التعليمية واستفد من محتوى مُنظّم يدعم رحلتك الدراسية.
+              <h2 className="text-3xl font-bold text-[var(--color-foreground)]">{sectionTitle}</h2>
+              <p className="mt-4 max-w-3xl whitespace-pre-wrap text-base leading-7 text-[var(--color-muted)]">
+                {sectionDescription}
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-4">
                 <Link

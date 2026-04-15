@@ -20,6 +20,7 @@ import { HomeSubscriptionsSection } from "@/components/HomeSubscriptionsSection"
 import { HeroScrollCue } from "@/components/HeroScrollCue";
 import { HeroShootingStar } from "@/components/HeroShootingStar";
 import { HomeStoreSection } from "@/components/HomeStoreSection";
+import { resolveHeroBgGradient } from "@/lib/hero-bg";
 
 /** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
 export const dynamic = "force-dynamic";
@@ -132,17 +133,7 @@ export default async function HomePage() {
     sections.push({ title: "دورات أخرى", courses: uncategorized });
   }
 
-  const HERO_BG_GRADIENTS: Record<string, { from: string; to: string }> = {
-    navy: { from: "#14162E", to: "#1E2145" },
-    indigo: { from: "#1e1b4b", to: "#312e81" },
-    purple: { from: "#2e1065", to: "#4c1d95" },
-    teal: { from: "#134e4a", to: "#0f766e" },
-    forest: { from: "#14532d", to: "#166534" },
-    slate: { from: "#0f172a", to: "#1e293b" },
-  };
-  const heroBg = homepageSettings.heroBgPreset?.trim() && HERO_BG_GRADIENTS[homepageSettings.heroBgPreset]
-    ? HERO_BG_GRADIENTS[homepageSettings.heroBgPreset]
-    : HERO_BG_GRADIENTS.navy;
+  const heroBg = resolveHeroBgGradient(homepageSettings);
 
   return (
     <div>
@@ -324,6 +315,13 @@ export default async function HomePage() {
       {homepageSettings.storeEnabled && storeProductsHome.length > 0 ? (
         <HomeStoreSection
           productsCount={storeProductsHome.length}
+          sectionTitle={
+            homepageSettings.storeSectionTitle?.trim() || "متجر المنصة"
+          }
+          sectionDescription={
+            homepageSettings.storeSectionDescription?.trim() ||
+            "مرحبًا بك في متجر المنصة الذي يضم ملازم وكتب في غاية الأهمية. اختر ما يناسبك من المواد الرقمية التعليمية واستفد من محتوى مُنظّم يدعم رحلتك الدراسية."
+          }
         />
       ) : null}
 
