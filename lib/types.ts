@@ -120,6 +120,22 @@ export interface HomepageSetting {
   heroSliderImage5?: string | null;
   /** مدة التبديل التلقائي بالمللي ثانية */
   heroSliderIntervalMs?: number | null;
+  /** عنوان القالب الثالث (Hero 3) */
+  hero3Title?: string | null;
+  /** النص الفرعي في القالب الثالث */
+  hero3Subtitle?: string | null;
+  /** صورة الهاتف في القالب الثالث */
+  hero3PhoneImageUrl?: string | null;
+  /** لون الشكل خلف الهاتف (#RRGGBB) */
+  hero3PhoneBgColor?: string | null;
+  /** صورة شارة المتجر الأولى (Google Play/App Store) */
+  hero3StoreBadge1ImageUrl?: string | null;
+  /** رابط الشارة الأولى */
+  hero3StoreBadge1Link?: string | null;
+  /** صورة شارة المتجر الثانية */
+  hero3StoreBadge2ImageUrl?: string | null;
+  /** رابط الشارة الثانية */
+  hero3StoreBadge2Link?: string | null;
   /** عنوان الفوتر (مثلاً: منصتي التعليمية) */
   footerTitle: string | null;
   /** وصف قصير تحت العنوان (مثلاً: تعلم بأسلوب حديث...) */

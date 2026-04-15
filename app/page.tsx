@@ -22,6 +22,7 @@ import { HeroShootingStar } from "@/components/HeroShootingStar";
 import { HomeStoreSection } from "@/components/HomeStoreSection";
 import { HomeHeroImageSlider } from "@/components/HomeHeroImageSlider";
 import { HomePlatformDetailsSection } from "@/components/HomePlatformDetailsSection";
+import { HomeHeroTemplateThree } from "@/components/HomeHeroTemplateThree";
 import { resolveHeroBgGradient } from "@/lib/hero-bg";
 import { parsePlatformDetailsItems } from "@/lib/platform-details";
 
@@ -138,7 +139,11 @@ export default async function HomePage() {
 
   const heroBg = resolveHeroBgGradient(homepageSettings);
   const heroTemplate =
-    homepageSettings.heroTemplate === "image_slider" ? "image_slider" : "classic";
+    homepageSettings.heroTemplate === "image_slider"
+      ? "image_slider"
+      : homepageSettings.heroTemplate === "coming_soon"
+        ? "coming_soon"
+        : "classic";
   const heroSliderImages = [
     homepageSettings.heroSliderImage1,
     homepageSettings.heroSliderImage2,
@@ -163,6 +168,17 @@ export default async function HomePage() {
         >
           <HomeHeroImageSlider images={heroSliderImages} intervalMs={heroSliderIntervalMs} />
         </section>
+      ) : heroTemplate === "coming_soon" ? (
+        <HomeHeroTemplateThree
+          title={homepageSettings.hero3Title?.trim() || "المنصة الشاملة رقم 1"}
+          subtitle={homepageSettings.hero3Subtitle?.trim() || "انضم لأكثر من مليون طالب مع الخطة"}
+          phoneImageUrl={homepageSettings.hero3PhoneImageUrl?.trim() || null}
+          phoneBgColor={homepageSettings.hero3PhoneBgColor?.trim() || "#FACC15"}
+          badge1ImageUrl={homepageSettings.hero3StoreBadge1ImageUrl?.trim() || null}
+          badge1Link={homepageSettings.hero3StoreBadge1Link?.trim() || null}
+          badge2ImageUrl={homepageSettings.hero3StoreBadge2ImageUrl?.trim() || null}
+          badge2Link={homepageSettings.hero3StoreBadge2Link?.trim() || null}
+        />
       ) : (
         <section
           className="hero-saas relative min-h-screen w-full flex items-center justify-center overflow-hidden"

@@ -115,6 +115,14 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     heroSliderIntervalSeconds: String(
       Math.min(20, Math.max(2, Math.round((initialSettings.heroSliderIntervalMs ?? 5000) / 1000))),
     ),
+    hero3Title: initialSettings.hero3Title ?? "",
+    hero3Subtitle: initialSettings.hero3Subtitle ?? "",
+    hero3PhoneImageUrl: initialSettings.hero3PhoneImageUrl ?? "",
+    hero3PhoneBgColor: initialSettings.hero3PhoneBgColor ?? "#FACC15",
+    hero3StoreBadge1ImageUrl: initialSettings.hero3StoreBadge1ImageUrl ?? "",
+    hero3StoreBadge1Link: initialSettings.hero3StoreBadge1Link ?? "",
+    hero3StoreBadge2ImageUrl: initialSettings.hero3StoreBadge2ImageUrl ?? "",
+    hero3StoreBadge2Link: initialSettings.hero3StoreBadge2Link ?? "",
     footerTitle: initialSettings.footerTitle ?? "",
     footerTagline: initialSettings.footerTagline ?? "",
     footerCopyright: initialSettings.footerCopyright ?? "",
@@ -135,6 +143,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
   const [logoUploadError, setLogoUploadError] = useState("");
   const [floatImageUploading, setFloatImageUploading] = useState<1 | 2 | 3 | null>(null);
   const [sliderImageUploading, setSliderImageUploading] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+  const [hero3Uploading, setHero3Uploading] = useState<"phone" | "badge1" | "badge2" | null>(null);
   const [platformItemUploading, setPlatformItemUploading] = useState<string | null>(null);
   const [platformDetailsItems, setPlatformDetailsItems] = useState<PlatformDetailsItem[]>(
     parsePlatformDetailsItems(initialSettings.platformDetailsItems),
@@ -185,6 +194,12 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
       const intervalSecondsRaw = Number(form.heroSliderIntervalSeconds.trim());
       if (!Number.isFinite(intervalSecondsRaw) || intervalSecondsRaw < 2 || intervalSecondsRaw > 20) {
         throw new Error("مدة تبديل صور السلايدر يجب أن تكون رقمًا بين 2 و 20 ثانية");
+      }
+      const hero3PhoneBgNorm = form.hero3PhoneBgColor.trim()
+        ? normalizeHeroHex(form.hero3PhoneBgColor.trim())
+        : null;
+      if (form.hero3PhoneBgColor.trim() && !hero3PhoneBgNorm) {
+        throw new Error("لون خلفية الهاتف في القالب الثالث يجب أن يكون بصيغة #RRGGBB");
       }
       if (platformDetailsItems.length > 4) {
         throw new Error("الحد الأقصى لبطاقات قسم تفاصيل المنصة هو 4 بطاقات");
@@ -237,6 +252,14 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           heroSliderImage4: form.heroSliderImage4.trim() || null,
           heroSliderImage5: form.heroSliderImage5.trim() || null,
           heroSliderIntervalSeconds: Math.round(intervalSecondsRaw),
+          hero3Title: form.hero3Title.trim() || null,
+          hero3Subtitle: form.hero3Subtitle.trim() || null,
+          hero3PhoneImageUrl: form.hero3PhoneImageUrl.trim() || null,
+          hero3PhoneBgColor: hero3PhoneBgNorm,
+          hero3StoreBadge1ImageUrl: form.hero3StoreBadge1ImageUrl.trim() || null,
+          hero3StoreBadge1Link: form.hero3StoreBadge1Link.trim() || null,
+          hero3StoreBadge2ImageUrl: form.hero3StoreBadge2ImageUrl.trim() || null,
+          hero3StoreBadge2Link: form.hero3StoreBadge2Link.trim() || null,
           footerTitle: form.footerTitle.trim() || null,
           footerTagline: form.footerTagline.trim() || null,
           footerCopyright: form.footerCopyright.trim() || null,
@@ -352,16 +375,183 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
               onChange={() => setForm((f) => ({ ...f, heroTemplate: "coming_soon" }))}
             />
             <span>
-              <span className="block text-sm font-semibold text-[var(--color-foreground)]">القالب الثالث (قريبًا)</span>
-              <span className="text-xs text-[var(--color-muted)]">خيار محجوز الآن، وسيتم تطويره لاحقًا</span>
+              <span className="block text-sm font-semibold text-[var(--color-foreground)]">القالب الثالث (واجهة التطبيق)</span>
+              <span className="text-xs text-[var(--color-muted)]">عنوان كبير + نص فرعي + هاتف + شارات تحميل التطبيق</span>
             </span>
           </label>
         </div>
 
         {form.heroTemplate === "coming_soon" ? (
-          <p className="mt-3 rounded-[var(--radius-btn)] border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-            قالب «قريبًا» غير مفعل في الواجهة الآن، وسيتم عرض القالب الحالي مؤقتًا.
-          </p>
+          <div className="mt-4 space-y-4 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-foreground)]">عنوان القالب الثالث</label>
+              <input
+                type="text"
+                value={form.hero3Title}
+                onChange={(e) => setForm((f) => ({ ...f, hero3Title: e.target.value }))}
+                maxLength={300}
+                placeholder="المنصة الشاملة رقم 1"
+                className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-foreground)]">النص الفرعي</label>
+              <input
+                type="text"
+                value={form.hero3Subtitle}
+                onChange={(e) => setForm((f) => ({ ...f, hero3Subtitle: e.target.value }))}
+                maxLength={600}
+                placeholder="انضم لأكثر من مليون طالب مع الخطة"
+                className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-foreground)]">صورة الهاتف</label>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {form.hero3PhoneImageUrl ? (
+                  <img
+                    src={form.hero3PhoneImageUrl}
+                    alt="معاينة صورة الهاتف"
+                    className="h-14 w-12 rounded border border-[var(--color-border)] object-cover"
+                  />
+                ) : null}
+                <input
+                  type="text"
+                  value={form.hero3PhoneImageUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, hero3PhoneImageUrl: e.target.value }))}
+                  placeholder="رابط صورة الهاتف"
+                  className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                />
+                <label className="shrink-0 cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-sm font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-primary)]/20 disabled:opacity-50">
+                  {hero3Uploading === "phone" ? "جاري الرفع..." : "رفع صورة الهاتف"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    disabled={hero3Uploading !== null}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      setHero3Uploading("phone");
+                      try {
+                        const fd = new FormData();
+                        fd.set("file", f);
+                        const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok && data.url) {
+                          setForm((prev) => ({ ...prev, hero3PhoneImageUrl: data.url }));
+                        }
+                      } finally {
+                        setHero3Uploading(null);
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, hero3PhoneImageUrl: "" }))}
+                  className="shrink-0 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs font-semibold text-[var(--color-foreground)] transition hover:bg-[var(--color-border)]/40"
+                >
+                  حذف صورة الهاتف
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-foreground)]">لون الخلفية خلف الهاتف</label>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <input
+                  type="color"
+                  value={normalizeHeroHex(form.hero3PhoneBgColor) ?? "#facc15"}
+                  onChange={(e) => setForm((f) => ({ ...f, hero3PhoneBgColor: e.target.value }))}
+                  className="h-10 w-14 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0.5"
+                />
+                <input
+                  type="text"
+                  value={form.hero3PhoneBgColor}
+                  onChange={(e) => setForm((f) => ({ ...f, hero3PhoneBgColor: e.target.value }))}
+                  placeholder="#FACC15"
+                  className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 font-mono text-sm"
+                />
+              </div>
+            </div>
+            {[
+              { id: "1", imageKey: "hero3StoreBadge1ImageUrl", linkKey: "hero3StoreBadge1Link", uploading: "badge1" as const, label: "شارة التحميل الأولى" },
+              { id: "2", imageKey: "hero3StoreBadge2ImageUrl", linkKey: "hero3StoreBadge2Link", uploading: "badge2" as const, label: "شارة التحميل الثانية" },
+            ].map((badge) => {
+              const imageValue = form[badge.imageKey as "hero3StoreBadge1ImageUrl" | "hero3StoreBadge2ImageUrl"];
+              const linkValue = form[badge.linkKey as "hero3StoreBadge1Link" | "hero3StoreBadge2Link"];
+              return (
+                <div key={badge.id} className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                  <p className="mb-2 text-xs font-semibold text-[var(--color-muted)]">{badge.label}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {imageValue ? (
+                      <img
+                        src={imageValue}
+                        alt={`معاينة ${badge.label}`}
+                        className="h-10 rounded border border-[var(--color-border)] object-contain bg-black/10 px-2"
+                      />
+                    ) : null}
+                    <input
+                      type="text"
+                      value={imageValue}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, [badge.imageKey]: e.target.value }))
+                      }
+                      placeholder={`رابط صورة ${badge.label}`}
+                      className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
+                    />
+                    <label className="shrink-0 cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-xs font-medium text-[var(--color-primary)] transition hover:bg-[var(--color-primary)]/20 disabled:opacity-50">
+                      {hero3Uploading === badge.uploading ? "جاري الرفع..." : "رفع الشارة"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        disabled={hero3Uploading !== null}
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setHero3Uploading(badge.uploading);
+                          try {
+                            const fd = new FormData();
+                            fd.set("file", f);
+                            const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+                            const data = await res.json().catch(() => ({}));
+                            if (res.ok && data.url) {
+                              setForm((prev) => ({ ...prev, [badge.imageKey]: data.url }));
+                            }
+                          } finally {
+                            setHero3Uploading(null);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          [badge.imageKey]: "",
+                          [badge.linkKey]: "",
+                        }))
+                      }
+                      className="shrink-0 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs font-semibold text-[var(--color-foreground)] transition hover:bg-[var(--color-border)]/40"
+                    >
+                      حذف الشارة
+                    </button>
+                  </div>
+                  <input
+                    type="url"
+                    value={linkValue}
+                    onChange={(e) => setForm((f) => ({ ...f, [badge.linkKey]: e.target.value }))}
+                    placeholder={`رابط ${badge.label}`}
+                    className="mt-2 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm"
+                  />
+                </div>
+              );
+            })}
+          </div>
         ) : null}
 
         {form.heroTemplate === "image_slider" ? (

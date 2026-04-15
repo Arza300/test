@@ -54,6 +54,14 @@ export async function PUT(request: NextRequest) {
     heroSliderImage5?: string | null;
     heroSliderIntervalSeconds?: number | null;
     heroSliderIntervalMs?: number | null;
+    hero3Title?: string | null;
+    hero3Subtitle?: string | null;
+    hero3PhoneImageUrl?: string | null;
+    hero3PhoneBgColor?: string | null;
+    hero3StoreBadge1ImageUrl?: string | null;
+    hero3StoreBadge1Link?: string | null;
+    hero3StoreBadge2ImageUrl?: string | null;
+    hero3StoreBadge2Link?: string | null;
     footerTitle?: string | null;
     footerTagline?: string | null;
     footerCopyright?: string | null;
@@ -168,6 +176,22 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  let hero3_phone_bg_color: string | null | undefined;
+  if (body.hero3PhoneBgColor !== undefined) {
+    if (body.hero3PhoneBgColor === null) {
+      hero3_phone_bg_color = null;
+    } else {
+      const normalized = normalizeHeroHex(String(body.hero3PhoneBgColor ?? ""));
+      if (!normalized) {
+        return NextResponse.json(
+          { error: "لون خلفية الهاتف في القالب الثالث يجب أن يكون بصيغة #RRGGBB" },
+          { status: 400 },
+        );
+      }
+      hero3_phone_bg_color = normalized;
+    }
+  }
+
   let platform_details_items: string | null | undefined;
   let platform_details_background_color: string | null | undefined;
   if (body.platformDetailsBackgroundColor !== undefined) {
@@ -256,6 +280,44 @@ export async function PUT(request: NextRequest) {
       hero_slider_image_5:
         body.heroSliderImage5 !== undefined ? normalizeSliderImage(body.heroSliderImage5) : undefined,
       hero_slider_interval_ms,
+      hero3_title:
+        body.hero3Title !== undefined
+          ? (body.hero3Title && String(body.hero3Title).trim()
+              ? String(body.hero3Title).trim().slice(0, 300)
+              : null)
+          : undefined,
+      hero3_subtitle:
+        body.hero3Subtitle !== undefined
+          ? (body.hero3Subtitle && String(body.hero3Subtitle).trim()
+              ? String(body.hero3Subtitle).trim().slice(0, 600)
+              : null)
+          : undefined,
+      hero3_phone_image_url:
+        body.hero3PhoneImageUrl !== undefined
+          ? normalizeSliderImage(body.hero3PhoneImageUrl)
+          : undefined,
+      hero3_phone_bg_color:
+        hero3_phone_bg_color,
+      hero3_store_badge_1_image_url:
+        body.hero3StoreBadge1ImageUrl !== undefined
+          ? normalizeSliderImage(body.hero3StoreBadge1ImageUrl)
+          : undefined,
+      hero3_store_badge_1_link:
+        body.hero3StoreBadge1Link !== undefined
+          ? (body.hero3StoreBadge1Link && String(body.hero3StoreBadge1Link).trim()
+              ? String(body.hero3StoreBadge1Link).trim().slice(0, 4000)
+              : null)
+          : undefined,
+      hero3_store_badge_2_image_url:
+        body.hero3StoreBadge2ImageUrl !== undefined
+          ? normalizeSliderImage(body.hero3StoreBadge2ImageUrl)
+          : undefined,
+      hero3_store_badge_2_link:
+        body.hero3StoreBadge2Link !== undefined
+          ? (body.hero3StoreBadge2Link && String(body.hero3StoreBadge2Link).trim()
+              ? String(body.hero3StoreBadge2Link).trim().slice(0, 4000)
+              : null)
+          : undefined,
       footer_title: body.footerTitle !== undefined ? body.footerTitle : undefined,
       footer_tagline: body.footerTagline !== undefined ? body.footerTagline : undefined,
       footer_copyright: body.footerCopyright !== undefined ? body.footerCopyright : undefined,

@@ -705,6 +705,14 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   heroSliderImage4: null,
   heroSliderImage5: null,
   heroSliderIntervalMs: 5000,
+  hero3Title: "المنصة الشاملة رقم 1",
+  hero3Subtitle: "انضم لأكثر من مليون طالب مع الخطة",
+  hero3PhoneImageUrl: null,
+  hero3PhoneBgColor: "#FACC15",
+  hero3StoreBadge1ImageUrl: null,
+  hero3StoreBadge1Link: null,
+  hero3StoreBadge2ImageUrl: null,
+  hero3StoreBadge2Link: null,
   footerTitle: "منصتي التعليمية",
   footerTagline: "تعلم بأسلوب حديث ومنهجية واضحة",
   footerCopyright: "منصتي التعليمية. جميع الحقوق محفوظة.",
@@ -832,6 +840,14 @@ async function ensureHomepageHeroTemplateColumns(): Promise<void> {
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_image_4 TEXT`;
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_image_5 TEXT`;
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_interval_ms INTEGER`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero3_title TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero3_subtitle TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero3_phone_image_url TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero3_phone_bg_color TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero3_store_badge_1_image_url TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero3_store_badge_1_link TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero3_store_badge_2_image_url TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero3_store_badge_2_link TEXT`;
   } catch {
     /* DDL غير متاح */
   }
@@ -1191,6 +1207,60 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       heroSliderImage4: sliderImage4,
       heroSliderImage5: sliderImage5,
       heroSliderIntervalMs,
+      hero3Title: (() => {
+        const raw = row.hero3_title ?? (c as { hero3Title?: unknown }).hero3Title;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 300);
+        return HOMEPAGE_DEFAULTS.hero3Title ?? null;
+      })(),
+      hero3Subtitle: (() => {
+        const raw = row.hero3_subtitle ?? (c as { hero3Subtitle?: unknown }).hero3Subtitle;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 600);
+        return HOMEPAGE_DEFAULTS.hero3Subtitle ?? null;
+      })(),
+      hero3PhoneImageUrl: (() => {
+        const raw =
+          row.hero3_phone_image_url ??
+          (c as { hero3PhoneImageUrl?: unknown }).hero3PhoneImageUrl;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 4000) : null;
+      })(),
+      hero3PhoneBgColor: (() => {
+        const raw =
+          row.hero3_phone_bg_color ?? (c as { hero3PhoneBgColor?: unknown }).hero3PhoneBgColor;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 16);
+        return HOMEPAGE_DEFAULTS.hero3PhoneBgColor ?? null;
+      })(),
+      hero3StoreBadge1ImageUrl: (() => {
+        const raw =
+          row.hero3_store_badge_1_image_url ??
+          (c as { hero3StoreBadge1ImageUrl?: unknown }).hero3StoreBadge1ImageUrl;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 4000) : null;
+      })(),
+      hero3StoreBadge1Link: (() => {
+        const raw =
+          row.hero3_store_badge_1_link ??
+          (c as { hero3StoreBadge1Link?: unknown }).hero3StoreBadge1Link;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 4000) : null;
+      })(),
+      hero3StoreBadge2ImageUrl: (() => {
+        const raw =
+          row.hero3_store_badge_2_image_url ??
+          (c as { hero3StoreBadge2ImageUrl?: unknown }).hero3StoreBadge2ImageUrl;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 4000) : null;
+      })(),
+      hero3StoreBadge2Link: (() => {
+        const raw =
+          row.hero3_store_badge_2_link ??
+          (c as { hero3StoreBadge2Link?: unknown }).hero3StoreBadge2Link;
+        const s = raw != null ? String(raw).trim() : "";
+        return s.length > 0 ? s.slice(0, 4000) : null;
+      })(),
       footerTitle: (c.footerTitle as string) ?? HOMEPAGE_DEFAULTS.footerTitle,
       footerTagline: (c.footerTagline as string) ?? HOMEPAGE_DEFAULTS.footerTagline,
       footerCopyright: (c.footerCopyright as string) ?? HOMEPAGE_DEFAULTS.footerCopyright,
@@ -1358,6 +1428,14 @@ export async function updateHomepageSettings(data: {
   hero_slider_image_4?: string | null;
   hero_slider_image_5?: string | null;
   hero_slider_interval_ms?: number | null;
+  hero3_title?: string | null;
+  hero3_subtitle?: string | null;
+  hero3_phone_image_url?: string | null;
+  hero3_phone_bg_color?: string | null;
+  hero3_store_badge_1_image_url?: string | null;
+  hero3_store_badge_1_link?: string | null;
+  hero3_store_badge_2_image_url?: string | null;
+  hero3_store_badge_2_link?: string | null;
   footer_title?: string | null;
   footer_tagline?: string | null;
   footer_copyright?: string | null;
@@ -1460,6 +1538,30 @@ export async function updateHomepageSettings(data: {
   }
   if (data.hero_slider_interval_ms !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_slider_interval_ms = ${data.hero_slider_interval_ms}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero3_title !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero3_title = ${data.hero3_title}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero3_subtitle !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero3_subtitle = ${data.hero3_subtitle}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero3_phone_image_url !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero3_phone_image_url = ${data.hero3_phone_image_url}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero3_phone_bg_color !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero3_phone_bg_color = ${data.hero3_phone_bg_color}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero3_store_badge_1_image_url !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero3_store_badge_1_image_url = ${data.hero3_store_badge_1_image_url}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero3_store_badge_1_link !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero3_store_badge_1_link = ${data.hero3_store_badge_1_link}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero3_store_badge_2_image_url !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero3_store_badge_2_image_url = ${data.hero3_store_badge_2_image_url}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero3_store_badge_2_link !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero3_store_badge_2_link = ${data.hero3_store_badge_2_link}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.footer_title !== undefined) {
     await sql`UPDATE "HomepageSetting" SET footer_title = ${data.footer_title}, updated_at = NOW() WHERE id = 'default'`;
