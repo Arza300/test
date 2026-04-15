@@ -63,6 +63,10 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     footerCopyright: initialSettings.footerCopyright ?? "",
     reviewsSectionTitle: initialSettings.reviewsSectionTitle ?? "",
     reviewsSectionSubtitle: initialSettings.reviewsSectionSubtitle ?? "",
+    ctaBadgeText: initialSettings.ctaBadgeText ?? "",
+    ctaTitle: initialSettings.ctaTitle ?? "",
+    ctaDescription: initialSettings.ctaDescription ?? "",
+    ctaButtonText: initialSettings.ctaButtonText ?? "",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
@@ -132,6 +136,10 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           footerCopyright: form.footerCopyright.trim() || null,
           reviewsSectionTitle: form.reviewsSectionTitle.trim() || null,
           reviewsSectionSubtitle: form.reviewsSectionSubtitle.trim() || null,
+          ctaBadgeText: form.ctaBadgeText.trim() || null,
+          ctaTitle: form.ctaTitle.trim() || null,
+          ctaDescription: form.ctaDescription.trim() || null,
+          ctaButtonText: form.ctaButtonText.trim() || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -684,6 +692,59 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
               maxLength={400}
               className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)]"
               placeholder="تجارب حقيقية من طلاب المنصة"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">قسم الانطلاقة التعليمية (CTA)</h3>
+        <p className="mb-3 text-sm text-[var(--color-muted)]">
+          هذا القسم يظهر قرب أسفل الصفحة الرئيسية فوق الفوتر.
+        </p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">نص الشارة الصغيرة</label>
+            <input
+              type="text"
+              value={form.ctaBadgeText}
+              onChange={(e) => setForm((f) => ({ ...f, ctaBadgeText: e.target.value }))}
+              maxLength={120}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)]"
+              placeholder="انطلاقة تعليمية أقوى"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">العنوان الرئيسي</label>
+            <input
+              type="text"
+              value={form.ctaTitle}
+              onChange={(e) => setForm((f) => ({ ...f, ctaTitle: e.target.value }))}
+              maxLength={300}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)]"
+              placeholder="جاهز تحوّل حلمك لنتيجة حقيقية؟"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">الوصف</label>
+            <textarea
+              value={form.ctaDescription}
+              onChange={(e) => setForm((f) => ({ ...f, ctaDescription: e.target.value }))}
+              maxLength={2000}
+              rows={4}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)]"
+              placeholder="ابدأ الآن بخطوة واثقة..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">نص الزر</label>
+            <input
+              type="text"
+              value={form.ctaButtonText}
+              onChange={(e) => setForm((f) => ({ ...f, ctaButtonText: e.target.value }))}
+              maxLength={120}
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)]"
+              placeholder="ابدأ رحلتك الآن"
             />
           </div>
         </div>

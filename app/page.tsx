@@ -366,14 +366,14 @@ export default async function HomePage() {
           <div className="rounded-[var(--radius-card)] bg-[var(--color-surface)] p-8 sm:p-12">
             <div className="text-center">
               <p className="inline-flex items-center rounded-full border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-4 py-1 text-xs font-semibold text-[var(--color-primary)] sm:text-sm">
-                انطلاقة تعليمية أقوى
+                {homepageSettings.ctaBadgeText?.trim() || "انطلاقة تعليمية أقوى"}
               </p>
               <h2 className="mt-4 text-3xl font-extrabold text-[var(--color-foreground)] sm:text-4xl">
-                جاهز تحوّل حلمك لنتيجة حقيقية؟
+                {homepageSettings.ctaTitle?.trim() || "جاهز تحوّل حلمك لنتيجة حقيقية؟"}
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--color-muted)] sm:text-base">
-                ابدأ الآن بخطوة واثقة: محتوى منظم، شرح واضح، وتمارين عملية تساعدك تثبّت المعلومة بسرعة.
-                كل درس تقطعه اليوم يقرّبك من مستواك اللي تستحقه بكرة.
+                {homepageSettings.ctaDescription?.trim() ||
+                  "ابدأ الآن بخطوة واثقة: محتوى منظم، شرح واضح، وتمارين عملية تساعدك تثبّت المعلومة بسرعة. كل درس تقطعه اليوم يقرّبك من مستواك اللي تستحقه بكرة."}
               </p>
 
               <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
@@ -392,7 +392,7 @@ export default async function HomePage() {
                 href="/#home-next-section"
                 className="mt-8 inline-flex items-center justify-center rounded-[var(--radius-btn)] bg-[var(--color-primary)] px-8 py-3 text-base font-bold text-white transition hover:scale-[1.02] hover:bg-[var(--color-primary-hover)]"
               >
-                ابدأ رحلتك الآن
+                {homepageSettings.ctaButtonText?.trim() || "ابدأ رحلتك الآن"}
               </Link>
             </div>
           </div>

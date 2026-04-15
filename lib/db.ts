@@ -702,6 +702,11 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   footerCopyright: "منصتي التعليمية. جميع الحقوق محفوظة.",
   reviewsSectionTitle: "ماذا يقول الطلاب",
   reviewsSectionSubtitle: "تجارب حقيقية من طلاب المنصة",
+  ctaBadgeText: "انطلاقة تعليمية أقوى",
+  ctaTitle: "جاهز تحوّل حلمك لنتيجة حقيقية؟",
+  ctaDescription:
+    "ابدأ الآن بخطوة واثقة: محتوى منظم، شرح واضح، وتمارين عملية تساعدك تثبّت المعلومة بسرعة. كل درس تقطعه اليوم يقرّبك من مستواك اللي تستحقه بكرة.",
+  ctaButtonText: "ابدأ رحلتك الآن",
   teachersEnabled: false,
   subscriptionsEnabled: false,
   storeEnabled: false,
@@ -744,6 +749,18 @@ async function ensureHomepagePrimaryColorColumn(): Promise<void> {
 async function ensureHomepageHeaderLogoColumn(): Promise<void> {
   try {
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS header_logo_url TEXT`;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
+/** نصوص قسم CTA أسفل الصفحة الرئيسية */
+async function ensureHomepageCtaCopyColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS cta_badge_text TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS cta_title TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS cta_description TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS cta_button_text TEXT`;
   } catch {
     /* DDL غير متاح */
   }
@@ -1011,6 +1028,7 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
     await ensureHomepageStoreSectionCopyColumns();
     await ensureHomepagePrimaryColorColumn();
     await ensureHomepageHeaderLogoColumn();
+    await ensureHomepageCtaCopyColumns();
     const rows = await sql`SELECT * FROM "HomepageSetting" WHERE id = 'default' LIMIT 1`;
     const row = rows[0] as Record<string, unknown> | undefined;
     if (!row) return HOMEPAGE_DEFAULTS;
@@ -1074,6 +1092,30 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
         "reviewsSectionSubtitle",
         HOMEPAGE_DEFAULTS.reviewsSectionSubtitle,
       ),
+      ctaBadgeText: (() => {
+        const raw = row.cta_badge_text ?? (c as { ctaBadgeText?: unknown }).ctaBadgeText;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 120);
+        return HOMEPAGE_DEFAULTS.ctaBadgeText ?? null;
+      })(),
+      ctaTitle: (() => {
+        const raw = row.cta_title ?? (c as { ctaTitle?: unknown }).ctaTitle;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 300);
+        return HOMEPAGE_DEFAULTS.ctaTitle ?? null;
+      })(),
+      ctaDescription: (() => {
+        const raw = row.cta_description ?? (c as { ctaDescription?: unknown }).ctaDescription;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 2000);
+        return HOMEPAGE_DEFAULTS.ctaDescription ?? null;
+      })(),
+      ctaButtonText: (() => {
+        const raw = row.cta_button_text ?? (c as { ctaButtonText?: unknown }).ctaButtonText;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 120);
+        return HOMEPAGE_DEFAULTS.ctaButtonText ?? null;
+      })(),
       teachersEnabled: Boolean(
         (row as { teachers_enabled?: boolean }).teachers_enabled ??
           (c as { teachersEnabled?: boolean }).teachersEnabled,
@@ -1162,6 +1204,10 @@ export async function updateHomepageSettings(data: {
   footer_copyright?: string | null;
   reviews_section_title?: string | null;
   reviews_section_subtitle?: string | null;
+  cta_badge_text?: string | null;
+  cta_title?: string | null;
+  cta_description?: string | null;
+  cta_button_text?: string | null;
   teachers_enabled?: boolean;
   subscriptions_enabled?: boolean;
   store_enabled?: boolean;
@@ -1182,6 +1228,7 @@ export async function updateHomepageSettings(data: {
   await ensureAddBalanceSettingsColumns();
   await ensureHomepagePrimaryColorColumn();
   await ensureHomepageHeaderLogoColumn();
+  await ensureHomepageCtaCopyColumns();
   if (data.teacher_image_url !== undefined) {
     await sql`UPDATE "HomepageSetting" SET teacher_image_url = ${data.teacher_image_url}, updated_at = NOW() WHERE id = 'default'`;
   }
@@ -1241,6 +1288,18 @@ export async function updateHomepageSettings(data: {
   }
   if (data.reviews_section_subtitle !== undefined) {
     await sql`UPDATE "HomepageSetting" SET reviews_section_subtitle = ${data.reviews_section_subtitle}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.cta_badge_text !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET cta_badge_text = ${data.cta_badge_text}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.cta_title !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET cta_title = ${data.cta_title}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.cta_description !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET cta_description = ${data.cta_description}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.cta_button_text !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET cta_button_text = ${data.cta_button_text}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.teachers_enabled !== undefined) {
     await ensureHomepageTeachersEnabledColumn();

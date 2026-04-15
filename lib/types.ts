@@ -101,6 +101,14 @@ export interface HomepageSetting {
   reviewsSectionTitle: string | null;
   /** وصف قصير تحت عنوان قسم التعليقات */
   reviewsSectionSubtitle: string | null;
+  /** عنوان الشارة الصغيرة بقسم CTA أسفل الرئيسية */
+  ctaBadgeText?: string | null;
+  /** عنوان CTA الرئيسي */
+  ctaTitle?: string | null;
+  /** وصف CTA */
+  ctaDescription?: string | null;
+  /** نص زر CTA */
+  ctaButtonText?: string | null;
   /** عند true تظهر صفحة «اختر المدرسين» ويُسمح بحسابات TEACHER */
   teachersEnabled?: boolean;
   /** عند true يظهر قسم «الاشتراكات المتاحة» ويُفعّل شراء باقات الوصول لكل الدورات المدفوعة */

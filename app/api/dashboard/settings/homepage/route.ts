@@ -46,6 +46,10 @@ export async function PUT(request: NextRequest) {
     footerCopyright?: string | null;
     reviewsSectionTitle?: string | null;
     reviewsSectionSubtitle?: string | null;
+    ctaBadgeText?: string | null;
+    ctaTitle?: string | null;
+    ctaDescription?: string | null;
+    ctaButtonText?: string | null;
   };
   try {
     body = await request.json();
@@ -134,6 +138,30 @@ export async function PUT(request: NextRequest) {
         body.reviewsSectionSubtitle !== undefined
           ? (body.reviewsSectionSubtitle && String(body.reviewsSectionSubtitle).trim()
               ? String(body.reviewsSectionSubtitle).trim().slice(0, 400)
+              : null)
+          : undefined,
+      cta_badge_text:
+        body.ctaBadgeText !== undefined
+          ? (body.ctaBadgeText && String(body.ctaBadgeText).trim()
+              ? String(body.ctaBadgeText).trim().slice(0, 120)
+              : null)
+          : undefined,
+      cta_title:
+        body.ctaTitle !== undefined
+          ? (body.ctaTitle && String(body.ctaTitle).trim()
+              ? String(body.ctaTitle).trim().slice(0, 300)
+              : null)
+          : undefined,
+      cta_description:
+        body.ctaDescription !== undefined
+          ? (body.ctaDescription && String(body.ctaDescription).trim()
+              ? String(body.ctaDescription).trim().slice(0, 2000)
+              : null)
+          : undefined,
+      cta_button_text:
+        body.ctaButtonText !== undefined
+          ? (body.ctaButtonText && String(body.ctaButtonText).trim()
+              ? String(body.ctaButtonText).trim().slice(0, 120)
               : null)
           : undefined,
     });
