@@ -23,6 +23,19 @@ const HERO_BG_PRESET_META: { id: HeroBgPreset; label: string }[] = [
 ];
 
 type HeroTemplate = "classic" | "image_slider" | "coming_soon";
+type SliderImageKey =
+  | "heroSliderImage1"
+  | "heroSliderImage2"
+  | "heroSliderImage3"
+  | "heroSliderImage4"
+  | "heroSliderImage5";
+const SLIDER_IMAGE_FIELDS: Array<{ idx: 1 | 2 | 3 | 4 | 5; key: SliderImageKey }> = [
+  { idx: 1, key: "heroSliderImage1" },
+  { idx: 2, key: "heroSliderImage2" },
+  { idx: 3, key: "heroSliderImage3" },
+  { idx: 4, key: "heroSliderImage4" },
+  { idx: 5, key: "heroSliderImage5" },
+];
 
 function initialHeroBgCustom(settings: HomepageSetting): {
   useCustom: boolean;
@@ -282,8 +295,7 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
                 className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
               />
             </div>
-            {[1, 2, 3, 4, 5].map((idx) => {
-              const key = `heroSliderImage${idx}` as const;
+            {SLIDER_IMAGE_FIELDS.map(({ idx, key }) => {
               const current = form[key];
               return (
                 <div key={idx}>
