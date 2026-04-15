@@ -19,6 +19,7 @@ import type {
   Conversation,
   Message,
   SubscriptionDurationKind,
+  PlatformDetailsItem,
 } from "./types";
 import { generateCopyrightCodeCandidate } from "./copyright-code";
 
@@ -720,6 +721,44 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   storeSectionTitle: "متجر المنصة",
   storeSectionDescription:
     "مرحبًا بك في متجر المنصة الذي يضم ملازم وكتب في غاية الأهمية. اختر ما يناسبك من المواد الرقمية التعليمية واستفد من محتوى مُنظّم يدعم رحلتك الدراسية.",
+  platformDetailsEnabled: false,
+  platformDetailsTitle: "“قلم” الحل المثالي!",
+  platformDetailsSubtitle: "تعرف على أهم ما يميز المنصة",
+  platformDetailsBackgroundColor: null,
+  platformDetailsItems: JSON.stringify([
+    {
+      id: "platform-detail-1",
+      title: "فصول افتراضية فورية",
+      description: "تصميم الفصول والمعلومات خلال الفصول الافتراضية.",
+      iconType: "preset",
+      presetIcon: "book",
+      customIconUrl: null,
+    },
+    {
+      id: "platform-detail-2",
+      title: "محتوى جذاب في دقائق",
+      description: "تصميم وإنشاء المحتوى التعليمي بشكل سريع ومميز.",
+      iconType: "preset",
+      presetIcon: "pencil",
+      customIconUrl: null,
+    },
+    {
+      id: "platform-detail-3",
+      title: "أنشطة وفعاليات رائعة",
+      description: "تجذب الطلاب وتنشئ تفاعلهم بعد أو داخل الصف الدراسي.",
+      iconType: "preset",
+      presetIcon: "bulb",
+      customIconUrl: null,
+    },
+    {
+      id: "platform-detail-4",
+      title: "تواصل فعال",
+      description: "أدوات للتواصل والتعاون الفعال بين كل أطراف العملية التعليمية.",
+      iconType: "preset",
+      presetIcon: "chat",
+      customIconUrl: null,
+    },
+  ] satisfies PlatformDetailsItem[]),
   addBalanceTitle: "إضافة رصيد",
   addBalanceSubtitle: "اختر طريقة الدفع ثم اتبع التعليمات",
   addBalanceMethodTitle: "فودافون كاش",
@@ -828,6 +867,19 @@ async function ensureHomepageStoreSectionCopyColumns(): Promise<void> {
   try {
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS store_section_title TEXT`;
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS store_section_description TEXT`;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
+/** قسم تفاصيل المنصة (إظهار/إخفاء + عنوان + وصف + بطاقات) */
+async function ensureHomepagePlatformDetailsColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_details_enabled BOOLEAN NOT NULL DEFAULT false`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_details_title TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_details_subtitle TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_details_background_color TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_details_items TEXT`;
   } catch {
     /* DDL غير متاح */
   }
@@ -1052,6 +1104,7 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
     await ensureHomepagePrimaryColorColumn();
     await ensureHomepageHeaderLogoColumn();
     await ensureHomepageCtaCopyColumns();
+    await ensureHomepagePlatformDetailsColumns();
     const rows = await sql`SELECT * FROM "HomepageSetting" WHERE id = 'default' LIMIT 1`;
     const row = rows[0] as Record<string, unknown> | undefined;
     if (!row) return HOMEPAGE_DEFAULTS;
@@ -1206,6 +1259,42 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
         if (s.length > 0) return s.slice(0, 2000);
         return HOMEPAGE_DEFAULTS.storeSectionDescription ?? null;
       })(),
+      platformDetailsEnabled: Boolean(
+        (row as { platform_details_enabled?: boolean }).platform_details_enabled ??
+          (c as { platformDetailsEnabled?: boolean }).platformDetailsEnabled,
+      ),
+      platformDetailsTitle: (() => {
+        const raw =
+          row.platform_details_title ??
+          (c as { platformDetailsTitle?: unknown }).platformDetailsTitle;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 240);
+        return HOMEPAGE_DEFAULTS.platformDetailsTitle ?? null;
+      })(),
+      platformDetailsSubtitle: (() => {
+        const raw =
+          row.platform_details_subtitle ??
+          (c as { platformDetailsSubtitle?: unknown }).platformDetailsSubtitle;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 500);
+        return HOMEPAGE_DEFAULTS.platformDetailsSubtitle ?? null;
+      })(),
+      platformDetailsBackgroundColor: (() => {
+        const raw =
+          row.platform_details_background_color ??
+          (c as { platformDetailsBackgroundColor?: unknown }).platformDetailsBackgroundColor;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 16);
+        return HOMEPAGE_DEFAULTS.platformDetailsBackgroundColor ?? null;
+      })(),
+      platformDetailsItems: (() => {
+        const raw =
+          row.platform_details_items ??
+          (c as { platformDetailsItems?: unknown }).platformDetailsItems;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 12000);
+        return HOMEPAGE_DEFAULTS.platformDetailsItems ?? "[]";
+      })(),
       addBalanceTitle: (c.addBalanceTitle as string) ?? HOMEPAGE_DEFAULTS.addBalanceTitle,
       addBalanceSubtitle:
         (c.addBalanceSubtitle as string) ?? HOMEPAGE_DEFAULTS.addBalanceSubtitle,
@@ -1283,6 +1372,11 @@ export async function updateHomepageSettings(data: {
   store_enabled?: boolean;
   store_section_title?: string | null;
   store_section_description?: string | null;
+  platform_details_enabled?: boolean;
+  platform_details_title?: string | null;
+  platform_details_subtitle?: string | null;
+  platform_details_background_color?: string | null;
+  platform_details_items?: string | null;
   add_balance_title?: string | null;
   add_balance_subtitle?: string | null;
   add_balance_method_title?: string | null;
@@ -1300,6 +1394,7 @@ export async function updateHomepageSettings(data: {
   await ensureHomepagePrimaryColorColumn();
   await ensureHomepageHeaderLogoColumn();
   await ensureHomepageCtaCopyColumns();
+  await ensureHomepagePlatformDetailsColumns();
   if (data.hero_template !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_template = ${data.hero_template}, updated_at = NOW() WHERE id = 'default'`;
   }
@@ -1430,6 +1525,32 @@ export async function updateHomepageSettings(data: {
   if (data.store_section_description !== undefined) {
     await ensureHomepageStoreSectionCopyColumns();
     await sql`UPDATE "HomepageSetting" SET store_section_description = ${data.store_section_description}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.platform_details_enabled !== undefined) {
+    await ensureHomepagePlatformDetailsColumns();
+    await sql`
+      INSERT INTO "HomepageSetting" (id, platform_details_enabled, updated_at)
+      VALUES ('default', ${data.platform_details_enabled}, NOW())
+      ON CONFLICT (id) DO UPDATE SET
+        platform_details_enabled = EXCLUDED.platform_details_enabled,
+        updated_at = NOW()
+    `;
+  }
+  if (data.platform_details_title !== undefined) {
+    await ensureHomepagePlatformDetailsColumns();
+    await sql`UPDATE "HomepageSetting" SET platform_details_title = ${data.platform_details_title}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.platform_details_subtitle !== undefined) {
+    await ensureHomepagePlatformDetailsColumns();
+    await sql`UPDATE "HomepageSetting" SET platform_details_subtitle = ${data.platform_details_subtitle}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.platform_details_background_color !== undefined) {
+    await ensureHomepagePlatformDetailsColumns();
+    await sql`UPDATE "HomepageSetting" SET platform_details_background_color = ${data.platform_details_background_color}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.platform_details_items !== undefined) {
+    await ensureHomepagePlatformDetailsColumns();
+    await sql`UPDATE "HomepageSetting" SET platform_details_items = ${data.platform_details_items}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.add_balance_title !== undefined) {
     await sql`UPDATE "HomepageSetting" SET add_balance_title = ${data.add_balance_title}, updated_at = NOW() WHERE id = 'default'`;

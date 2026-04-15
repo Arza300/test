@@ -3,6 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getHomepageSettings, updateHomepageSettings } from "@/lib/db";
 import { normalizeHeroHex } from "@/lib/hero-bg";
+import type { PlatformDetailsItem, PlatformDetailsPresetIcon } from "@/lib/types";
+import { PLATFORM_DETAILS_PRESET_ICON_OPTIONS } from "@/lib/platform-details";
+const PLATFORM_DETAILS_PRESET_ICONS = PLATFORM_DETAILS_PRESET_ICON_OPTIONS.map(
+  (option) => option.id,
+) as PlatformDetailsPresetIcon[];
 
 /** جلب إعدادات الصفحة الرئيسية — للأدمن */
 export async function GET() {
@@ -58,6 +63,11 @@ export async function PUT(request: NextRequest) {
     ctaTitle?: string | null;
     ctaDescription?: string | null;
     ctaButtonText?: string | null;
+    platformDetailsEnabled?: boolean;
+    platformDetailsTitle?: string | null;
+    platformDetailsSubtitle?: string | null;
+    platformDetailsBackgroundColor?: string | null;
+    platformDetailsItems?: unknown;
   };
   try {
     body = await request.json();
@@ -158,6 +168,65 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  let platform_details_items: string | null | undefined;
+  let platform_details_background_color: string | null | undefined;
+  if (body.platformDetailsBackgroundColor !== undefined) {
+    if (body.platformDetailsBackgroundColor === null) {
+      platform_details_background_color = null;
+    } else {
+      const normalized = normalizeHeroHex(String(body.platformDetailsBackgroundColor ?? ""));
+      if (!normalized) {
+        return NextResponse.json(
+          { error: "لون خلفية قسم تفاصيل المنصة يجب أن يكون بصيغة #RRGGBB" },
+          { status: 400 },
+        );
+      }
+      platform_details_background_color = normalized;
+    }
+  }
+  if (body.platformDetailsItems !== undefined) {
+    if (body.platformDetailsItems === null) {
+      platform_details_items = null;
+    } else if (!Array.isArray(body.platformDetailsItems)) {
+      return NextResponse.json({ error: "بيانات بطاقات تفاصيل المنصة غير صالحة" }, { status: 400 });
+    } else {
+      if (body.platformDetailsItems.length > 4) {
+        return NextResponse.json({ error: "الحد الأقصى لبطاقات تفاصيل المنصة هو 4 بطاقات" }, { status: 400 });
+      }
+      const items: PlatformDetailsItem[] = [];
+      for (let i = 0; i < body.platformDetailsItems.length; i++) {
+        const raw = body.platformDetailsItems[i];
+        if (!raw || typeof raw !== "object") {
+          return NextResponse.json({ error: `البطاقة رقم ${i + 1} غير صالحة` }, { status: 400 });
+        }
+        const item = raw as Record<string, unknown>;
+        const iconType = item.iconType === "upload" ? "upload" : "preset";
+        const presetIconRaw = String(item.presetIcon ?? "chat").trim() as PlatformDetailsPresetIcon;
+        const presetIcon = PLATFORM_DETAILS_PRESET_ICONS.includes(presetIconRaw)
+          ? presetIconRaw
+          : "chat";
+        const title = String(item.title ?? "").trim().slice(0, 120);
+        const description = String(item.description ?? "").trim().slice(0, 400);
+        if (!title || !description) {
+          return NextResponse.json(
+            { error: `عنوان ووصف البطاقة رقم ${i + 1} مطلوبان` },
+            { status: 400 },
+          );
+        }
+        const customIconRaw = String(item.customIconUrl ?? "").trim();
+        items.push({
+          id: String(item.id ?? `platform-detail-${i + 1}`).trim() || `platform-detail-${i + 1}`,
+          title,
+          description,
+          iconType,
+          presetIcon,
+          customIconUrl: customIconRaw ? customIconRaw.slice(0, 4000) : null,
+        });
+      }
+      platform_details_items = JSON.stringify(items);
+    }
+  }
+
   try {
     await updateHomepageSettings({
       hero_template,
@@ -226,6 +295,22 @@ export async function PUT(request: NextRequest) {
               ? String(body.ctaButtonText).trim().slice(0, 120)
               : null)
           : undefined,
+      platform_details_enabled:
+        body.platformDetailsEnabled !== undefined ? Boolean(body.platformDetailsEnabled) : undefined,
+      platform_details_title:
+        body.platformDetailsTitle !== undefined
+          ? (body.platformDetailsTitle && String(body.platformDetailsTitle).trim()
+              ? String(body.platformDetailsTitle).trim().slice(0, 240)
+              : null)
+          : undefined,
+      platform_details_subtitle:
+        body.platformDetailsSubtitle !== undefined
+          ? (body.platformDetailsSubtitle && String(body.platformDetailsSubtitle).trim()
+              ? String(body.platformDetailsSubtitle).trim().slice(0, 500)
+              : null)
+          : undefined,
+      platform_details_background_color,
+      platform_details_items,
     });
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -2,8 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { HomepageSetting, HeroBgPreset } from "@/lib/types";
+import type {
+  HomepageSetting,
+  HeroBgPreset,
+  PlatformDetailsItem,
+  PlatformDetailsPresetIcon,
+} from "@/lib/types";
 import { HERO_BG_PRESET_GRADIENTS, normalizeHeroHex } from "@/lib/hero-bg";
+import {
+  DEFAULT_PLATFORM_DETAILS_ITEMS,
+  PLATFORM_DETAILS_PRESET_ICON_OPTIONS,
+  parsePlatformDetailsItems,
+} from "@/lib/platform-details";
 
 const HERO_BG_PRESET_META: { id: HeroBgPreset; label: string }[] = [
   { id: "navy", label: "أزرق داكن (افتراضي)" },
@@ -50,6 +60,29 @@ function initialHeroBgCustom(settings: HomepageSetting): {
   return { useCustom: false, from: g.from, to: g.to };
 }
 
+function renderPresetIcon(icon: PlatformDetailsPresetIcon, className: string) {
+  const common = { className, fill: "none", stroke: "currentColor", strokeWidth: 1.8 } as const;
+  switch (icon) {
+    case "book":
+      return <svg viewBox="0 0 24 24" {...common}><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21z" /><path d="M4 5.5V21" /></svg>;
+    case "pencil":
+      return <svg viewBox="0 0 24 24" {...common}><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4z" /></svg>;
+    case "bulb":
+      return <svg viewBox="0 0 24 24" {...common}><path d="M9 18h6" /><path d="M10 22h4" /><path d="M8 14a6 6 0 1 1 8 0c-1 1-1.5 2-1.5 3h-5C9.5 16 9 15 8 14z" /></svg>;
+    case "users":
+      return <svg viewBox="0 0 24 24" {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="3.5" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a3.5 3.5 0 0 1 0 6.75" /></svg>;
+    case "rocket":
+      return <svg viewBox="0 0 24 24" {...common}><path d="M5 15c-1 0-2.5 0-3 1.5S1 20 1 20s2-.5 3.5-1S6 17 6 16" /><path d="M14 10 4 20" /><path d="M12 2s5 0 8 3 3 8 3 8-4 1-8-3-3-8-3-8z" /></svg>;
+    case "target":
+      return <svg viewBox="0 0 24 24" {...common}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="1.5" /></svg>;
+    case "certificate":
+      return <svg viewBox="0 0 24 24" {...common}><path d="M7 4h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4l-3 3v-3H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><circle cx="12" cy="9" r="2.5" /></svg>;
+    case "chat":
+    default:
+      return <svg viewBox="0 0 24 24" {...common}><path d="M21 12a8 8 0 0 1-8 8H6l-3 3v-8a8 8 0 1 1 18-3z" /></svg>;
+  }
+}
+
 export function HomepageSettingsForm({ initialSettings }: { initialSettings: HomepageSetting }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -91,6 +124,10 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     ctaTitle: initialSettings.ctaTitle ?? "",
     ctaDescription: initialSettings.ctaDescription ?? "",
     ctaButtonText: initialSettings.ctaButtonText ?? "",
+    platformDetailsEnabled: Boolean(initialSettings.platformDetailsEnabled ?? false),
+    platformDetailsTitle: initialSettings.platformDetailsTitle ?? "",
+    platformDetailsSubtitle: initialSettings.platformDetailsSubtitle ?? "",
+    platformDetailsBackgroundColor: initialSettings.platformDetailsBackgroundColor ?? "",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
@@ -98,6 +135,10 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
   const [logoUploadError, setLogoUploadError] = useState("");
   const [floatImageUploading, setFloatImageUploading] = useState<1 | 2 | 3 | null>(null);
   const [sliderImageUploading, setSliderImageUploading] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+  const [platformItemUploading, setPlatformItemUploading] = useState<string | null>(null);
+  const [platformDetailsItems, setPlatformDetailsItems] = useState<PlatformDetailsItem[]>(
+    parsePlatformDetailsItems(initialSettings.platformDetailsItems),
+  );
 
   useEffect(() => {
     if (!success) return;
@@ -120,6 +161,10 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     initialSettings.heroBgCustomTo,
   ]);
 
+  useEffect(() => {
+    setPlatformDetailsItems(parsePlatformDetailsItems(initialSettings.platformDetailsItems));
+  }, [initialSettings.platformDetailsItems]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -140,6 +185,25 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
       const intervalSecondsRaw = Number(form.heroSliderIntervalSeconds.trim());
       if (!Number.isFinite(intervalSecondsRaw) || intervalSecondsRaw < 2 || intervalSecondsRaw > 20) {
         throw new Error("مدة تبديل صور السلايدر يجب أن تكون رقمًا بين 2 و 20 ثانية");
+      }
+      if (platformDetailsItems.length > 4) {
+        throw new Error("الحد الأقصى لبطاقات قسم تفاصيل المنصة هو 4 بطاقات");
+      }
+      if (
+        platformDetailsItems.some(
+          (item) =>
+            !item.title.trim() ||
+            !item.description.trim() ||
+            (item.iconType === "upload" && !item.customIconUrl?.trim()),
+        )
+      ) {
+        throw new Error("أكمل بيانات بطاقات قسم تفاصيل المنصة (العنوان/الوصف/الأيقونة)");
+      }
+      const platformDetailsBgNorm = form.platformDetailsBackgroundColor.trim()
+        ? normalizeHeroHex(form.platformDetailsBackgroundColor.trim())
+        : null;
+      if (form.platformDetailsBackgroundColor.trim() && !platformDetailsBgNorm) {
+        throw new Error("لون خلفية قسم تفاصيل المنصة يجب أن يكون بصيغة #RRGGBB");
       }
       const heroTemplate: HeroTemplate =
         form.heroTemplate === "classic" ||
@@ -182,6 +246,11 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           ctaTitle: form.ctaTitle.trim() || null,
           ctaDescription: form.ctaDescription.trim() || null,
           ctaButtonText: form.ctaButtonText.trim() || null,
+          platformDetailsEnabled: form.platformDetailsEnabled,
+          platformDetailsTitle: form.platformDetailsTitle.trim() || null,
+          platformDetailsSubtitle: form.platformDetailsSubtitle.trim() || null,
+          platformDetailsBackgroundColor: platformDetailsBgNorm,
+          platformDetailsItems,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -194,6 +263,23 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     } finally {
       setSaving(false);
     }
+  }
+
+  const canAddPlatformDetailItem = platformDetailsItems.length < 4;
+
+  function addPlatformDetailsItem() {
+    if (!canAddPlatformDetailItem) return;
+    setPlatformDetailsItems((prev) => [
+      ...prev,
+      {
+        id: `platform-detail-${Date.now()}`,
+        title: "",
+        description: "",
+        iconType: "preset",
+        presetIcon: "chat",
+        customIconUrl: null,
+      },
+    ]);
   }
 
   return (
@@ -832,6 +918,260 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
             />
             <p className="mt-1 text-xs text-[var(--color-muted)]">يُعرض كـ: © السنة الحالية ثم النص أعلاه.</p>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">قسم تفاصيل المنصة</h3>
+        <p className="mb-4 text-sm text-[var(--color-muted)]">
+          عند التفعيل يظهر هذا القسم بعد الهيرو مباشرة في الصفحة الرئيسية.
+        </p>
+        <label className="mb-4 flex items-center gap-2 text-sm font-medium text-[var(--color-foreground)]">
+          <input
+            type="checkbox"
+            className="accent-[var(--color-primary)]"
+            checked={form.platformDetailsEnabled}
+            onChange={(e) => setForm((f) => ({ ...f, platformDetailsEnabled: e.target.checked }))}
+          />
+          تفعيل قسم تفاصيل المنصة
+        </label>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">عنوان القسم</label>
+            <input
+              type="text"
+              value={form.platformDetailsTitle}
+              onChange={(e) => setForm((f) => ({ ...f, platformDetailsTitle: e.target.value }))}
+              maxLength={240}
+              placeholder="“قلم” الحل المثالي!"
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">وصف القسم</label>
+            <textarea
+              value={form.platformDetailsSubtitle}
+              onChange={(e) => setForm((f) => ({ ...f, platformDetailsSubtitle: e.target.value }))}
+              rows={2}
+              maxLength={500}
+              placeholder="تعرف على أهم ما يميز المنصة"
+              className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-foreground)]">لون خلفية القسم</label>
+            <p className="mt-1 text-xs text-[var(--color-muted)]">
+              اتركه فارغًا لاستخدام الخلفية الافتراضية.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <input
+                type="color"
+                value={normalizeHeroHex(form.platformDetailsBackgroundColor) ?? "#ffffff"}
+                onChange={(e) => setForm((f) => ({ ...f, platformDetailsBackgroundColor: e.target.value }))}
+                className="h-10 w-14 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0.5"
+                aria-label="لون خلفية قسم تفاصيل المنصة"
+              />
+              <input
+                type="text"
+                value={form.platformDetailsBackgroundColor}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, platformDetailsBackgroundColor: e.target.value }))
+                }
+                placeholder="#F5F7FB"
+                className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 font-mono text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, platformDetailsBackgroundColor: "" }))}
+                className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs font-medium text-[var(--color-foreground)]"
+              >
+                افتراضي
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold text-[var(--color-foreground)]">بطاقات القسم (حتى 4)</h4>
+            <button
+              type="button"
+              onClick={addPlatformDetailsItem}
+              disabled={!canAddPlatformDetailItem}
+              className="rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-xs font-semibold text-[var(--color-primary)] disabled:opacity-50"
+            >
+              إضافة بطاقة
+            </button>
+          </div>
+          <div className="space-y-3">
+            {platformDetailsItems.map((item, idx) => (
+              <div
+                key={item.id}
+                className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4"
+              >
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-[var(--color-muted)]">بطاقة #{idx + 1}</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPlatformDetailsItems((prev) => prev.filter((entry) => entry.id !== item.id))
+                    }
+                    className="rounded-[var(--radius-btn)] border border-red-500/40 px-2 py-1 text-xs font-semibold text-red-600 dark:text-red-400"
+                  >
+                    حذف
+                  </button>
+                </div>
+                <div className="grid gap-3">
+                  <input
+                    type="text"
+                    value={item.title}
+                    onChange={(e) =>
+                      setPlatformDetailsItems((prev) =>
+                        prev.map((entry) =>
+                          entry.id === item.id ? { ...entry, title: e.target.value } : entry,
+                        ),
+                      )
+                    }
+                    maxLength={120}
+                    placeholder="عنوان البطاقة"
+                    className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                  />
+                  <textarea
+                    value={item.description}
+                    onChange={(e) =>
+                      setPlatformDetailsItems((prev) =>
+                        prev.map((entry) =>
+                          entry.id === item.id ? { ...entry, description: e.target.value } : entry,
+                        ),
+                      )
+                    }
+                    rows={2}
+                    maxLength={400}
+                    placeholder="وصف البطاقة"
+                    className="w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                  />
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 text-xs text-[var(--color-foreground)]">
+                      <input
+                        type="radio"
+                        name={`platform-icon-type-${item.id}`}
+                        checked={item.iconType === "preset"}
+                        onChange={() =>
+                          setPlatformDetailsItems((prev) =>
+                            prev.map((entry) =>
+                              entry.id === item.id ? { ...entry, iconType: "preset" } : entry,
+                            ),
+                          )
+                        }
+                      />
+                      أيقونة جاهزة
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-[var(--color-foreground)]">
+                      <input
+                        type="radio"
+                        name={`platform-icon-type-${item.id}`}
+                        checked={item.iconType === "upload"}
+                        onChange={() =>
+                          setPlatformDetailsItems((prev) =>
+                            prev.map((entry) =>
+                              entry.id === item.id ? { ...entry, iconType: "upload" } : entry,
+                            ),
+                          )
+                        }
+                      />
+                      أيقونة مرفوعة
+                    </label>
+                  </div>
+                  {item.iconType === "preset" ? (
+                    <div className="grid grid-cols-4 gap-2">
+                      {PLATFORM_DETAILS_PRESET_ICON_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() =>
+                            setPlatformDetailsItems((prev) =>
+                              prev.map((entry) =>
+                                entry.id === item.id ? { ...entry, presetIcon: opt.id } : entry,
+                              ),
+                            )
+                          }
+                          title={opt.label}
+                          className={`flex h-12 items-center justify-center rounded-[var(--radius-btn)] border ${
+                            item.presetIcon === opt.id
+                              ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                              : "border-[var(--color-border)] text-[var(--color-muted)]"
+                          }`}
+                        >
+                          {renderPresetIcon(opt.id, "h-5 w-5")}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          value={item.customIconUrl ?? ""}
+                          onChange={(e) =>
+                            setPlatformDetailsItems((prev) =>
+                              prev.map((entry) =>
+                                entry.id === item.id
+                                  ? { ...entry, customIconUrl: e.target.value || null }
+                                  : entry,
+                              ),
+                            )
+                          }
+                          placeholder="رابط الأيقونة"
+                          className="min-w-[180px] flex-1 rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                        />
+                        <label className="cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-xs font-semibold text-[var(--color-primary)]">
+                          {platformItemUploading === item.id ? "جاري الرفع..." : "رفع أيقونة"}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                            className="hidden"
+                            disabled={platformItemUploading !== null}
+                            onChange={async (e) => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              setPlatformItemUploading(item.id);
+                              try {
+                                const fd = new FormData();
+                                fd.set("file", f);
+                                const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+                                const data = await res.json().catch(() => ({}));
+                                if (res.ok && data.url) {
+                                  setPlatformDetailsItems((prev) =>
+                                    prev.map((entry) =>
+                                      entry.id === item.id ? { ...entry, customIconUrl: data.url } : entry,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                setPlatformItemUploading(null);
+                                e.target.value = "";
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {item.customIconUrl ? (
+                        <img
+                          src={item.customIconUrl}
+                          alt="معاينة الأيقونة"
+                          className="h-10 w-10 rounded border border-[var(--color-border)] object-contain p-1"
+                        />
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPlatformDetailsItems([...DEFAULT_PLATFORM_DETAILS_ITEMS])}
+            className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-xs font-medium text-[var(--color-foreground)]"
+          >
+            استرجاع البطاقات الافتراضية
+          </button>
         </div>
       </div>
 

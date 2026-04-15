@@ -21,7 +21,9 @@ import { HeroScrollCue } from "@/components/HeroScrollCue";
 import { HeroShootingStar } from "@/components/HeroShootingStar";
 import { HomeStoreSection } from "@/components/HomeStoreSection";
 import { HomeHeroImageSlider } from "@/components/HomeHeroImageSlider";
+import { HomePlatformDetailsSection } from "@/components/HomePlatformDetailsSection";
 import { resolveHeroBgGradient } from "@/lib/hero-bg";
+import { parsePlatformDetailsItems } from "@/lib/platform-details";
 
 /** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
 export const dynamic = "force-dynamic";
@@ -150,6 +152,7 @@ export default async function HomePage() {
     typeof homepageSettings.heroSliderIntervalMs === "number"
       ? homepageSettings.heroSliderIntervalMs
       : 5000;
+  const platformDetailsItems = parsePlatformDetailsItems(homepageSettings.platformDetailsItems);
 
   return (
     <div>
@@ -272,6 +275,15 @@ export default async function HomePage() {
       )}
 
       <div id="home-next-section" className="scroll-mt-20" />
+
+      {homepageSettings.platformDetailsEnabled && platformDetailsItems.length > 0 ? (
+        <HomePlatformDetailsSection
+          title={homepageSettings.platformDetailsTitle?.trim() || "“قلم” الحل المثالي!"}
+          subtitle={homepageSettings.platformDetailsSubtitle?.trim() || null}
+          backgroundColor={homepageSettings.platformDetailsBackgroundColor?.trim() || null}
+          items={platformDetailsItems}
+        />
+      ) : null}
 
       {homepageSettings.teachersEnabled ? (
         <HomeTeachersSection enabled initialTeachers={teachersHomePreview} />

@@ -70,6 +70,25 @@ export type HeroBgPreset =
   | "midnight"
   | "wine";
 
+export type PlatformDetailsPresetIcon =
+  | "chat"
+  | "bulb"
+  | "pencil"
+  | "book"
+  | "users"
+  | "rocket"
+  | "target"
+  | "certificate";
+
+export interface PlatformDetailsItem {
+  id: string;
+  title: string;
+  description: string;
+  iconType: "preset" | "upload";
+  presetIcon: PlatformDetailsPresetIcon;
+  customIconUrl: string | null;
+}
+
 export interface HomepageSetting {
   /** القالب العام لهيرو الصفحة الرئيسية */
   heroTemplate?: "classic" | "image_slider" | "coming_soon" | string | null;
@@ -129,6 +148,16 @@ export interface HomepageSetting {
   storeSectionTitle?: string | null;
   /** وصف قسم المتجر في الصفحة الرئيسية */
   storeSectionDescription?: string | null;
+  /** عند true يظهر قسم تفاصيل المنصة بعد الهيرو مباشرة */
+  platformDetailsEnabled?: boolean;
+  /** عنوان قسم تفاصيل المنصة */
+  platformDetailsTitle?: string | null;
+  /** وصف قصير تحت عنوان قسم تفاصيل المنصة */
+  platformDetailsSubtitle?: string | null;
+  /** لون خلفية قسم تفاصيل المنصة (#RRGGBB) */
+  platformDetailsBackgroundColor?: string | null;
+  /** عناصر القسم (JSON) */
+  platformDetailsItems?: string | null;
   /** عنوان صفحة إضافة الرصيد للطالب */
   addBalanceTitle?: string | null;
   /** وصف أعلى صفحة إضافة الرصيد */
