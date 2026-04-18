@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { HomepageSettingsForm } from "./HomepageSettingsForm";
-import { getHomepageSettings } from "@/lib/db";
+import { getCoursesPublished, getHomepageSettings } from "@/lib/db";
 
 export default async function DashboardHomepageSettingsPage() {
   const session = await getServerSession(authOptions);
@@ -10,6 +10,23 @@ export default async function DashboardHomepageSettingsPage() {
   if (session.user.role !== "ADMIN") redirect("/dashboard");
 
   const settings = await getHomepageSettings();
+  let publishedCourses: { id: string; slug: string; title: string; titleAr: string | null }[] = [];
+  try {
+    const courses = await getCoursesPublished(true);
+    publishedCourses = courses.map((c) => {
+      const titleArRaw = (c as { titleAr?: string | null }).titleAr ?? c.title_ar ?? null;
+      const titleAr =
+        titleArRaw != null && String(titleArRaw).trim() !== "" ? String(titleArRaw).trim() : null;
+      return {
+        id: String(c.id),
+        slug: String(c.slug),
+        title: String(c.title ?? ""),
+        titleAr,
+      };
+    });
+  } catch {
+    /* قاعدة البيانات غير متصلة */
+  }
 
   return (
     <div>
@@ -19,7 +36,7 @@ export default async function DashboardHomepageSettingsPage() {
       <p className="mt-1 text-sm text-[var(--color-muted)]">
         غيّر صورة المدرس والعنوان والشعار واسم المنصة الظاهر في أعلى الموقع وفي الصفحة الرئيسية.
       </p>
-      <HomepageSettingsForm initialSettings={settings} />
+      <HomepageSettingsForm initialSettings={settings} publishedCourses={publishedCourses} />
     </div>
   );
 }

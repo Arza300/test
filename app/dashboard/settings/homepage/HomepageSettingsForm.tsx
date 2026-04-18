@@ -7,6 +7,7 @@ import type {
   HeroBgPreset,
   PlatformDetailsItem,
   PlatformDetailsPresetIcon,
+  PlatformNewsItem,
 } from "@/lib/types";
 import { HERO_BG_PRESET_GRADIENTS, normalizeHeroHex } from "@/lib/hero-bg";
 import {
@@ -14,6 +15,7 @@ import {
   PLATFORM_DETAILS_PRESET_ICON_OPTIONS,
   parsePlatformDetailsItems,
 } from "@/lib/platform-details";
+import { parsePlatformNewsItems, PLATFORM_NEWS_MAX_ITEMS } from "@/lib/platform-news";
 
 const HERO_BG_PRESET_META: { id: HeroBgPreset; label: string }[] = [
   { id: "navy", label: "أزرق داكن (افتراضي)" },
@@ -39,12 +41,30 @@ type SliderImageKey =
   | "heroSliderImage3"
   | "heroSliderImage4"
   | "heroSliderImage5";
-const SLIDER_IMAGE_FIELDS: Array<{ idx: 1 | 2 | 3 | 4 | 5; key: SliderImageKey }> = [
-  { idx: 1, key: "heroSliderImage1" },
-  { idx: 2, key: "heroSliderImage2" },
-  { idx: 3, key: "heroSliderImage3" },
-  { idx: 4, key: "heroSliderImage4" },
-  { idx: 5, key: "heroSliderImage5" },
+type SliderCourseIdKey =
+  | "heroSliderCourseId1"
+  | "heroSliderCourseId2"
+  | "heroSliderCourseId3"
+  | "heroSliderCourseId4"
+  | "heroSliderCourseId5";
+
+type PublishedCourseOption = {
+  id: string;
+  slug: string;
+  title: string;
+  titleAr: string | null;
+};
+
+const SLIDER_IMAGE_FIELDS: Array<{
+  idx: 1 | 2 | 3 | 4 | 5;
+  key: SliderImageKey;
+  courseIdKey: SliderCourseIdKey;
+}> = [
+  { idx: 1, key: "heroSliderImage1", courseIdKey: "heroSliderCourseId1" },
+  { idx: 2, key: "heroSliderImage2", courseIdKey: "heroSliderCourseId2" },
+  { idx: 3, key: "heroSliderImage3", courseIdKey: "heroSliderCourseId3" },
+  { idx: 4, key: "heroSliderImage4", courseIdKey: "heroSliderCourseId4" },
+  { idx: 5, key: "heroSliderImage5", courseIdKey: "heroSliderCourseId5" },
 ];
 
 function initialHeroBgCustom(settings: HomepageSetting): {
@@ -83,7 +103,13 @@ function renderPresetIcon(icon: PlatformDetailsPresetIcon, className: string) {
   }
 }
 
-export function HomepageSettingsForm({ initialSettings }: { initialSettings: HomepageSetting }) {
+export function HomepageSettingsForm({
+  initialSettings,
+  publishedCourses,
+}: {
+  initialSettings: HomepageSetting;
+  publishedCourses: PublishedCourseOption[];
+}) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -112,6 +138,11 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     heroSliderImage3: initialSettings.heroSliderImage3 ?? "",
     heroSliderImage4: initialSettings.heroSliderImage4 ?? "",
     heroSliderImage5: initialSettings.heroSliderImage5 ?? "",
+    heroSliderCourseId1: initialSettings.heroSliderCourseId1 ?? "",
+    heroSliderCourseId2: initialSettings.heroSliderCourseId2 ?? "",
+    heroSliderCourseId3: initialSettings.heroSliderCourseId3 ?? "",
+    heroSliderCourseId4: initialSettings.heroSliderCourseId4 ?? "",
+    heroSliderCourseId5: initialSettings.heroSliderCourseId5 ?? "",
     heroSliderIntervalSeconds: String(
       Math.min(20, Math.max(2, Math.round((initialSettings.heroSliderIntervalMs ?? 5000) / 1000))),
     ),
@@ -136,6 +167,8 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
     platformDetailsTitle: initialSettings.platformDetailsTitle ?? "",
     platformDetailsSubtitle: initialSettings.platformDetailsSubtitle ?? "",
     platformDetailsBackgroundColor: initialSettings.platformDetailsBackgroundColor ?? "",
+    platformNewsEnabled: Boolean(initialSettings.platformNewsEnabled ?? false),
+    platformNewsSectionTitle: initialSettings.platformNewsSectionTitle ?? "",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [imageUploadError, setImageUploadError] = useState("");
@@ -148,6 +181,10 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
   const [platformDetailsItems, setPlatformDetailsItems] = useState<PlatformDetailsItem[]>(
     parsePlatformDetailsItems(initialSettings.platformDetailsItems),
   );
+  const [platformNewsItems, setPlatformNewsItems] = useState<PlatformNewsItem[]>(
+    parsePlatformNewsItems(initialSettings.platformNewsItems),
+  );
+  const [platformNewsUploading, setPlatformNewsUploading] = useState<string | null>(null);
 
   useEffect(() => {
     if (!success) return;
@@ -173,6 +210,34 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
   useEffect(() => {
     setPlatformDetailsItems(parsePlatformDetailsItems(initialSettings.platformDetailsItems));
   }, [initialSettings.platformDetailsItems]);
+
+  useEffect(() => {
+    setPlatformNewsItems(parsePlatformNewsItems(initialSettings.platformNewsItems));
+  }, [initialSettings.platformNewsItems]);
+
+  useEffect(() => {
+    setForm((f) => ({
+      ...f,
+      platformNewsSectionTitle: initialSettings.platformNewsSectionTitle ?? "",
+    }));
+  }, [initialSettings.platformNewsSectionTitle]);
+
+  useEffect(() => {
+    setForm((f) => ({
+      ...f,
+      heroSliderCourseId1: initialSettings.heroSliderCourseId1 ?? "",
+      heroSliderCourseId2: initialSettings.heroSliderCourseId2 ?? "",
+      heroSliderCourseId3: initialSettings.heroSliderCourseId3 ?? "",
+      heroSliderCourseId4: initialSettings.heroSliderCourseId4 ?? "",
+      heroSliderCourseId5: initialSettings.heroSliderCourseId5 ?? "",
+    }));
+  }, [
+    initialSettings.heroSliderCourseId1,
+    initialSettings.heroSliderCourseId2,
+    initialSettings.heroSliderCourseId3,
+    initialSettings.heroSliderCourseId4,
+    initialSettings.heroSliderCourseId5,
+  ]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -220,6 +285,18 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
       if (form.platformDetailsBackgroundColor.trim() && !platformDetailsBgNorm) {
         throw new Error("لون خلفية قسم تفاصيل المنصة يجب أن يكون بصيغة #RRGGBB");
       }
+      if (platformNewsItems.length > PLATFORM_NEWS_MAX_ITEMS) {
+        throw new Error(`الحد الأقصى لأخبار المنصة هو ${PLATFORM_NEWS_MAX_ITEMS}`);
+      }
+      if (
+        platformNewsItems.some(
+          (item) =>
+            (item.imageUrl.trim() && !item.description.trim()) ||
+            (!item.imageUrl.trim() && item.description.trim()),
+        )
+      ) {
+        throw new Error("أكمل صورة ووصف كل خبر، أو امسح الحقول غير المكتملة");
+      }
       const heroTemplate: HeroTemplate =
         form.heroTemplate === "classic" ||
         form.heroTemplate === "image_slider" ||
@@ -251,6 +328,11 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           heroSliderImage3: form.heroSliderImage3.trim() || null,
           heroSliderImage4: form.heroSliderImage4.trim() || null,
           heroSliderImage5: form.heroSliderImage5.trim() || null,
+          heroSliderCourseId1: form.heroSliderCourseId1.trim() || null,
+          heroSliderCourseId2: form.heroSliderCourseId2.trim() || null,
+          heroSliderCourseId3: form.heroSliderCourseId3.trim() || null,
+          heroSliderCourseId4: form.heroSliderCourseId4.trim() || null,
+          heroSliderCourseId5: form.heroSliderCourseId5.trim() || null,
           heroSliderIntervalSeconds: Math.round(intervalSecondsRaw),
           hero3Title: form.hero3Title.trim() || null,
           hero3Subtitle: form.hero3Subtitle.trim() || null,
@@ -274,6 +356,11 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
           platformDetailsSubtitle: form.platformDetailsSubtitle.trim() || null,
           platformDetailsBackgroundColor: platformDetailsBgNorm,
           platformDetailsItems,
+          platformNewsEnabled: form.platformNewsEnabled,
+          platformNewsSectionTitle: form.platformNewsSectionTitle.trim() || null,
+          platformNewsItems: platformNewsItems.filter(
+            (item) => item.imageUrl.trim() && item.description.trim(),
+          ),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -289,6 +376,15 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
   }
 
   const canAddPlatformDetailItem = platformDetailsItems.length < 4;
+  const canAddPlatformNewsItem = platformNewsItems.length < PLATFORM_NEWS_MAX_ITEMS;
+
+  function addPlatformNewsItem() {
+    if (!canAddPlatformNewsItem) return;
+    setPlatformNewsItems((prev) => [
+      ...prev,
+      { id: `platform-news-${Date.now()}`, imageUrl: "", description: "" },
+    ]);
+  }
 
   function addPlatformDetailsItem() {
     if (!canAddPlatformDetailItem) return;
@@ -571,8 +667,9 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
                 className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
               />
             </div>
-            {SLIDER_IMAGE_FIELDS.map(({ idx, key }) => {
+            {SLIDER_IMAGE_FIELDS.map(({ idx, key, courseIdKey }) => {
               const current = form[key];
+              const courseIdValue = form[courseIdKey];
               return (
                 <div key={idx}>
                   <label className="block text-sm font-medium text-[var(--color-foreground)]">صورة السلايدر {idx}</label>
@@ -618,6 +715,23 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
                       />
                     </label>
                   </div>
+                  <label className="mt-2 block text-sm font-medium text-[var(--color-foreground)]">
+                    ربط بالضغط على الصورة (كورس منشور)
+                  </label>
+                  <select
+                    value={courseIdValue}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, [courseIdKey]: e.target.value }))
+                    }
+                    className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                  >
+                    <option value="">— بدون ربط —</option>
+                    {publishedCourses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {(c.titleAr ?? c.title).trim() || c.slug}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               );
             })}
@@ -1393,6 +1507,128 @@ export function HomepageSettingsForm({ initialSettings }: { initialSettings: Hom
               placeholder="تجارب حقيقية من طلاب المنصة"
             />
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+        <h3 className="mb-4 text-lg font-semibold text-[var(--color-foreground)]">الجزء الإخباري في المنصة</h3>
+        <p className="mb-3 text-sm text-[var(--color-muted)]">
+          يظهر هذا القسم في الصفحة الرئيسية أسفل «ماذا يقول الطلاب» عند التفعيل. يمكنك إضافة عدة أخبار؛ التبديل
+          التلقائي كل 5 ثوانٍ عند وجود أكثر من خبر.
+        </p>
+        <div className="mb-4 flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="platformNewsEnabled"
+            checked={form.platformNewsEnabled}
+            onChange={(e) => setForm((f) => ({ ...f, platformNewsEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-[var(--color-border)]"
+          />
+          <label htmlFor="platformNewsEnabled" className="text-sm font-medium text-[var(--color-foreground)]">
+            تفعيل عرض قسم الأخبار
+          </label>
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-[var(--color-foreground)]">عنوان القسم</label>
+          <input
+            type="text"
+            value={form.platformNewsSectionTitle}
+            onChange={(e) => setForm((f) => ({ ...f, platformNewsSectionTitle: e.target.value }))}
+            maxLength={240}
+            className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-[var(--color-foreground)]"
+            placeholder="أخبار المنصة"
+          />
+          <p className="mt-1 text-xs text-[var(--color-muted)]">اتركه فارغاً لاستخدام العنوان الافتراضي «أخبار المنصة».</p>
+        </div>
+        <div className="space-y-4">
+          {platformNewsItems.map((item, idx) => (
+            <div
+              key={item.id}
+              className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] p-4"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-sm font-medium text-[var(--color-foreground)]">خبر {idx + 1}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPlatformNewsItems((prev) => prev.filter((entry) => entry.id !== item.id))
+                  }
+                  className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
+                >
+                  حذف
+                </button>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div className="shrink-0">
+                  <label className="block text-xs text-[var(--color-muted)]">صورة الخبر</label>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <label className="cursor-pointer rounded-[var(--radius-btn)] border border-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-2 text-xs font-semibold text-[var(--color-primary)]">
+                      {platformNewsUploading === item.id ? "جاري الرفع..." : "رفع صورة"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        disabled={platformNewsUploading !== null}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setPlatformNewsUploading(item.id);
+                          try {
+                            const fd = new FormData();
+                            fd.set("file", file);
+                            const res = await fetch("/api/upload/image", { method: "POST", body: fd });
+                            const data = await res.json().catch(() => ({}));
+                            if (res.ok && data.url) {
+                              setPlatformNewsItems((prev) =>
+                                prev.map((entry) =>
+                                  entry.id === item.id ? { ...entry, imageUrl: data.url } : entry,
+                                ),
+                              );
+                            }
+                          } finally {
+                            setPlatformNewsUploading(null);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="mt-2 h-24 max-w-[200px] rounded border border-[var(--color-border)] object-cover"
+                    />
+                  ) : null}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <label className="block text-xs text-[var(--color-muted)]">وصف الحدث</label>
+                  <textarea
+                    value={item.description}
+                    onChange={(e) =>
+                      setPlatformNewsItems((prev) =>
+                        prev.map((entry) =>
+                          entry.id === item.id ? { ...entry, description: e.target.value } : entry,
+                        ),
+                      )
+                    }
+                    maxLength={1000}
+                    rows={3}
+                    className="mt-1 w-full rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-foreground)]"
+                    placeholder="نص يظهر فوق الصورة في الصفحة الرئيسية"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addPlatformNewsItem}
+            disabled={!canAddPlatformNewsItem}
+            className="rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)] disabled:opacity-50"
+          >
+            إضافة خبر {canAddPlatformNewsItem ? `(${platformNewsItems.length}/${PLATFORM_NEWS_MAX_ITEMS})` : ""}
+          </button>
         </div>
       </div>
 

@@ -704,6 +704,11 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
   heroSliderImage3: null,
   heroSliderImage4: null,
   heroSliderImage5: null,
+  heroSliderCourseId1: null,
+  heroSliderCourseId2: null,
+  heroSliderCourseId3: null,
+  heroSliderCourseId4: null,
+  heroSliderCourseId5: null,
   heroSliderIntervalMs: 5000,
   hero3Title: "المنصة الشاملة رقم 1",
   hero3Subtitle: "انضم لأكثر من مليون طالب مع الخطة",
@@ -767,6 +772,9 @@ const HOMEPAGE_DEFAULTS: HomepageSetting = {
       customIconUrl: null,
     },
   ] satisfies PlatformDetailsItem[]),
+  platformNewsEnabled: false,
+  platformNewsItems: "[]",
+  platformNewsSectionTitle: "أخبار المنصة",
   addBalanceTitle: "إضافة رصيد",
   addBalanceSubtitle: "اختر طريقة الدفع ثم اتبع التعليمات",
   addBalanceMethodTitle: "فودافون كاش",
@@ -787,6 +795,19 @@ async function ensureHomepageReviewsSectionCopyColumns(): Promise<void> {
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS reviews_section_subtitle TEXT`;
   } catch {
     /* DDL غير متاح أو الجدول غير موجود */
+  }
+}
+
+/** ربط شرائح السلايدر بمعرفات كورسات منشورة */
+async function ensureHomepageHeroSliderCourseIdColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_course_id_1 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_course_id_2 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_course_id_3 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_course_id_4 TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS hero_slider_course_id_5 TEXT`;
+  } catch {
+    /* DDL غير متاح */
   }
 }
 
@@ -896,6 +917,17 @@ async function ensureHomepagePlatformDetailsColumns(): Promise<void> {
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_details_subtitle TEXT`;
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_details_background_color TEXT`;
     await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_details_items TEXT`;
+  } catch {
+    /* DDL غير متاح */
+  }
+}
+
+/** قسم الأخبار في الصفحة الرئيسية (تفعيل + JSON) */
+async function ensureHomepagePlatformNewsColumns(): Promise<void> {
+  try {
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_news_enabled BOOLEAN NOT NULL DEFAULT false`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_news_items TEXT`;
+    await sql`ALTER TABLE "HomepageSetting" ADD COLUMN IF NOT EXISTS platform_news_section_title TEXT`;
   } catch {
     /* DDL غير متاح */
   }
@@ -1112,6 +1144,7 @@ export async function getTeacherIdsExcludedFromPublicCourseLists(): Promise<Set<
 export async function getHomepageSettings(): Promise<HomepageSetting> {
   try {
     await ensureHomepageHeroTemplateColumns();
+    await ensureHomepageHeroSliderCourseIdColumns();
     await ensureHomepageReviewsSectionCopyColumns();
     await ensureHomepageHeroCustomBgColumns();
     await ensureAddBalanceSettingsColumns();
@@ -1121,6 +1154,7 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
     await ensureHomepageHeaderLogoColumn();
     await ensureHomepageCtaCopyColumns();
     await ensureHomepagePlatformDetailsColumns();
+    await ensureHomepagePlatformNewsColumns();
     const rows = await sql`SELECT * FROM "HomepageSetting" WHERE id = 'default' LIMIT 1`;
     const row = rows[0] as Record<string, unknown> | undefined;
     if (!row) return HOMEPAGE_DEFAULTS;
@@ -1149,6 +1183,12 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       row.hero_slider_image_5 != null && String(row.hero_slider_image_5).trim() !== ""
         ? String(row.hero_slider_image_5).trim().slice(0, 4000)
         : null;
+    const readSliderCourseId = (snake: string) => {
+      const v = row[snake];
+      if (v == null) return null;
+      const s = String(v).trim();
+      return s.length > 0 ? s.slice(0, 128) : null;
+    };
     const sliderIntervalRaw =
       row.hero_slider_interval_ms ??
       (c as { heroSliderIntervalMs?: unknown }).heroSliderIntervalMs;
@@ -1206,6 +1246,11 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
       heroSliderImage3: sliderImage3,
       heroSliderImage4: sliderImage4,
       heroSliderImage5: sliderImage5,
+      heroSliderCourseId1: readSliderCourseId("hero_slider_course_id_1"),
+      heroSliderCourseId2: readSliderCourseId("hero_slider_course_id_2"),
+      heroSliderCourseId3: readSliderCourseId("hero_slider_course_id_3"),
+      heroSliderCourseId4: readSliderCourseId("hero_slider_course_id_4"),
+      heroSliderCourseId5: readSliderCourseId("hero_slider_course_id_5"),
       heroSliderIntervalMs,
       hero3Title: (() => {
         const raw = row.hero3_title ?? (c as { hero3Title?: unknown }).hero3Title;
@@ -1365,6 +1410,25 @@ export async function getHomepageSettings(): Promise<HomepageSetting> {
         if (s.length > 0) return s.slice(0, 12000);
         return HOMEPAGE_DEFAULTS.platformDetailsItems ?? "[]";
       })(),
+      platformNewsEnabled: Boolean(
+        (row as { platform_news_enabled?: boolean }).platform_news_enabled ??
+          (c as { platformNewsEnabled?: boolean }).platformNewsEnabled,
+      ),
+      platformNewsItems: (() => {
+        const raw =
+          row.platform_news_items ?? (c as { platformNewsItems?: unknown }).platformNewsItems;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 12000);
+        return HOMEPAGE_DEFAULTS.platformNewsItems ?? "[]";
+      })(),
+      platformNewsSectionTitle: (() => {
+        const raw =
+          row.platform_news_section_title ??
+          (c as { platformNewsSectionTitle?: unknown }).platformNewsSectionTitle;
+        const s = raw != null ? String(raw).trim() : "";
+        if (s.length > 0) return s.slice(0, 240);
+        return HOMEPAGE_DEFAULTS.platformNewsSectionTitle ?? "أخبار المنصة";
+      })(),
       addBalanceTitle: (c.addBalanceTitle as string) ?? HOMEPAGE_DEFAULTS.addBalanceTitle,
       addBalanceSubtitle:
         (c.addBalanceSubtitle as string) ?? HOMEPAGE_DEFAULTS.addBalanceSubtitle,
@@ -1427,6 +1491,11 @@ export async function updateHomepageSettings(data: {
   hero_slider_image_3?: string | null;
   hero_slider_image_4?: string | null;
   hero_slider_image_5?: string | null;
+  hero_slider_course_id_1?: string | null;
+  hero_slider_course_id_2?: string | null;
+  hero_slider_course_id_3?: string | null;
+  hero_slider_course_id_4?: string | null;
+  hero_slider_course_id_5?: string | null;
   hero_slider_interval_ms?: number | null;
   hero3_title?: string | null;
   hero3_subtitle?: string | null;
@@ -1464,8 +1533,12 @@ export async function updateHomepageSettings(data: {
   add_balance_whatsapp_number?: string | null;
   add_balance_whatsapp_button_text?: string | null;
   add_balance_waiting_note?: string | null;
+  platform_news_enabled?: boolean;
+  platform_news_items?: string | null;
+  platform_news_section_title?: string | null;
 }): Promise<void> {
   await ensureHomepageHeroTemplateColumns();
+  await ensureHomepageHeroSliderCourseIdColumns();
   await ensureHomepageReviewsSectionCopyColumns();
   await ensureHomepageHeroCustomBgColumns();
   await ensureAddBalanceSettingsColumns();
@@ -1473,6 +1546,7 @@ export async function updateHomepageSettings(data: {
   await ensureHomepageHeaderLogoColumn();
   await ensureHomepageCtaCopyColumns();
   await ensureHomepagePlatformDetailsColumns();
+  await ensureHomepagePlatformNewsColumns();
   if (data.hero_template !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_template = ${data.hero_template}, updated_at = NOW() WHERE id = 'default'`;
   }
@@ -1535,6 +1609,21 @@ export async function updateHomepageSettings(data: {
   }
   if (data.hero_slider_image_5 !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_slider_image_5 = ${data.hero_slider_image_5}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_course_id_1 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_course_id_1 = ${data.hero_slider_course_id_1}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_course_id_2 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_course_id_2 = ${data.hero_slider_course_id_2}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_course_id_3 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_course_id_3 = ${data.hero_slider_course_id_3}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_course_id_4 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_course_id_4 = ${data.hero_slider_course_id_4}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.hero_slider_course_id_5 !== undefined) {
+    await sql`UPDATE "HomepageSetting" SET hero_slider_course_id_5 = ${data.hero_slider_course_id_5}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.hero_slider_interval_ms !== undefined) {
     await sql`UPDATE "HomepageSetting" SET hero_slider_interval_ms = ${data.hero_slider_interval_ms}, updated_at = NOW() WHERE id = 'default'`;
@@ -1653,6 +1742,24 @@ export async function updateHomepageSettings(data: {
   if (data.platform_details_items !== undefined) {
     await ensureHomepagePlatformDetailsColumns();
     await sql`UPDATE "HomepageSetting" SET platform_details_items = ${data.platform_details_items}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.platform_news_enabled !== undefined) {
+    await ensureHomepagePlatformNewsColumns();
+    await sql`
+      INSERT INTO "HomepageSetting" (id, platform_news_enabled, updated_at)
+      VALUES ('default', ${data.platform_news_enabled}, NOW())
+      ON CONFLICT (id) DO UPDATE SET
+        platform_news_enabled = EXCLUDED.platform_news_enabled,
+        updated_at = NOW()
+    `;
+  }
+  if (data.platform_news_items !== undefined) {
+    await ensureHomepagePlatformNewsColumns();
+    await sql`UPDATE "HomepageSetting" SET platform_news_items = ${data.platform_news_items}, updated_at = NOW() WHERE id = 'default'`;
+  }
+  if (data.platform_news_section_title !== undefined) {
+    await ensureHomepagePlatformNewsColumns();
+    await sql`UPDATE "HomepageSetting" SET platform_news_section_title = ${data.platform_news_section_title}, updated_at = NOW() WHERE id = 'default'`;
   }
   if (data.add_balance_title !== undefined) {
     await sql`UPDATE "HomepageSetting" SET add_balance_title = ${data.add_balance_title}, updated_at = NOW() WHERE id = 'default'`;
@@ -2502,6 +2609,25 @@ export async function getCoursesPublished(withCategory = true): Promise<(Course 
     const base = rowToCamel(rest) ?? {};
     return { ...base, category };
   }) as unknown as (Course & { category?: Category })[];
+}
+
+/** يعيد خريطة معرف كورس → slug للكورسات المنشورة فقط (لروابط السلايدر في الصفحة الرئيسية). */
+export async function getPublishedCourseSlugsByIds(ids: string[]): Promise<Map<string, string>> {
+  const uniq = [...new Set(ids.map((id) => String(id).trim()).filter(Boolean))];
+  const map = new Map<string, string>();
+  if (uniq.length === 0) return map;
+  const results = await Promise.all(
+    uniq.map((id) =>
+      sql`SELECT id, slug FROM "Course" WHERE id = ${id} AND is_published = true LIMIT 1`,
+    ),
+  );
+  for (const rows of results) {
+    const r = rows[0] as { id?: unknown; slug?: unknown } | undefined;
+    if (r?.id != null && r?.slug != null) {
+      map.set(String(r.id), String(r.slug));
+    }
+  }
+  return map;
 }
 
 export async function getCoursesWithCounts(): Promise<

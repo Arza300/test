@@ -7,6 +7,7 @@ import {
   getCategories,
   getReviews,
   getHomepageSettings,
+  getPublishedCourseSlugsByIds,
   listTeachersForHomepage,
   selectTeachersForHomepagePreview,
   listActiveSubscriptionPlansPublic,
@@ -25,6 +26,8 @@ import { HomePlatformDetailsSection } from "@/components/HomePlatformDetailsSect
 import { HomeHeroTemplateThree } from "@/components/HomeHeroTemplateThree";
 import { resolveHeroBgGradient } from "@/lib/hero-bg";
 import { parsePlatformDetailsItems } from "@/lib/platform-details";
+import { parsePlatformNewsItems } from "@/lib/platform-news";
+import { HomePlatformNewsSlider } from "@/components/HomePlatformNewsSlider";
 
 /** عدم تخزين الصفحة مؤقتاً — الكورسات الجديدة والمحذوفة تظهر فوراً */
 export const dynamic = "force-dynamic";
@@ -103,6 +106,10 @@ export default async function HomePage() {
     // جدول التعليقات قد يكون غير موجود بعد — نعرض الصفحة بدون تعليقات
   }
 
+  const platformNewsSlides = parsePlatformNewsItems(homepageSettings.platformNewsItems);
+  const showPlatformNewsSection =
+    Boolean(homepageSettings.platformNewsEnabled) && platformNewsSlides.length > 0;
+
   const teachersHomePreview =
     teachersForHome.length > 0
       ? selectTeachersForHomepagePreview(teachersForHome, 4).map(({ homepageOrder: _order, ...row }) => row)
@@ -144,15 +151,49 @@ export default async function HomePage() {
       : homepageSettings.heroTemplate === "coming_soon"
         ? "coming_soon"
         : "classic";
-  const heroSliderImages = [
-    homepageSettings.heroSliderImage1,
-    homepageSettings.heroSliderImage2,
-    homepageSettings.heroSliderImage3,
-    homepageSettings.heroSliderImage4,
-    homepageSettings.heroSliderImage5,
-  ]
-    .map((v) => (v ? String(v).trim() : ""))
+  const heroSliderSlots = [
+    {
+      src: homepageSettings.heroSliderImage1,
+      courseId: homepageSettings.heroSliderCourseId1 ?? null,
+    },
+    {
+      src: homepageSettings.heroSliderImage2,
+      courseId: homepageSettings.heroSliderCourseId2 ?? null,
+    },
+    {
+      src: homepageSettings.heroSliderImage3,
+      courseId: homepageSettings.heroSliderCourseId3 ?? null,
+    },
+    {
+      src: homepageSettings.heroSliderImage4,
+      courseId: homepageSettings.heroSliderCourseId4 ?? null,
+    },
+    {
+      src: homepageSettings.heroSliderImage5,
+      courseId: homepageSettings.heroSliderCourseId5 ?? null,
+    },
+  ];
+  const sliderCourseIds = heroSliderSlots
+    .map((s) => (s.courseId ? String(s.courseId).trim() : ""))
     .filter(Boolean);
+  let sliderCourseSlugMap = new Map<string, string>();
+  if (sliderCourseIds.length > 0) {
+    try {
+      sliderCourseSlugMap = await getPublishedCourseSlugsByIds(sliderCourseIds);
+    } catch {
+      sliderCourseSlugMap = new Map();
+    }
+  }
+  const heroSliderSlides = heroSliderSlots
+    .map((slot) => {
+      const src = slot.src ? String(slot.src).trim() : "";
+      if (!src) return null;
+      const cid = slot.courseId ? String(slot.courseId).trim() : "";
+      const slug = cid ? sliderCourseSlugMap.get(cid) : undefined;
+      const href = slug ? `/courses/${slug}` : null;
+      return { src, href };
+    })
+    .filter((s): s is { src: string; href: string | null } => s != null);
   const heroSliderIntervalMs =
     typeof homepageSettings.heroSliderIntervalMs === "number"
       ? homepageSettings.heroSliderIntervalMs
@@ -166,7 +207,7 @@ export default async function HomePage() {
           className="relative w-full overflow-hidden bg-[var(--color-background)]"
           aria-label="Hero Slider"
         >
-          <HomeHeroImageSlider images={heroSliderImages} intervalMs={heroSliderIntervalMs} />
+          <HomeHeroImageSlider slides={heroSliderSlides} intervalMs={heroSliderIntervalMs} />
         </section>
       ) : heroTemplate === "coming_soon" ? (
         <HomeHeroTemplateThree
@@ -411,6 +452,17 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {showPlatformNewsSection ? (
+        <section className="border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-12 sm:px-6">
+          <div className="mx-auto max-w-6xl">
+            <h2 className="mb-6 text-2xl font-bold text-[var(--color-foreground)]">
+              {homepageSettings.platformNewsSectionTitle?.trim() || "أخبار المنصة"}
+            </h2>
+            <HomePlatformNewsSlider items={platformNewsSlides} />
+          </div>
+        </section>
+      ) : null}
 
       {/* CTA */}
       <section className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">

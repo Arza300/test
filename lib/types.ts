@@ -89,6 +89,13 @@ export interface PlatformDetailsItem {
   customIconUrl: string | null;
 }
 
+/** شريحة في قسم الأخبار بالصفحة الرئيسية */
+export interface PlatformNewsItem {
+  id: string;
+  imageUrl: string;
+  description: string;
+}
+
 export interface HomepageSetting {
   /** القالب العام لهيرو الصفحة الرئيسية */
   heroTemplate?: "classic" | "image_slider" | "coming_soon" | string | null;
@@ -118,6 +125,12 @@ export interface HomepageSetting {
   heroSliderImage3?: string | null;
   heroSliderImage4?: string | null;
   heroSliderImage5?: string | null;
+  /** ربط كل شريحة سلايدر بكورس منشور (معرف الكورس) */
+  heroSliderCourseId1?: string | null;
+  heroSliderCourseId2?: string | null;
+  heroSliderCourseId3?: string | null;
+  heroSliderCourseId4?: string | null;
+  heroSliderCourseId5?: string | null;
   /** مدة التبديل التلقائي بالمللي ثانية */
   heroSliderIntervalMs?: number | null;
   /** عنوان القالب الثالث (Hero 3) */
@@ -174,6 +187,12 @@ export interface HomepageSetting {
   platformDetailsBackgroundColor?: string | null;
   /** عناصر القسم (JSON) */
   platformDetailsItems?: string | null;
+  /** عند true يظهر قسم الأخبار أسفل «ماذا يقول الطلاب» */
+  platformNewsEnabled?: boolean;
+  /** شرائح الأخبار (JSON: PlatformNewsItem[]) */
+  platformNewsItems?: string | null;
+  /** عنوان قسم الأخبار في الصفحة الرئيسية */
+  platformNewsSectionTitle?: string | null;
   /** عنوان صفحة إضافة الرصيد للطالب */
   addBalanceTitle?: string | null;
   /** وصف أعلى صفحة إضافة الرصيد */

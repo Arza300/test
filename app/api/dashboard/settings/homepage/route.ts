@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getHomepageSettings, updateHomepageSettings } from "@/lib/db";
+import { getCourseById, getHomepageSettings, updateHomepageSettings } from "@/lib/db";
 import { normalizeHeroHex } from "@/lib/hero-bg";
-import type { PlatformDetailsItem, PlatformDetailsPresetIcon } from "@/lib/types";
+import type { PlatformDetailsItem, PlatformDetailsPresetIcon, PlatformNewsItem } from "@/lib/types";
 import { PLATFORM_DETAILS_PRESET_ICON_OPTIONS } from "@/lib/platform-details";
+import { PLATFORM_NEWS_MAX_ITEMS } from "@/lib/platform-news";
 const PLATFORM_DETAILS_PRESET_ICONS = PLATFORM_DETAILS_PRESET_ICON_OPTIONS.map(
   (option) => option.id,
 ) as PlatformDetailsPresetIcon[];
@@ -52,6 +53,11 @@ export async function PUT(request: NextRequest) {
     heroSliderImage3?: string | null;
     heroSliderImage4?: string | null;
     heroSliderImage5?: string | null;
+    heroSliderCourseId1?: string | null;
+    heroSliderCourseId2?: string | null;
+    heroSliderCourseId3?: string | null;
+    heroSliderCourseId4?: string | null;
+    heroSliderCourseId5?: string | null;
     heroSliderIntervalSeconds?: number | null;
     heroSliderIntervalMs?: number | null;
     hero3Title?: string | null;
@@ -76,6 +82,9 @@ export async function PUT(request: NextRequest) {
     platformDetailsSubtitle?: string | null;
     platformDetailsBackgroundColor?: string | null;
     platformDetailsItems?: unknown;
+    platformNewsEnabled?: boolean;
+    platformNewsItems?: unknown;
+    platformNewsSectionTitle?: string | null;
   };
   try {
     body = await request.json();
@@ -105,6 +114,27 @@ export async function PUT(request: NextRequest) {
   function normalizeSliderImage(input: unknown): string | null {
     const s = input != null ? String(input).trim() : "";
     return s ? s.slice(0, 4000) : null;
+  }
+
+  function normalizeSliderCourseId(input: unknown): string | null {
+    const s = input != null ? String(input).trim() : "";
+    return s ? s.slice(0, 128) : null;
+  }
+
+  async function assertPublishedCourseOr400(courseId: string): Promise<NextResponse | null> {
+    const course = await getCourseById(courseId);
+    if (!course) {
+      return NextResponse.json({ error: "أحد معرفات الكورس المرتبطة بالسلايدر غير موجود" }, { status: 400 });
+    }
+    const row = course as unknown as Record<string, unknown>;
+    const pub = Boolean(row.isPublished ?? row.is_published);
+    if (!pub) {
+      return NextResponse.json(
+        { error: "يمكن ربط السلايدر بكورسات منشورة فقط. ألغِ الربط أو انشر الكورس أولاً." },
+        { status: 400 },
+      );
+    }
+    return null;
   }
 
   let hero_slider_interval_ms: number | null | undefined;
@@ -251,6 +281,100 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  let platform_news_enabled: boolean | undefined;
+  if (body.platformNewsEnabled !== undefined) {
+    platform_news_enabled = Boolean(body.platformNewsEnabled);
+  }
+
+  let platform_news_items: string | null | undefined;
+  if (body.platformNewsItems !== undefined) {
+    if (body.platformNewsItems === null) {
+      platform_news_items = null;
+    } else if (!Array.isArray(body.platformNewsItems)) {
+      return NextResponse.json({ error: "بيانات قسم الأخبار غير صالحة" }, { status: 400 });
+    } else {
+      if (body.platformNewsItems.length > PLATFORM_NEWS_MAX_ITEMS) {
+        return NextResponse.json(
+          { error: `الحد الأقصى لأخبار المنصة هو ${PLATFORM_NEWS_MAX_ITEMS}` },
+          { status: 400 },
+        );
+      }
+      const newsItems: PlatformNewsItem[] = [];
+      for (let i = 0; i < body.platformNewsItems.length; i++) {
+        const raw = body.platformNewsItems[i];
+        if (!raw || typeof raw !== "object") {
+          return NextResponse.json({ error: `الخبر رقم ${i + 1} غير صالح` }, { status: 400 });
+        }
+        const item = raw as Record<string, unknown>;
+        const imageUrl = String(item.imageUrl ?? "").trim().slice(0, 4000);
+        const description = String(item.description ?? "").trim().slice(0, 1000);
+        if (!imageUrl || !description) {
+          return NextResponse.json(
+            { error: `صورة ووصف الخبر رقم ${i + 1} مطلوبان` },
+            { status: 400 },
+          );
+        }
+        newsItems.push({
+          id: String(item.id ?? `platform-news-${i + 1}`).trim() || `platform-news-${i + 1}`,
+          imageUrl,
+          description,
+        });
+      }
+      platform_news_items = JSON.stringify(newsItems);
+    }
+  }
+
+  let platform_news_section_title: string | null | undefined;
+  if (body.platformNewsSectionTitle !== undefined) {
+    if (body.platformNewsSectionTitle === null) {
+      platform_news_section_title = null;
+    } else {
+      const s = String(body.platformNewsSectionTitle ?? "").trim();
+      platform_news_section_title = s ? s.slice(0, 240) : null;
+    }
+  }
+
+  let hero_slider_course_id_1: string | null | undefined;
+  let hero_slider_course_id_2: string | null | undefined;
+  let hero_slider_course_id_3: string | null | undefined;
+  let hero_slider_course_id_4: string | null | undefined;
+  let hero_slider_course_id_5: string | null | undefined;
+  if (body.heroSliderCourseId1 !== undefined) {
+    hero_slider_course_id_1 = normalizeSliderCourseId(body.heroSliderCourseId1);
+    if (hero_slider_course_id_1) {
+      const bad = await assertPublishedCourseOr400(hero_slider_course_id_1);
+      if (bad) return bad;
+    }
+  }
+  if (body.heroSliderCourseId2 !== undefined) {
+    hero_slider_course_id_2 = normalizeSliderCourseId(body.heroSliderCourseId2);
+    if (hero_slider_course_id_2) {
+      const bad = await assertPublishedCourseOr400(hero_slider_course_id_2);
+      if (bad) return bad;
+    }
+  }
+  if (body.heroSliderCourseId3 !== undefined) {
+    hero_slider_course_id_3 = normalizeSliderCourseId(body.heroSliderCourseId3);
+    if (hero_slider_course_id_3) {
+      const bad = await assertPublishedCourseOr400(hero_slider_course_id_3);
+      if (bad) return bad;
+    }
+  }
+  if (body.heroSliderCourseId4 !== undefined) {
+    hero_slider_course_id_4 = normalizeSliderCourseId(body.heroSliderCourseId4);
+    if (hero_slider_course_id_4) {
+      const bad = await assertPublishedCourseOr400(hero_slider_course_id_4);
+      if (bad) return bad;
+    }
+  }
+  if (body.heroSliderCourseId5 !== undefined) {
+    hero_slider_course_id_5 = normalizeSliderCourseId(body.heroSliderCourseId5);
+    if (hero_slider_course_id_5) {
+      const bad = await assertPublishedCourseOr400(hero_slider_course_id_5);
+      if (bad) return bad;
+    }
+  }
+
   try {
     await updateHomepageSettings({
       hero_template,
@@ -279,6 +403,11 @@ export async function PUT(request: NextRequest) {
         body.heroSliderImage4 !== undefined ? normalizeSliderImage(body.heroSliderImage4) : undefined,
       hero_slider_image_5:
         body.heroSliderImage5 !== undefined ? normalizeSliderImage(body.heroSliderImage5) : undefined,
+      hero_slider_course_id_1,
+      hero_slider_course_id_2,
+      hero_slider_course_id_3,
+      hero_slider_course_id_4,
+      hero_slider_course_id_5,
       hero_slider_interval_ms,
       hero3_title:
         body.hero3Title !== undefined
@@ -373,6 +502,9 @@ export async function PUT(request: NextRequest) {
           : undefined,
       platform_details_background_color,
       platform_details_items,
+      platform_news_enabled,
+      platform_news_items,
+      platform_news_section_title,
     });
     return NextResponse.json({ success: true });
   } catch (error) {
