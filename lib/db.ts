@@ -3185,6 +3185,101 @@ export async function listActivationCodesForTeacher(
   return (rows as Record<string, unknown>[]).map((r) => rowToCamel(r) as ActivationCodeWithCourse);
 }
 
+/** صف واحد لعرض من فعّل كوداً (لوحة الأكواد) */
+export type ActivationCodeUsageRow = {
+  activationCodeId: string;
+  code: string;
+  usedAt: string;
+  courseId: string;
+  courseTitle?: string;
+  courseTitleAr?: string;
+  studentId: string;
+  studentName: string;
+  studentNumber: string | null;
+};
+
+export async function listActivationCodeUsages(courseId?: string | null): Promise<ActivationCodeUsageRow[]> {
+  const rows = courseId
+    ? await sql`
+        SELECT ac.id as activation_code_id,
+               ac.code,
+               ac.used_at,
+               ac.course_id,
+               c.title as course_title,
+               c.title_ar as course_title_ar,
+               u.id as student_id,
+               u.name as student_name,
+               u.student_number
+        FROM "ActivationCode" ac
+        JOIN "Course" c ON c.id = ac.course_id
+        JOIN "User" u ON u.id = ac.used_by_user_id
+        WHERE ac.used_at IS NOT NULL
+          AND ac.used_by_user_id IS NOT NULL
+          AND ac.course_id = ${courseId}
+        ORDER BY ac.used_at DESC
+      `
+    : await sql`
+        SELECT ac.id as activation_code_id,
+               ac.code,
+               ac.used_at,
+               ac.course_id,
+               c.title as course_title,
+               c.title_ar as course_title_ar,
+               u.id as student_id,
+               u.name as student_name,
+               u.student_number
+        FROM "ActivationCode" ac
+        JOIN "Course" c ON c.id = ac.course_id
+        JOIN "User" u ON u.id = ac.used_by_user_id
+        WHERE ac.used_at IS NOT NULL
+          AND ac.used_by_user_id IS NOT NULL
+        ORDER BY ac.used_at DESC
+      `;
+  return (rows as Record<string, unknown>[]).map((r) => rowToCamel(r) as ActivationCodeUsageRow);
+}
+
+export async function listActivationCodeUsagesForTeacher(
+  teacherId: string,
+  courseId?: string | null
+): Promise<ActivationCodeUsageRow[]> {
+  const cid = courseId?.trim() || null;
+  const rows = cid
+    ? await sql`
+        SELECT ac.id as activation_code_id,
+               ac.code,
+               ac.used_at,
+               ac.course_id,
+               c.title as course_title,
+               c.title_ar as course_title_ar,
+               u.id as student_id,
+               u.name as student_name,
+               u.student_number
+        FROM "ActivationCode" ac
+        JOIN "Course" c ON c.id = ac.course_id AND c.created_by_id = ${teacherId}
+        WHERE ac.used_at IS NOT NULL
+          AND ac.used_by_user_id IS NOT NULL
+          AND ac.course_id = ${cid}
+        ORDER BY ac.used_at DESC
+      `
+    : await sql`
+        SELECT ac.id as activation_code_id,
+               ac.code,
+               ac.used_at,
+               ac.course_id,
+               c.title as course_title,
+               c.title_ar as course_title_ar,
+               u.id as student_id,
+               u.name as student_name,
+               u.student_number
+        FROM "ActivationCode" ac
+        JOIN "Course" c ON c.id = ac.course_id AND c.created_by_id = ${teacherId}
+        WHERE ac.used_at IS NOT NULL
+          AND ac.used_by_user_id IS NOT NULL
+        ORDER BY ac.used_at DESC
+      `;
+  return (rows as Record<string, unknown>[]).map((r) => rowToCamel(r) as ActivationCodeUsageRow);
+}
+
 export async function getActivationCodeByCode(code: string): Promise<(ActivationCode & { courseId: string; lessonIds: string[]; quizIds: string[] }) | null> {
   const trimmed = code.trim().toUpperCase();
   if (!trimmed) return null;

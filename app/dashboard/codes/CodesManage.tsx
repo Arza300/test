@@ -16,6 +16,18 @@ type CodeRow = {
   quizCount?: number | null;
 };
 
+type UsageRow = {
+  activationCodeId: string;
+  code: string;
+  usedAt: string;
+  courseId: string;
+  courseTitle?: string;
+  courseTitleAr?: string;
+  studentId: string;
+  studentName: string;
+  studentNumber: string | null;
+};
+
 export function CodesManage({ courseOptions }: { courseOptions: { id: string; title: string }[] }) {
   const router = useRouter();
   const [codes, setCodes] = useState<CodeRow[]>([]);
@@ -23,6 +35,8 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
   const [error, setError] = useState("");
   const [filterCourseId, setFilterCourseId] = useState<string>("");
   const [searchCode, setSearchCode] = useState("");
+  const [usages, setUsages] = useState<UsageRow[]>([]);
+  const [searchStudent, setSearchStudent] = useState("");
   const [generating, setGenerating] = useState(false);
   const [createCourseId, setCreateCourseId] = useState("");
   const [createCount, setCreateCount] = useState(5);
@@ -70,6 +84,17 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
     return codes.filter((c) => (c.code ?? "").toLowerCase().includes(q));
   }, [codes, searchCode]);
 
+  const filteredUsages = useMemo(() => {
+    const q = searchStudent.trim().toLowerCase();
+    if (!q) return usages;
+    return usages.filter((u) => {
+      const name = (u.studentName ?? "").toLowerCase();
+      const num = (u.studentNumber ?? "").toLowerCase();
+      const id = (u.studentId ?? "").toLowerCase();
+      return name.includes(q) || num.includes(q) || id.includes(q);
+    });
+  }, [usages, searchStudent]);
+
   function toggleSelectAll() {
     if (selectedIds.size === filteredCodes.length) setSelectedIds(new Set());
     else setSelectedIds(new Set(filteredCodes.map((c) => c.id)));
@@ -78,15 +103,25 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
   function load() {
     setLoading(true);
     setError("");
-    const url = filterCourseId
+    const q = filterCourseId ? `?courseId=${encodeURIComponent(filterCourseId)}` : "";
+    const codesUrl = filterCourseId
       ? `/api/dashboard/codes?courseId=${encodeURIComponent(filterCourseId)}`
       : "/api/dashboard/codes";
-    fetch(url)
-      .then((res) => {
+    const activationsUrl = `/api/dashboard/codes/activations${q}`;
+    Promise.all([
+      fetch(codesUrl).then((res) => {
         if (!res.ok) throw new Error("فشل جلب الأكواد");
         return res.json();
+      }),
+      fetch(activationsUrl).then((res) => {
+        if (!res.ok) throw new Error("فشل جلب بيانات التفعيل");
+        return res.json();
+      }),
+    ])
+      .then(([codesData, usagesData]) => {
+        setCodes(Array.isArray(codesData) ? codesData : []);
+        setUsages(Array.isArray(usagesData) ? usagesData : []);
       })
-      .then((data) => setCodes(Array.isArray(data) ? data : []))
       .catch((e) => setError(e instanceof Error ? e.message : "حدث خطأ"))
       .finally(() => setLoading(false));
   }
@@ -588,6 +623,60 @@ export function CodesManage({ courseOptions }: { courseOptions: { id: string; ti
                       >
                         {deletingIds.has(row.id) ? "جاري الحذف..." : confirmDeleteIds.has(row.id) ? "اضغط مرة أخرى للحذف" : "حذف"}
                       </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)]/50 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="text-lg font-semibold text-[var(--color-foreground)]">
+              الطلاب الذين فعّلوا الأكواد ({filteredUsages.length}
+              {searchStudent.trim() ? ` من ${usages.length}` : ""})
+            </h3>
+            <input
+              type="search"
+              value={searchStudent}
+              onChange={(e) => setSearchStudent(e.target.value)}
+              placeholder="بحث بالاسم أو رقم الطالب..."
+              className="min-w-[200px] max-w-[280px] rounded-[var(--radius-btn)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1.5 text-sm placeholder:text-[var(--color-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            />
+          </div>
+        </div>
+        {usages.length === 0 ? (
+          <p className="p-8 text-center text-[var(--color-muted)]">
+            لا يوجد طلاب فعّلوا أكواداً بعد (أو لا توجد نتائج للفلتر الحالي).
+          </p>
+        ) : filteredUsages.length === 0 ? (
+          <p className="p-8 text-center text-[var(--color-muted)]">لا يوجد طلاب يطابقون البحث.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]/30">
+                  <th className="p-2 text-right font-medium text-[var(--color-foreground)]">الطالب</th>
+                  <th className="p-2 text-right font-medium text-[var(--color-foreground)]">رقم الطالب</th>
+                  <th className="p-2 text-right font-medium text-[var(--color-foreground)]">الدورة</th>
+                  <th className="p-2 text-right font-medium text-[var(--color-foreground)]">الكود</th>
+                  <th className="p-2 text-right font-medium text-[var(--color-foreground)]">تاريخ التفعيل</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsages.map((row) => (
+                  <tr key={row.activationCodeId} className="border-b border-[var(--color-border)]">
+                    <td className="p-2 text-[var(--color-foreground)]">{row.studentName}</td>
+                    <td className="p-2 font-mono text-[var(--color-muted)]">{row.studentNumber ?? "—"}</td>
+                    <td className="p-2 text-[var(--color-foreground)]">
+                      {row.courseTitleAr ?? row.courseTitle ?? row.courseId}
+                    </td>
+                    <td className="p-2 font-mono text-[var(--color-foreground)]">{row.code}</td>
+                    <td className="p-2 text-[var(--color-muted)]">
+                      {row.usedAt ? new Date(row.usedAt).toLocaleDateString("ar-EG") : "—"}
                     </td>
                   </tr>
                 ))}
