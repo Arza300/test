@@ -3370,6 +3370,41 @@ export async function hasPartialCourseAccess(userId: string, courseId: string): 
   return lessons.length > 0 || quizzes.length > 0;
 }
 
+/** دورات يملكها الطالب عبر كود تفعيل بحدود حصص/اختبارات — بدون صف في Enrollment */
+export async function getPartialActivationCoursesByUserId(
+  userId: string,
+): Promise<Array<{ courseId: string; course: { id: string; title: string; titleAr: string | null; slug: string } }>> {
+  try {
+    const rows = await sql`
+      SELECT DISTINCT ON (c.id)
+        c.id as c_id,
+        c.title as c_title,
+        c.title_ar as c_title_ar,
+        c.slug as c_slug
+      FROM "ActivationCode" ac
+      INNER JOIN "Course" c ON c.id = ac.course_id
+      WHERE ac.used_by_user_id = ${userId}
+        AND ac.used_at IS NOT NULL
+        AND (
+          EXISTS (SELECT 1 FROM "ActivationCodeLesson" acl WHERE acl.activation_code_id = ac.id)
+          OR EXISTS (SELECT 1 FROM "ActivationCodeQuiz" acq WHERE acq.activation_code_id = ac.id)
+        )
+      ORDER BY c.id, ac.used_at DESC
+    `;
+    return (rows as Record<string, unknown>[]).map((r) => ({
+      courseId: String(r.c_id),
+      course: {
+        id: String(r.c_id),
+        title: String(r.c_title ?? ""),
+        titleAr: (r.c_title_ar != null ? String(r.c_title_ar) : null) as string | null,
+        slug: String(r.c_slug ?? ""),
+      },
+    }));
+  } catch {
+    return [];
+  }
+}
+
 /** دورات الطالب: المسجّل فيها + الدورات المتاحة عبر أكواد (حصص/اختبارات محددة) + كل الدورات المدفوعة المنشورة عند اشتراك منصة نشط */
 export async function getAccessibleCoursesForUser(userId: string): Promise<(Course & { category?: Category })[]> {
   await ensurePlatformSubscriptionSchema();

@@ -23,6 +23,8 @@ type Student = {
   copyright_code?: string | null;
   _count: { enrollments: number };
   enrollments: Enrollment[];
+  /** دورات متاحة عبر كود تفعيل (حصص/اختبارات محددة) — ليست مسجّلة كـ Enrollment */
+  partial_activation_courses?: { courseId: string; course: Course }[];
 };
 
 export function StudentsList({
@@ -118,7 +120,8 @@ export function StudentsList({
   const availableToAdd = useMemo(() => {
     if (!coursesStudent) return [];
     const enrolledIds = new Set(coursesStudent.enrollments.map((e) => e.courseId));
-    return courses.filter((c) => !enrolledIds.has(c.id));
+    const partialIds = new Set((coursesStudent.partial_activation_courses ?? []).map((p) => p.courseId));
+    return courses.filter((c) => !enrolledIds.has(c.id) && !partialIds.has(c.id));
   }, [coursesStudent, courses]);
 
   async function handleAddCourse(e: React.FormEvent) {
@@ -143,10 +146,15 @@ export function StudentsList({
       if (!prev) return null;
       const course = courses.find((c) => c.id === addCourseId);
       if (!course) return prev;
+      const hadPartialOnly = (prev.partial_activation_courses ?? []).some((p) => p.courseId === addCourseId);
+      const nextPartial = (prev.partial_activation_courses ?? []).filter((p) => p.courseId !== addCourseId);
       return {
         ...prev,
         enrollments: [...prev.enrollments, { id: "", courseId: course.id, course }],
-        _count: { enrollments: prev._count.enrollments + 1 },
+        partial_activation_courses: nextPartial,
+        _count: {
+          enrollments: prev._count.enrollments + (hadPartialOnly ? 0 : 1),
+        },
       };
     });
   }
@@ -265,7 +273,11 @@ export function StudentsList({
             <div className="mt-4 space-y-3">
               <p className="text-sm font-medium text-[var(--color-foreground)]">الدورات المسجّل فيها:</p>
               {coursesStudent.enrollments.length === 0 ? (
-                <p className="text-sm text-[var(--color-muted)]">لا يوجد</p>
+                <p className="text-sm text-[var(--color-muted)]">
+                  {(coursesStudent.partial_activation_courses?.length ?? 0) > 0
+                    ? "لا يوجد تسجيل كامل؛ الوصول الحالي عبر كود تفعيل (قسم أدناه)."
+                    : "لا يوجد"}
+                </p>
               ) : (
                 <ul className="space-y-2">
                   {coursesStudent.enrollments.map((e) => (
@@ -282,6 +294,22 @@ export function StudentsList({
                     </li>
                   ))}
                 </ul>
+              )}
+              {(coursesStudent.partial_activation_courses?.length ?? 0) > 0 && (
+                <div className="pt-2">
+                  <p className="text-sm font-medium text-[var(--color-foreground)]">دورات عبر كود تفعيل (وصول جزئي):</p>
+                  <ul className="mt-2 space-y-2">
+                    {coursesStudent.partial_activation_courses!.map((p) => (
+                      <li
+                        key={p.courseId}
+                        className="rounded border border-[var(--color-border)] border-dashed bg-[var(--color-background)]/80 px-3 py-2 text-sm text-[var(--color-muted)]"
+                      >
+                        {p.course.titleAr ?? p.course.title}
+                        <span className="mr-2 text-xs">(حصص أو اختبارات محددة)</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {availableToAdd.length > 0 && (
                 <form onSubmit={handleAddCourse} className="flex flex-wrap items-end gap-2 pt-2">

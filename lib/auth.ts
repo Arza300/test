@@ -2,7 +2,11 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { randomUUID } from "crypto";
-import { getUserByEmailOrPhone, getCurrentSessionId, setCurrentSessionId } from "@/lib/db";
+import {
+  getUserByEmailOrPhone,
+  getCurrentSessionId,
+  setCurrentSessionId,
+} from "@/lib/db";
 import type { UserRole } from "@/lib/types";
 import { CONCURRENT_SESSION_ERROR } from "@/lib/auth-constants";
 
@@ -22,6 +26,7 @@ export const authOptions: NextAuthOptions = {
         if (!user) return null;
         const ok = await compare(credentials.password, user.password_hash);
         if (!ok) return null;
+
         const existingSessionId = await getCurrentSessionId(user.id);
         if (existingSessionId != null && existingSessionId !== "") {
           throw new Error(CONCURRENT_SESSION_ERROR);

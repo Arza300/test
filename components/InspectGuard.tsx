@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+/** فرق outer/inner غير موثوق على الجوال (Safari iOS وغيره) ويسبب إنذارات كاذبة. */
+function shouldSkipDimensionDevToolsCheck(): boolean {
+  if (typeof window === "undefined") return true;
+  if (window.matchMedia("(pointer: coarse)").matches) return true;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPod/i.test(ua) || /iPad/i.test(ua)) return true;
+  if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) return true;
+  return false;
+}
+
 /**
  * يمنع النقر بالزر الأيمن واختصارات فتح أدوات المطور،
  * ويعرض تحذيراً عند اكتشاف فتح DevTools/Inspect.
@@ -41,7 +51,9 @@ export function InspectGuard() {
         setDevToolsOpen(true);
       }
     }
-    checkInterval = setInterval(checkDevTools, 1000);
+    if (!shouldSkipDimensionDevToolsCheck()) {
+      checkInterval = setInterval(checkDevTools, 1000);
+    }
 
     return () => {
       document.removeEventListener("contextmenu", preventContext);

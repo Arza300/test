@@ -58,6 +58,47 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+type FullscreenCapableElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void>;
+  webkitRequestFullScreen?: () => Promise<void>;
+  msRequestFullscreen?: () => Promise<void>;
+};
+
+async function requestFullscreenCompat(el: HTMLElement): Promise<boolean> {
+  const e = el as FullscreenCapableElement;
+  const fn =
+    (typeof e.requestFullscreen === "function" && e.requestFullscreen.bind(e)) ||
+    (typeof e.webkitRequestFullscreen === "function" && e.webkitRequestFullscreen.bind(e)) ||
+    (typeof e.webkitRequestFullScreen === "function" && e.webkitRequestFullScreen.bind(e)) ||
+    (typeof e.msRequestFullscreen === "function" && e.msRequestFullscreen.bind(e));
+  if (!fn) return false;
+  try {
+    await fn();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function exitFullscreenCompat(): Promise<void> {
+  const doc = document as Document & {
+    webkitExitFullscreen?: () => Promise<void>;
+    msExitFullscreen?: () => Promise<void>;
+  };
+  if (!document.fullscreenElement) return;
+  try {
+    if (typeof document.exitFullscreen === "function") {
+      await document.exitFullscreen();
+    } else if (typeof doc.webkitExitFullscreen === "function") {
+      await doc.webkitExitFullscreen();
+    } else if (typeof doc.msExitFullscreen === "function") {
+      await doc.msExitFullscreen();
+    }
+  } catch {
+    /* */
+  }
+}
+
 type Props = {
   videoUrl: string;
   title: string;
@@ -117,6 +158,20 @@ export function YouTubeOverlayPlayer({ videoUrl, title, studentCopyrightCode }: 
   const [qualityApplying, setQualityApplying] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** وضع ملء الشاشة عبر CSS (هواتف لا تدعم Fullscreen API على div) */
+  const [isImmersive, setIsImmersive] = useState(false);
+  /** مزامنة مع واجهة Fullscreen الأصلية */
+  const [isNativeFs, setIsNativeFs] = useState(false);
+  const bodyOverflowBeforeImmersiveRef = useRef<string | null>(null);
+
+  const restoreBodyScrollAfterImmersive = useCallback(() => {
+    if (bodyOverflowBeforeImmersiveRef.current !== null) {
+      document.body.style.overflow = bodyOverflowBeforeImmersiveRef.current;
+      bodyOverflowBeforeImmersiveRef.current = null;
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, []);
 
   const videoId = getYouTubeVideoId(videoUrl);
 
@@ -382,12 +437,54 @@ export function YouTubeOverlayPlayer({ videoUrl, title, studentCopyrightCode }: 
     };
   }, [videoId, startProgressPoll, stopProgressPoll]);
 
-  const togglePlay = () => {
+  useEffect(() => {
+    const syncNativeFs = () => {
+      const el = wrapperRef.current;
+      setIsNativeFs(!!el && document.fullscreenElement === el);
+    };
+    document.addEventListener("fullscreenchange", syncNativeFs);
+    document.addEventListener("webkitfullscreenchange", syncNativeFs);
+    syncNativeFs();
+    return () => {
+      document.removeEventListener("fullscreenchange", syncNativeFs);
+      document.removeEventListener("webkitfullscreenchange", syncNativeFs);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (!isImmersive) return;
+      setIsImmersive(false);
+      restoreBodyScrollAfterImmersive();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isImmersive, restoreBodyScrollAfterImmersive]);
+
+  useEffect(() => {
+    return () => {
+      if (bodyOverflowBeforeImmersiveRef.current !== null) {
+        document.body.style.overflow = bodyOverflowBeforeImmersiveRef.current;
+        bodyOverflowBeforeImmersiveRef.current = null;
+      }
+      try {
+        const el = wrapperRef.current;
+        if (el && document.fullscreenElement === el) {
+          void exitFullscreenCompat();
+        }
+      } catch {
+        /* */
+      }
+    };
+  }, []);
+
+  const togglePlay = useCallback(() => {
     const p = playerRef.current;
     if (!p) return;
     if (isPlaying) p.pauseVideo();
     else p.playVideo();
-  };
+  }, [isPlaying]);
 
   const seekBySeconds = useCallback(
     (delta: number) => {
@@ -417,6 +514,11 @@ export function YouTubeOverlayPlayer({ videoUrl, title, studentCopyrightCode }: 
 
   const handleTapOrClick = useCallback(
     (clientX: number) => {
+      if (isPlaying && !showControls) {
+        setShowControls(true);
+        scheduleHideControls();
+        return;
+      }
       const rect = wrapperRef.current?.getBoundingClientRect();
       const mid = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
       const side: "left" | "right" = clientX < mid ? "left" : "right";
@@ -445,7 +547,7 @@ export function YouTubeOverlayPlayer({ videoUrl, title, studentCopyrightCode }: 
         togglePlay();
       }, DOUBLE_TAP_MS);
     },
-    [seekBySeconds, togglePlay]
+    [seekBySeconds, togglePlay, isPlaying, showControls, scheduleHideControls]
   );
 
 
@@ -496,24 +598,56 @@ export function YouTubeOverlayPlayer({ videoUrl, title, studentCopyrightCode }: 
     if (p) p.setVolume(v);
   };
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(async () => {
     const el = wrapperRef.current;
     if (!el) return;
-    try {
-      if (!document.fullscreenElement) {
-        el.requestFullscreen?.();
-      } else {
-        document.exitFullscreen?.();
+
+    if (isImmersive) {
+      setIsImmersive(false);
+      restoreBodyScrollAfterImmersive();
+      return;
+    }
+
+    if (document.fullscreenElement === el) {
+      await exitFullscreenCompat();
+      return;
+    }
+
+    const ok = await requestFullscreenCompat(el);
+    if (!ok) {
+      if (bodyOverflowBeforeImmersiveRef.current === null) {
+        bodyOverflowBeforeImmersiveRef.current = document.body.style.overflow;
       }
-    } catch {}
-  };
+      document.body.style.overflow = "hidden";
+      setIsImmersive(true);
+    }
+  }, [isImmersive, restoreBodyScrollAfterImmersive]);
+
+  const handlePointerDownCapture = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse") return;
+      if (!isPlaying) return;
+      setShowControls(true);
+      scheduleHideControls();
+    },
+    [isPlaying, scheduleHideControls]
+  );
+
+  const isFullscreenUi = isImmersive || isNativeFs;
 
   if (!videoId) return null;
+
+  const wrapperClassName = isImmersive
+    ? "fixed inset-0 z-[9999] flex h-[100dvh] min-h-[100svh] w-full max-w-none flex-col overflow-hidden rounded-none border-0 bg-black pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+    : isNativeFs
+      ? "relative h-full w-full min-h-0 overflow-hidden rounded-none border-0 bg-black"
+      : "relative aspect-video w-full overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-black";
 
   return (
     <div
       ref={wrapperRef}
-      className="relative aspect-video w-full overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-black"
+      className={wrapperClassName}
+      onPointerDownCapture={handlePointerDownCapture}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
@@ -705,14 +839,20 @@ export function YouTubeOverlayPlayer({ videoUrl, title, studentCopyrightCode }: 
             </div>
             <button
               type="button"
-              onClick={toggleFullscreen}
+              onClick={() => void toggleFullscreen()}
               disabled={!ready}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-white transition hover:bg-white/30 disabled:opacity-50"
-              aria-label="شاشة كاملة"
+              aria-label={isFullscreenUi ? "الخروج من الشاشة الكاملة" : "شاشة كاملة"}
             >
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
-              </svg>
+              {isFullscreenUi ? (
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+                </svg>
+              )}
             </button>
           </div>
         </div>

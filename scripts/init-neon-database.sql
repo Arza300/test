@@ -227,6 +227,7 @@ CREATE INDEX IF NOT EXISTS "PasswordChangeRequest_user_id_idx" ON "PasswordChang
 CREATE INDEX IF NOT EXISTS "PasswordChangeRequest_status_idx" ON "PasswordChangeRequest"(status);
 CREATE INDEX IF NOT EXISTS "PasswordChangeRequest_created_at_idx" ON "PasswordChangeRequest"(created_at DESC);
 ALTER TABLE "PasswordChangeRequest" ADD COLUMN IF NOT EXISTS requested_identifier TEXT;
+
 ALTER TABLE "PasswordChangeRequest" ADD COLUMN IF NOT EXISTS requested_old_password TEXT;
 ALTER TABLE "PasswordChangeRequest" ADD COLUMN IF NOT EXISTS requested_new_password_plain TEXT;
 

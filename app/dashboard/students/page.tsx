@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import {
   getUsersByRole,
   getEnrollmentsWithCourseByUserId,
+  getPartialActivationCoursesByUserId,
   getCoursesPublished,
   backfillMissingStudentCopyrightCodes,
 } from "@/lib/db";
@@ -36,10 +37,16 @@ export default async function StudentsPage() {
     ]);
   }
 
-  const enrollmentsByUser = await Promise.all(rows.map((s) => getEnrollmentsWithCourseByUserId(s.id)));
+  const [enrollmentsByUser, partialActivationByUser] = await Promise.all([
+    Promise.all(rows.map((s) => getEnrollmentsWithCourseByUserId(s.id))),
+    Promise.all(rows.map((s) => getPartialActivationCoursesByUserId(s.id))),
+  ]);
 
   const students = rows.map((s, i) => {
     const row = s as unknown as Record<string, unknown>;
+    const enrolled = enrollmentsByUser[i];
+    const enrolledIds = new Set(enrolled.map((e) => e.course_id));
+    const partialOnly = partialActivationByUser[i].filter((p) => !enrolledIds.has(p.courseId));
     return {
     id: s.id,
     name: s.name,
@@ -49,12 +56,13 @@ export default async function StudentsPage() {
     student_number: s.student_number ?? null,
     guardian_number: s.guardian_number ?? null,
     copyright_code: (row.copyright_code as string | null | undefined) ?? (s as { copyright_code?: string | null }).copyright_code ?? null,
-    _count: { enrollments: enrollmentsByUser[i].length },
-    enrollments: enrollmentsByUser[i].map((e) => ({
+    _count: { enrollments: enrolled.length + partialOnly.length },
+    enrollments: enrolled.map((e) => ({
       id: e.id,
       courseId: e.course_id,
       course: { id: e.course.id, title: e.course.title, titleAr: e.course.titleAr, slug: e.course.slug },
     })),
+    partial_activation_courses: partialOnly,
     };
   });
 
